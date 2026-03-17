@@ -1,43 +1,70 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 :root {
-  --zumba-pink: #FF2D55;
-  --zumba-lime: #CCFF00;
-  --zumba-cyan: #00E5FF;
+  --rose-primary: #FF6B95;
+  --rose-secondary: #FFE4E9;
+  --lavender-soft: #E0DAFF;
+  --apricot-glow: #FFB38A;
+  --bloom-white: #FDFCFB;
+  --theatre-dark: #2D2424;
+}
+
+@theme {
+  --color-rose-bloom: var(--rose-primary);
+  --color-rose-petal: var(--rose-secondary);
+  --color-lavender: var(--lavender-soft);
+  --color-apricot: var(--apricot-glow);
+  --color-bloom-white: var(--bloom-white);
+  --color-theatre-dark: var(--theatre-dark);
+  --color-theatre-dark: #1A1516;
+  --color-zumba-dark: #050505;
+  --color-zumba-pink: #FF2E63;
+  --color-zumba-lime: #00FF9D;
+  --color-zumba-cyan: #00E0FF;
 }
 
 @layer base {
   body {
-    @apply bg-[#0A0A0A] text-white font-sans antialiased selection:bg-zumba-pink selection:text-white;
+    @apply bg-bloom-white text-theatre-dark font-sans antialiased selection:bg-rose-bloom selection:text-white;
   }
 }
 
 @layer components {
   .glass {
-    @apply bg-white/5 backdrop-blur-xl border border-white/10 shadow-2xl;
+    @apply bg-bloom-white/80 backdrop-blur-xl border border-apricot/30 shadow-xl shadow-rose-bloom/5;
   }
   
   .btn-premium {
     @apply px-8 py-4 rounded-2xl font-black uppercase tracking-widest transition-all duration-300 active:scale-95;
   }
 
-  .neon-glow-pink {
-    @apply shadow-[0_0_20px_rgba(255,45,85,0.3)];
+  .text-gradient-rose {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-rose-bloom via-rose-bloom to-rose-petal;
   }
-  
-  .neon-glow-lime {
-    @apply shadow-[0_0_20px_rgba(204,255,0,0.3)];
+
+  .text-gradient-sunset {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-rose-bloom via-[#FF8E7A] to-apricot;
+  }
+
+  .text-gradient-lavender {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-rose-bloom to-lavender;
+  }
+
+  .neon-glow-rose {
+    @apply shadow-lg shadow-rose-bloom/20;
+  }
+
+  .neon-glow-pink {
+    @apply shadow-[0_0_20px_rgba(255,107,149,0.2)];
   }
 }
 
-/* Custom Theatrical Transitions */
 .theatre-reveal {
   animation: reveal 1s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 @keyframes reveal {
-  from { opacity: 0; transform: translateY(20px); }
+  from { opacity: 0; transform: translateY(15px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
