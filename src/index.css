@@ -1,0 +1,43 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --zumba-pink: #FF2D55;
+  --zumba-lime: #CCFF00;
+  --zumba-cyan: #00E5FF;
+}
+
+@layer base {
+  body {
+    @apply bg-[#0A0A0A] text-white font-sans antialiased selection:bg-zumba-pink selection:text-white;
+  }
+}
+
+@layer components {
+  .glass {
+    @apply bg-white/5 backdrop-blur-xl border border-white/10 shadow-2xl;
+  }
+  
+  .btn-premium {
+    @apply px-8 py-4 rounded-2xl font-black uppercase tracking-widest transition-all duration-300 active:scale-95;
+  }
+
+  .neon-glow-pink {
+    @apply shadow-[0_0_20px_rgba(255,45,85,0.3)];
+  }
+  
+  .neon-glow-lime {
+    @apply shadow-[0_0_20px_rgba(204,255,0,0.3)];
+  }
+}
+
+/* Custom Theatrical Transitions */
+.theatre-reveal {
+  animation: reveal 1s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes reveal {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
