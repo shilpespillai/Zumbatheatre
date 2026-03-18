@@ -22,108 +22,35 @@ import Contact from './pages/Contact';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { useAuth } from './context/AuthContext';
 
-const Navbar = () => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
-  const { user, profile, signOut } = useAuth();
-  
-  // Also check for guest session
-  const guestSession = JSON.parse(localStorage.getItem('zumba_guest_session') || 'null');
-  const isGuest = !!guestSession;
 
-  useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 20);
-    };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  return (
-    <nav className="fixed w-full z-50 p-6 font-sans transition-all duration-300">
-      <div className={`w-full flex justify-between items-center transition-all duration-500 ${
-        scrolled 
-          ? 'bg-zumba-dark/80 backdrop-blur-2xl border border-white/10 px-12 py-4 rounded-[2.5rem] shadow-2xl' 
-          : 'bg-transparent border-transparent px-12 py-4 rounded-[2.5rem]'
-      }`}>
-        <a href="/" className="flex items-center gap-2 group cursor-pointer">
-          <div className="w-10 h-10 bg-zumba-pink rounded-xl flex items-center justify-center rotate-12 group-hover:rotate-0 transition-transform duration-300">
-            <Play className="w-6 h-6 text-white fill-current" />
-          </div>
-          <span className="text-2xl font-black tracking-tighter text-white">ZUMBA<span className="text-zumba-lime text-lg">THEATRE</span></span>
-        </a>
-
-        <div className="hidden md:flex items-center gap-10">
-          {(user || isGuest) && (
-            <div className="flex items-center gap-4">
-              <a 
-                href={user && profile?.role?.toUpperCase() === 'TEACHER' ? '/teacher/dashboard' : '/student/dashboard'}
-                className="btn-premium bg-zumba-lime text-black flex items-center gap-2 hover:bg-zumba-lime/80"
-              >
-                {user && profile?.role?.toUpperCase() === 'TEACHER' ? 'Instructor Portal' : 'My Stage'}
-              </a>
-              <button 
-                onClick={() => {
-                  if (isGuest) {
-                    localStorage.removeItem('zumba_guest_session');
-                    window.location.href = '/';
-                  } else {
-                    signOut();
-                  }
-                }}
-                className="p-4 bg-white/5 border border-white/10 text-white hover:bg-zumba-pink transition-all rounded-2xl group"
-                title="Sign Out"
-              >
-                <LogOut className="w-5 h-5 group-hover:scale-110 transition-transform" />
-              </button>
-            </div>
-          )}
-        </div>
-
-        <button className="md:hidden text-zumba-lime" onClick={() => setIsOpen(!isOpen)}>
-          {isOpen ? <X /> : <Menu />}
-        </button>
-      </div>
-
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div 
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="md:hidden mt-4 bg-zumba-dark/90 backdrop-blur-2xl border border-white/10 p-8 rounded-[2rem] flex flex-col gap-6"
-          >
-            {(user || isGuest) && (
-              <button 
-                onClick={() => {
-                  if (isGuest) {
-                    localStorage.removeItem('zumba_guest_session');
-                    window.location.href = '/';
-                  } else {
-                    signOut();
-                  }
-                }} 
-                className="btn-premium bg-white/10 text-white w-full text-center"
-              >
-                Sign Out
-              </button>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </nav>
-  );
-};
 
 const Home = () => {
-  const { user, profile } = useAuth();
+  const { user, profile, signOut } = useAuth();
   const guestSession = JSON.parse(localStorage.getItem('zumba_guest_session') || 'null');
   const isGuest = !!guestSession;
+
+  const getHeroBtn = () => {
+    if (user && profile?.role?.toUpperCase() === 'TEACHER') {
+      return { text: 'Instructor Portal', href: '/teacher/dashboard' };
+    }
+    if (user || isGuest) {
+      return { text: 'My Stage', href: '/student/dashboard' };
+    }
+    return { text: 'Theatre Entrance', href: '/auth' };
+  };
+
+  const heroBtn = getHeroBtn();
 
   return (
     <div className="min-h-screen bg-zumba-dark text-white">
-      <Navbar />
       <section className="relative min-h-screen flex items-stretch overflow-hidden w-full p-0">
+        {/* Cinematic Logo - Top Left */}
+        <div className="absolute top-12 left-12 z-50 flex items-center gap-3">
+          <div className="w-12 h-12 bg-zumba-pink rounded-xl flex items-center justify-center rotate-12 shadow-2xl shadow-zumba-pink/20">
+            <Play className="w-7 h-7 text-white fill-current" />
+          </div>
+          <span className="text-3xl font-black tracking-tighter text-white">ZUMBA<span className="text-zumba-lime text-xl">THEATRE</span></span>
+        </div>
         {/* Background Orbs */}
         <div className="absolute top-1/4 -left-20 w-96 h-96 bg-zumba-pink/20 rounded-full blur-[120px] animate-pulse" />
         <div className="absolute bottom-1/4 left-1/4 w-80 h-80 bg-zumba-lime/10 rounded-full blur-[100px] animate-pulse delay-1000" />
@@ -148,8 +75,8 @@ const Home = () => {
                 Experience the rhythmic energy of Zumba. The ultimate dance-fitness platform for instructors to lead and students to thrive.
               </p>
               <div className="flex flex-wrap items-center gap-10">
-                <a href="/auth" className="btn-premium bg-zumba-lime text-black flex items-center gap-5 hover:bg-zumba-lime/80 shadow-2xl shadow-zumba-lime/20 py-10 px-16 text-3xl font-black">
-                  Theatre Entrance <ArrowRight className="w-10 h-10" />
+                <a href={heroBtn.href} className="btn-premium bg-zumba-lime text-black flex items-center gap-5 hover:bg-zumba-lime/80 shadow-2xl shadow-zumba-lime/20 py-10 px-16 text-3xl font-black">
+                  {heroBtn.text} <ArrowRight className="w-10 h-10" />
                 </a>
                 <a href="/contact" className="text-lg font-black uppercase tracking-[0.5em] text-white/20 hover:text-zumba-pink transition-colors">
                   Contact Support
@@ -196,6 +123,21 @@ const Home = () => {
               <Twitter className="text-white/40 hover:text-zumba-cyan cursor-pointer" />
               <Facebook className="text-white/40 hover:text-zumba-lime cursor-pointer" />
             </div>
+            {(user || isGuest) && (
+              <button 
+                onClick={() => {
+                  if (isGuest) {
+                    localStorage.removeItem('zumba_guest_session');
+                    window.location.href = '/';
+                  } else {
+                    signOut();
+                  }
+                }}
+                className="text-xs font-black uppercase tracking-[0.2em] text-zumba-pink hover:text-white transition-colors border border-zumba-pink/20 px-4 py-2 rounded-xl"
+              >
+                Sign Out
+              </button>
+            )}
           </div>
           <p className="text-xs font-bold text-white/20 tracking-[0.2em]">© 2026 ZUMBA THEATRE WORLDWIDE</p>
         </div>
