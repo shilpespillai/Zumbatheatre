@@ -17,6 +17,7 @@ import AdminDashboard from './pages/admin/Dashboard';
 import AdminAuth from './pages/admin/Auth';
 import Settings from './pages/Settings';
 import Onboarding from './pages/Onboarding';
+import HowItWorks from './pages/HowItWorks';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { useAuth } from './context/AuthContext';
 
@@ -52,9 +53,8 @@ const Navbar = () => {
         </a>
 
         <div className="hidden md:flex items-center gap-10">
-          {['How it Works', 'Contact'].map((item) => (
-            <a key={item} href={`#${item.toLowerCase().replace(/ /g, '-')}`} className="text-sm font-bold uppercase tracking-widest text-white/70 hover:text-white transition-colors">{item}</a>
-          ))}
+          <a href="/how-it-works" className="text-sm font-bold uppercase tracking-widest text-white/70 hover:text-white transition-colors">How it Works</a>
+          <a href="#contact" className="text-sm font-bold uppercase tracking-widest text-white/70 hover:text-white transition-colors">Contact</a>
           
           {(user || isGuest) ? (
             <div className="flex items-center gap-4">
@@ -100,9 +100,9 @@ const Navbar = () => {
             exit={{ opacity: 0, y: -20 }}
             className="md:hidden mt-4 bg-zumba-dark/90 backdrop-blur-2xl border border-white/10 p-8 rounded-[2rem] flex flex-col gap-6"
           >
-            {['How it Works', 'Contact'].map((item) => (
-              <a key={item} href={`#${item.toLowerCase().replace(/ /g, '-')}`} className="text-lg font-black uppercase tracking-widest text-white/70" onClick={() => setIsOpen(false)}>{item}</a>
-            ))}
+            <a href="/how-it-works" className="text-lg font-black uppercase tracking-widest text-white/70" onClick={() => setIsOpen(false)}>How it Works</a>
+            <a href="#contact" className="text-lg font-black uppercase tracking-widest text-white/70" onClick={() => setIsOpen(false)}>Contact</a>
+            
             {(user || isGuest) ? (
               <button 
                 onClick={() => {
@@ -189,6 +189,7 @@ export default function App() {
         <Route path="/" element={<Home />} />
         <Route path="/auth" element={<Auth />} />
         <Route path="/admin/auth" element={<AdminAuth />} />
+        <Route path="/how-it-works" element={<HowItWorks />} />
         <Route path="/onboarding" element={
           <ProtectedRoute>
             <Onboarding />
