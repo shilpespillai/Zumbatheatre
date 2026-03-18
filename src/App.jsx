@@ -18,6 +18,7 @@ import AdminAuth from './pages/admin/Auth';
 import Settings from './pages/Settings';
 import Onboarding from './pages/Onboarding';
 import HowItWorks from './pages/HowItWorks';
+import Contact from './pages/Contact';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { useAuth } from './context/AuthContext';
 
@@ -54,7 +55,7 @@ const Navbar = () => {
 
         <div className="hidden md:flex items-center gap-10">
           <a href="/how-it-works" className="text-sm font-bold uppercase tracking-widest text-white/70 hover:text-white transition-colors">How it Works</a>
-          <a href="#contact" className="text-sm font-bold uppercase tracking-widest text-white/70 hover:text-white transition-colors">Contact</a>
+          <a href="/contact" className="text-sm font-bold uppercase tracking-widest text-white/70 hover:text-white transition-colors">Contact</a>
           
           {(user || isGuest) ? (
             <div className="flex items-center gap-4">
@@ -101,7 +102,7 @@ const Navbar = () => {
             className="md:hidden mt-4 bg-zumba-dark/90 backdrop-blur-2xl border border-white/10 p-8 rounded-[2rem] flex flex-col gap-6"
           >
             <a href="/how-it-works" className="text-lg font-black uppercase tracking-widest text-white/70" onClick={() => setIsOpen(false)}>How it Works</a>
-            <a href="#contact" className="text-lg font-black uppercase tracking-widest text-white/70" onClick={() => setIsOpen(false)}>Contact</a>
+            <a href="/contact" className="text-lg font-black uppercase tracking-widest text-white/70" onClick={() => setIsOpen(false)}>Contact</a>
             
             {(user || isGuest) ? (
               <button 
@@ -140,25 +141,45 @@ const Home = () => {
         <div className="absolute top-1/4 -left-20 w-96 h-96 bg-zumba-pink/20 rounded-full blur-[120px] animate-pulse" />
         <div className="absolute bottom-1/4 -right-20 w-80 h-80 bg-zumba-lime/10 rounded-full blur-[100px] animate-pulse delay-1000" />
 
-        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center relative z-10">
-          <motion.div initial={{ opacity: 0, x: -50 }} animate={{ opacity: 1, x: 0 }}>
-            <div className="inline-flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-2 rounded-full mb-6 text-white">
+        <div className="max-w-[1440px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-16 lg:gap-24 items-center relative z-10 px-6 sm:px-12">
+          <motion.div 
+            initial={{ opacity: 0, x: -50 }} 
+            animate={{ opacity: 1, x: 0 }}
+            className="lg:col-span-7"
+          >
+            <div className="inline-flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-2 rounded-full mb-8 text-white">
               <Zap className="w-4 h-4 text-zumba-lime" />
               <span className="text-xs font-bold uppercase tracking-widest text-zumba-lime">The 2026 World Tour is Here</span>
             </div>
-            <h1 className="text-7xl sm:text-8xl lg:text-9xl font-black mb-8 leading-[0.9] tracking-tighter text-white">
+            <h1 className="text-6xl sm:text-7xl lg:text-8xl xl:text-9xl font-black mb-8 leading-[0.9] tracking-tighter text-white">
               DITCH THE <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-zumba-pink via-zumba-lime to-zumba-cyan cursor-default hover:opacity-80 transition-opacity">WORKOUT.</span>
             </h1>
-            <p className="text-xl text-white/60 font-medium max-w-lg mb-12 leading-relaxed">
+            <p className="text-xl text-white/60 font-medium max-w-xl mb-12 leading-relaxed">
               Experience the rhythmic energy of Zumba. The ultimate dance-fitness platform for instructors to lead and students to thrive.
             </p>
-
+            <div className="flex items-center gap-6">
+              <a href="/auth" className="btn-premium bg-zumba-lime text-black flex items-center gap-2 hover:bg-zumba-lime/80 shadow-xl shadow-zumba-lime/10">
+                Theatre Entrance <ArrowRight className="w-5 h-5" />
+              </a>
+              <a href="/contact" className="text-sm font-black uppercase tracking-widest text-white/40 hover:text-zumba-pink transition-colors">
+                Contact Support
+              </a>
+            </div>
           </motion.div>
-          <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} className="relative">
-            <div className="aspect-square rounded-[3rem] overflow-hidden border-4 border-white/10 group">
+
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.8 }} 
+            animate={{ opacity: 1, scale: 1 }} 
+            className="relative lg:col-span-5"
+          >
+            <div className="aspect-square rounded-[4rem] overflow-hidden border-4 border-white/10 shadow-2xl shadow-black/50 group">
               <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0A] via-transparent to-transparent z-10" />
-              <img src="https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?q=80&w=2069&auto=format&fit=crop" alt="Theatre" className="w-full h-full object-cover grayscale brightness-75 group-hover:scale-110 transition-transform duration-700" />
+              <img 
+                src="https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?q=80&w=2069&auto=format&fit=crop" 
+                alt="Theatre" 
+                className="w-full h-full object-cover grayscale brightness-75 group-hover:scale-110 transition-transform duration-700" 
+              />
             </div>
           </motion.div>
         </div>
@@ -190,6 +211,7 @@ export default function App() {
         <Route path="/auth" element={<Auth />} />
         <Route path="/admin/auth" element={<AdminAuth />} />
         <Route path="/how-it-works" element={<HowItWorks />} />
+        <Route path="/contact" element={<Contact />} />
         <Route path="/onboarding" element={
           <ProtectedRoute>
             <Onboarding />
