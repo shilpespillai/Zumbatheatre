@@ -54,10 +54,7 @@ const Navbar = () => {
         </a>
 
         <div className="hidden md:flex items-center gap-10">
-          <a href="/how-it-works" className="text-sm font-bold uppercase tracking-widest text-white/70 hover:text-white transition-colors">How it Works</a>
-          <a href="/contact" className="text-sm font-bold uppercase tracking-widest text-white/70 hover:text-white transition-colors">Contact</a>
-          
-          {(user || isGuest) ? (
+          {(user || isGuest) && (
             <div className="flex items-center gap-4">
               <a 
                 href={user && profile?.role?.toUpperCase() === 'TEACHER' ? '/teacher/dashboard' : '/student/dashboard'}
@@ -80,11 +77,6 @@ const Navbar = () => {
                 <LogOut className="w-5 h-5 group-hover:scale-110 transition-transform" />
               </button>
             </div>
-          ) : (
-            <a href="/auth" className="btn-premium bg-zumba-pink text-white flex items-center gap-2 hover:bg-zumba-pink/80 group text-sm">
-              <Sparkles className="w-5 h-5 group-hover:rotate-12 transition-transform" />
-              Theatre Entrance
-            </a>
           )}
         </div>
 
@@ -101,10 +93,7 @@ const Navbar = () => {
             exit={{ opacity: 0, y: -20 }}
             className="md:hidden mt-4 bg-zumba-dark/90 backdrop-blur-2xl border border-white/10 p-8 rounded-[2rem] flex flex-col gap-6"
           >
-            <a href="/how-it-works" className="text-lg font-black uppercase tracking-widest text-white/70" onClick={() => setIsOpen(false)}>How it Works</a>
-            <a href="/contact" className="text-lg font-black uppercase tracking-widest text-white/70" onClick={() => setIsOpen(false)}>Contact</a>
-            
-            {(user || isGuest) ? (
+            {(user || isGuest) && (
               <button 
                 onClick={() => {
                   if (isGuest) {
@@ -118,8 +107,6 @@ const Navbar = () => {
               >
                 Sign Out
               </button>
-            ) : (
-              <a href="/auth" className="btn-premium bg-zumba-pink text-white w-full text-center">Theatre Entrance</a>
             )}
           </motion.div>
         )}
@@ -201,12 +188,16 @@ const Home = () => {
             <Play className="w-8 h-8 text-zumba-lime fill-current" />
             <span className="text-xl font-black tracking-tighter">ZUMBA THEATRE</span>
           </div>
-          <div className="flex gap-10">
-            <Instagram className="text-white/40 hover:text-zumba-pink cursor-pointer" />
-            <Twitter className="text-white/40 hover:text-zumba-cyan cursor-pointer" />
-            <Facebook className="text-white/40 hover:text-zumba-lime cursor-pointer" />
+          <div className="flex flex-wrap items-center gap-10">
+            <a href="/how-it-works" className="text-sm font-bold uppercase tracking-widest text-white/40 hover:text-white transition-colors">How it Works</a>
+            <a href="/contact" className="text-sm font-bold uppercase tracking-widest text-white/40 hover:text-white transition-colors">Contact</a>
+            <div className="flex gap-10">
+              <Instagram className="text-white/40 hover:text-zumba-pink cursor-pointer" />
+              <Twitter className="text-white/40 hover:text-zumba-cyan cursor-pointer" />
+              <Facebook className="text-white/40 hover:text-zumba-lime cursor-pointer" />
+            </div>
           </div>
-          <p className="text-sm font-bold text-white/30 tracking-[0.2em]">© 2026 ZUMBA THEATRE WORLDWIDE</p>
+          <p className="text-xs font-bold text-white/20 tracking-[0.2em]">© 2026 ZUMBA THEATRE WORLDWIDE</p>
         </div>
       </footer>
     </div>
