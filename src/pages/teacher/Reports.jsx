@@ -10,7 +10,7 @@ import { motion } from 'framer-motion';
 import { format, subDays, startOfDay, endOfDay, eachDayOfInterval, isSameDay } from 'date-fns';
 
 export default function TeacherReports() {
-  const { user, profile } = useAuth();
+  const { user, profile, isDevBypass } = useAuth();
   const [loading, setLoading] = useState(true);
   const [reportData, setReportData] = useState({
     totalRevenue: 0,
@@ -28,30 +28,58 @@ export default function TeacherReports() {
   const fetchReportData = async () => {
     setLoading(true);
     try {
-      // 1. Fetch all routines by this teacher
-      const { data: routines } = await supabase
-        .from('routines')
-        .select('id, name')
-        .eq('teacher_id', user.id);
+      let routines, schedules, payments, bookings;
 
-      // 2. Fetch all schedules by this teacher
-      const { data: schedules } = await supabase
-        .from('schedules')
-        .select('id, routine_id, start_time, price, seats_taken, max_seats')
-        .eq('teacher_id', user.id);
+      if (isDevBypass) {
+        routines = JSON.parse(localStorage.getItem('zumba_mock_routines') || '[]')
+          .filter(r => String(r.teacher_id).trim() === String(user.id).trim());
+        
+        schedules = JSON.parse(localStorage.getItem('zumba_mock_schedules') || '[]')
+          .filter(s => String(s.teacher_id).trim() === String(user.id).trim());
+        
+        bookings = JSON.parse(localStorage.getItem('zumba_mock_bookings') || '[]');
+        
+        const scheduleIds = schedules.map(s => s.id);
+        const filteredBookings = bookings.filter(b => scheduleIds.includes(b.schedule_id));
+        
+        // In mock mode, we might not have a separate payments table, so we infer from PAID bookings
+        payments = filteredBookings
+          .filter(b => b.payment_status === 'PAID')
+          .map(b => ({
+            id: 'mock-p' + b.id,
+            amount: b.amount || 15,
+            created_at: b.created_at || new Date().toISOString(),
+            bookings: { schedule_id: b.schedule_id, student_id: b.student_id }
+          }));
+      } else {
+        // 1. Fetch all routines by this teacher
+        const { data: routinesData } = await supabase
+          .from('routines')
+          .select('id, name')
+          .eq('teacher_id', user.id);
+        routines = routinesData || [];
 
-      // 3. Fetch all payments via bookings
-      const { data: payments } = await supabase
-        .from('payments')
-        .select('*, bookings!inner(schedule_id, student_id)')
-        .in('bookings.schedule_id', (schedules || []).map(s => s.id));
+        // 2. Fetch all schedules by this teacher
+        const { data: schedulesData } = await supabase
+          .from('schedules')
+          .select('id, routine_id, start_time, price, seats_taken, max_seats')
+          .eq('teacher_id', user.id);
+        schedules = schedulesData || [];
+
+        // 3. Fetch all payments via bookings
+        const { data: paymentsData } = await supabase
+          .from('payments')
+          .select('*, bookings!inner(schedule_id, student_id)')
+          .in('bookings.schedule_id', schedules.map(s => s.id));
+        payments = paymentsData || [];
+      }
 
       // Calculate Metrics
-      const totalRevenue = (payments || []).reduce((sum, p) => sum + Number(p.amount), 0);
-      const totalBookings = (payments || []).length;
+      const totalRevenue = payments.reduce((sum, p) => sum + Number(p.amount), 0);
+      const totalBookings = payments.length;
       
-      const totalCapacity = (schedules || []).reduce((sum, s) => sum + (s.max_seats || 20), 0);
-      const totalSeatsTaken = (schedules || []).reduce((sum, s) => sum + (s.seats_taken || 0), 0);
+      const totalCapacity = schedules.reduce((sum, s) => sum + (s.max_seats || 20), 0);
+      const totalSeatsTaken = schedules.reduce((sum, s) => sum + (s.seats_taken || 0), 0);
       const occupanyRate = totalCapacity > 0 ? Math.round((totalSeatsTaken / totalCapacity) * 100) : 0;
 
       // Group Revenue by Date (last 14 days)
@@ -61,7 +89,7 @@ export default function TeacherReports() {
       });
 
       const revenueTrend = last14Days.map(date => {
-        const dayRevenue = (payments || [])
+        const dayRevenue = payments
           .filter(p => isSameDay(new Date(p.created_at), date))
           .reduce((sum, p) => sum + Number(p.amount), 0);
         return {
@@ -71,10 +99,10 @@ export default function TeacherReports() {
       });
 
       // Popular Routines
-      const routineStats = (routines || []).map(r => {
-        const routineSchedules = (schedules || []).filter(s => s.routine_id === r.id);
+      const routineStats = routines.map(r => {
+        const routineSchedules = schedules.filter(s => s.routine_id === r.id);
         const scheduleIds = routineSchedules.map(s => s.id);
-        const routinePayments = (payments || []).filter(p => scheduleIds.includes(p.bookings.schedule_id));
+        const routinePayments = payments.filter(p => scheduleIds.includes(p.bookings.schedule_id));
         const routineRevenue = routinePayments.reduce((sum, p) => sum + Number(p.amount), 0);
         
         return {
@@ -89,7 +117,7 @@ export default function TeacherReports() {
         totalRevenue,
         totalBookings,
         occupanyRate,
-        activeRoutines: (routines || []).length,
+        activeRoutines: routines.length,
         revenueTrend,
         popularRoutines: routineStats
       });
@@ -115,9 +143,34 @@ export default function TeacherReports() {
       </div>
 
       <div className="max-w-7xl mx-auto relative z-10">
+        {!profile?.is_subscribed && (
+          <div className="absolute inset-x-[-2rem] inset-y-[-2rem] z-[80] flex items-center justify-center rounded-[4rem] overflow-hidden">
+             <div className="absolute inset-0 bg-bloom-white/40 backdrop-blur-md" />
+             <motion.div 
+               initial={{ opacity: 0, y: 20 }}
+               animate={{ opacity: 1, y: 0 }}
+               className="relative z-10 bg-white p-12 rounded-[3.5rem] border border-apricot/40 shadow-2xl text-center max-w-sm"
+             >
+                <div className="w-16 h-16 bg-rose-bloom/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                  <TrendingUp className="w-8 h-8 text-rose-bloom" />
+                </div>
+                <h2 className="text-3xl font-black text-theatre-dark mb-3 italic">Growth Energy Locked</h2>
+                <p className="text-xs text-theatre-dark/40 font-bold uppercase tracking-widest leading-loose mb-10">
+                  Detailed analytics and revenue reports are reserved for our Premium Stage Instructors.
+                </p>
+                <a 
+                  href="/teacher/subscription"
+                  className="w-full btn-premium bg-theatre-dark text-white flex items-center justify-center gap-3 hover:bg-rose-bloom shadow-xl shadow-theatre-dark/20"
+                >
+                  Activate Premium <ArrowRight className="w-4 h-4" />
+                </a>
+                <p className="mt-6 text-[10px] font-black text-rose-bloom/40 uppercase tracking-[0.2em] italic">Only $10 / Month</p>
+             </motion.div>
+          </div>
+        )}
         <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 mb-16">
           <div className="flex items-center gap-6">
-             <a href="/teacher/dashboard" className="p-4 bg-white rounded-2xl border border-rose-petal/10 hover:bg-rose-petal/5 transition-all shadow-sm">
+             <a href="/teacher/dashboard" className="p-4 bg-white rounded-2xl border border-theatre-dark/15 hover:bg-rose-petal/5 transition-all shadow-sm">
                <ChevronLeft className="w-6 h-6 text-rose-bloom" />
              </a>
              <div>
@@ -126,7 +179,7 @@ export default function TeacherReports() {
             </div>
           </div>
           <div className="flex gap-4 w-full sm:w-auto">
-            <button className="flex-1 sm:flex-none px-6 py-4 bg-white rounded-2xl border border-rose-petal/10 text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-rose-petal/5 transition-all shadow-sm">
+            <button className="flex-1 sm:flex-none px-6 py-4 bg-white rounded-2xl border border-theatre-dark/15 text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-rose-petal/5 transition-all shadow-sm">
               <Download className="w-4 h-4 text-rose-bloom" /> Export Data
             </button>
             <div className="bg-gradient-to-r from-rose-bloom to-rose-petal p-0.5 rounded-2xl shadow-lg shadow-rose-bloom/20">
@@ -156,7 +209,7 @@ export default function TeacherReports() {
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: i * 0.1 }}
                   key={i} 
-                  className="bg-white/70 backdrop-blur-3xl p-8 rounded-[3rem] border border-rose-petal/10 shadow-xl shadow-rose-bloom/5 relative overflow-hidden group"
+                  className="bg-white/70 backdrop-blur-3xl p-8 rounded-[3rem] border border-theatre-dark/20 shadow-xl shadow-rose-bloom/5 relative overflow-hidden group"
                 >
                   <div className="flex justify-between items-start mb-6">
                     <div className="p-4 bg-rose-petal/10 rounded-2xl">
@@ -176,7 +229,7 @@ export default function TeacherReports() {
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
               {/* Main Chart Card */}
-              <div className="lg:col-span-2 bg-white/70 backdrop-blur-3xl p-10 rounded-[3.5rem] border border-rose-petal/10 shadow-2xl shadow-rose-bloom/5 min-h-[500px] relative overflow-hidden">
+              <div className="lg:col-span-2 bg-white/70 backdrop-blur-3xl p-10 rounded-[3.5rem] border border-theatre-dark/20 shadow-2xl shadow-rose-bloom/5 min-h-[500px] relative overflow-hidden">
                 <div className="flex justify-between items-center mb-16">
                    <div>
                       <h3 className="text-2xl font-black text-theatre-dark mb-1">Rhythm Trends</h3>
@@ -217,7 +270,7 @@ export default function TeacherReports() {
               </div>
 
               {/* Routine Performance */}
-              <div className="bg-white/70 backdrop-blur-3xl p-10 rounded-[3.5rem] border border-rose-petal/10 shadow-2xl shadow-rose-bloom/5">
+              <div className="bg-white/70 backdrop-blur-3xl p-10 rounded-[3.5rem] border border-theatre-dark/20 shadow-2xl shadow-rose-bloom/5">
                 <div className="flex justify-between items-center mb-12">
                   <h3 className="text-2xl font-black text-theatre-dark">Top Routines</h3>
                   <div className="p-3 bg-rose-petal/10 rounded-xl">
@@ -252,7 +305,7 @@ export default function TeacherReports() {
                   ))}
                 </div>
 
-                <div className="mt-16 p-8 bg-gradient-to-br from-rose-bloom/5 to-rose-petal/5 rounded-[2.5rem] border border-rose-petal/10">
+                <div className="mt-16 p-8 bg-gradient-to-br from-rose-bloom/5 to-rose-petal/5 rounded-[2.5rem] border border-theatre-dark/15">
                     <div className="flex items-center gap-3 mb-4">
                       <div className="w-8 h-8 bg-rose-bloom text-white rounded-xl flex items-center justify-center">
                         <Sparkles className="w-4 h-4" />

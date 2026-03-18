@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Ticket, Menu, X, Play, Zap, Star, ShieldCheck, Instagram, Twitter, Facebook, User, Mail, Lock, ArrowRight, LogOut, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -8,10 +8,13 @@ import TeacherDashboard from './pages/teacher/Dashboard';
 import Routines from './pages/teacher/Routines';
 import TeacherCalendar from './pages/teacher/Calendar';
 import TeacherReports from './pages/teacher/Reports';
+import TeacherSubscription from './pages/teacher/Subscription';
 import StudentDashboard from './pages/student/Dashboard';
 import StudentBrowse from './pages/student/Browse';
 import StudentBooking from './pages/student/Booking';
 import MyBookings from './pages/student/MyBookings';
+import AdminDashboard from './pages/admin/Dashboard';
+import AdminAuth from './pages/admin/Auth';
 import Settings from './pages/Settings';
 import Onboarding from './pages/Onboarding';
 import { ProtectedRoute } from './components/ProtectedRoute';
@@ -19,11 +22,28 @@ import { useAuth } from './context/AuthContext';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const { user, profile, signOut } = useAuth();
+  
+  // Also check for guest session
+  const guestSession = JSON.parse(localStorage.getItem('zumba_guest_session') || 'null');
+  const isGuest = !!guestSession;
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 20);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   return (
-    <nav className="fixed w-full z-50 px-6 py-6 font-sans">
-      <div className="max-w-7xl mx-auto flex justify-between items-center bg-zumba-dark/60 backdrop-blur-xl border border-white/10 px-8 py-4 rounded-[2rem]">
+    <nav className="fixed w-full z-50 px-6 py-4 lg:py-6 font-sans transition-all duration-300">
+      <div className={`max-w-7xl mx-auto flex justify-between items-center transition-all duration-500 ${
+        scrolled 
+          ? 'bg-zumba-dark/80 backdrop-blur-2xl border border-white/10 px-8 py-4 rounded-[2rem] shadow-2xl' 
+          : 'bg-transparent border-transparent px-8 py-4 rounded-[2rem]'
+      }`}>
         <a href="/" className="flex items-center gap-2 group cursor-pointer">
           <div className="w-10 h-10 bg-zumba-pink rounded-xl flex items-center justify-center rotate-12 group-hover:rotate-0 transition-transform duration-300">
             <Play className="w-6 h-6 text-white fill-current" />
@@ -36,16 +56,23 @@ const Navbar = () => {
             <a key={item} href={`#${item.toLowerCase().replace(/ /g, '-')}`} className="text-sm font-bold uppercase tracking-widest text-white/70 hover:text-white transition-colors">{item}</a>
           ))}
           
-          {user ? (
+          {(user || isGuest) ? (
             <div className="flex items-center gap-4">
               <a 
-                href={profile?.role?.toUpperCase() === 'TEACHER' ? '/teacher/dashboard' : '/student/dashboard'}
+                href={user && profile?.role?.toUpperCase() === 'TEACHER' ? '/teacher/dashboard' : '/student/dashboard'}
                 className="btn-premium bg-zumba-lime text-black flex items-center gap-2 hover:bg-zumba-lime/80"
               >
-                {profile?.role?.toUpperCase() === 'TEACHER' ? 'Instructor Portal' : 'My Stage'}
+                {user && profile?.role?.toUpperCase() === 'TEACHER' ? 'Instructor Portal' : 'My Stage'}
               </a>
               <button 
-                onClick={signOut}
+                onClick={() => {
+                  if (isGuest) {
+                    localStorage.removeItem('zumba_guest_session');
+                    window.location.href = '/';
+                  } else {
+                    signOut();
+                  }
+                }}
                 className="p-4 bg-white/5 border border-white/10 text-white hover:bg-zumba-pink transition-all rounded-2xl group"
                 title="Sign Out"
               >
@@ -53,9 +80,9 @@ const Navbar = () => {
               </button>
             </div>
           ) : (
-            <a href="/auth?role=teacher" className="btn-premium bg-zumba-pink text-white flex items-center gap-2 hover:bg-zumba-pink/80 group">
-              <User className="w-5 h-5 group-hover:rotate-12 transition-transform" />
-              Teacher Login
+            <a href="/auth" className="btn-premium bg-zumba-pink text-white flex items-center gap-2 hover:bg-zumba-pink/80 group text-sm">
+              <Sparkles className="w-5 h-5 group-hover:rotate-12 transition-transform" />
+              Theatre Entrance
             </a>
           )}
         </div>
@@ -76,10 +103,22 @@ const Navbar = () => {
             {['How it Works', 'Contact'].map((item) => (
               <a key={item} href={`#${item.toLowerCase().replace(/ /g, '-')}`} className="text-lg font-black uppercase tracking-widest text-white/70" onClick={() => setIsOpen(false)}>{item}</a>
             ))}
-            {user ? (
-              <button onClick={signOut} className="btn-premium bg-white/10 text-white w-full text-center">Sign Out</button>
+            {(user || isGuest) ? (
+              <button 
+                onClick={() => {
+                  if (isGuest) {
+                    localStorage.removeItem('zumba_guest_session');
+                    window.location.href = '/';
+                  } else {
+                    signOut();
+                  }
+                }} 
+                className="btn-premium bg-white/10 text-white w-full text-center"
+              >
+                Sign Out
+              </button>
             ) : (
-              <a href="/auth?role=teacher" className="btn-premium bg-zumba-pink text-white w-full text-center">Teacher Login</a>
+              <a href="/auth" className="btn-premium bg-zumba-pink text-white w-full text-center">Theatre Entrance</a>
             )}
           </motion.div>
         )}
@@ -90,6 +129,8 @@ const Navbar = () => {
 
 const Home = () => {
   const { user, profile } = useAuth();
+  const guestSession = JSON.parse(localStorage.getItem('zumba_guest_session') || 'null');
+  const isGuest = !!guestSession;
 
   return (
     <div className="min-h-screen bg-zumba-dark text-white">
@@ -112,31 +153,7 @@ const Home = () => {
             <p className="text-xl text-white/60 font-medium max-w-lg mb-12 leading-relaxed">
               Experience the rhythmic energy of Zumba. The ultimate dance-fitness platform for instructors to lead and students to thrive.
             </p>
-            {user ? (
-              <div className="bg-white/5 backdrop-blur-xl p-10 rounded-[3rem] border border-white/10 max-w-sm text-center">
-                <Sparkles className="w-12 h-12 text-zumba-lime mx-auto mb-6 opacity-40" />
-                <h3 className="text-2xl font-black text-white mb-2 leading-tight">Welcome back.</h3>
-                <p className="text-white/40 font-bold uppercase tracking-widest text-[10px] mb-8">Your stage is waiting for you.</p>
-                <a 
-                  href={profile?.role?.toUpperCase() === 'TEACHER' ? '/teacher/dashboard' : '/student/dashboard'}
-                  className="w-full btn-premium bg-zumba-lime text-black flex items-center justify-center gap-3"
-                >
-                  Enter Theatre <ArrowRight className="w-5 h-5" />
-                </a>
-              </div>
-            ) : (
-              <div className="bg-white/5 backdrop-blur-xl p-10 rounded-[3rem] border border-white/10 max-w-sm text-center">
-                <Sparkles className="w-12 h-12 text-zumba-pink mx-auto mb-6 opacity-40 rotate-12" />
-                <h3 className="text-2xl font-black text-white mb-2 leading-tight uppercase tracking-tighter">Join the Party.</h3>
-                <p className="text-white/40 font-bold uppercase tracking-widest text-[10px] mb-8">Ready to step onto your stage?</p>
-                <a 
-                  href="/auth?role=student"
-                  className="w-full btn-premium bg-white text-black flex items-center justify-center gap-3 hover:bg-zumba-lime transition-colors"
-                >
-                  Dancer Entrance <ArrowRight className="w-5 h-5" />
-                </a>
-              </div>
-            )}
+
           </motion.div>
           <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} className="relative">
             <div className="aspect-square rounded-[3rem] overflow-hidden border-4 border-white/10 group">
@@ -171,6 +188,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/auth" element={<Auth />} />
+        <Route path="/admin/auth" element={<AdminAuth />} />
         <Route path="/onboarding" element={
           <ProtectedRoute>
             <Onboarding />
@@ -199,6 +217,11 @@ export default function App() {
             <Settings />
           </ProtectedRoute>
         } />
+        <Route path="/teacher/subscription" element={
+          <ProtectedRoute allowedRoles={['TEACHER']}>
+            <TeacherSubscription />
+          </ProtectedRoute>
+        } />
 
         {/* Protected Student Routes */}
         <Route path="/student/dashboard" element={
@@ -220,6 +243,13 @@ export default function App() {
         <Route path="/student/settings" element={
           <ProtectedRoute allowedRoles={['STUDENT']}>
             <Settings />
+          </ProtectedRoute>
+        } />
+
+        {/* Protected Admin Routes */}
+        <Route path="/admin/dashboard" element={
+          <ProtectedRoute allowedRoles={['ADMIN']}>
+            <AdminDashboard />
           </ProtectedRoute>
         } />
 

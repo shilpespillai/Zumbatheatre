@@ -97,10 +97,26 @@ export const AuthProvider = ({ children }) => {
     let mockProfile = savedProfiles[stableId];
 
     if (!mockProfile) {
-      mockProfile = { id: stableId, email, role, full_name: fullName };
-      savedProfiles[stableId] = mockProfile;
-      localStorage.setItem('zumba_mock_profiles', JSON.stringify(savedProfiles));
+      mockProfile = { 
+        id: stableId, 
+        email, 
+        role, 
+        full_name: fullName,
+        payment_settings: {
+          method: 'manual', // default
+          config: {
+            bank_instructions: 'Please pay at the studio before the session.'
+          }
+        },
+        is_subscribed: false
+      };
+    } else {
+      // Allow name updates during login/entrance
+      mockProfile.full_name = fullName || mockProfile.full_name;
     }
+    
+    savedProfiles[stableId] = mockProfile;
+    localStorage.setItem('zumba_mock_profiles', JSON.stringify(savedProfiles));
     
     setUser(mockUser);
     setProfile(mockProfile);
@@ -129,7 +145,8 @@ export const AuthProvider = ({ children }) => {
     fetchProfile,
     isDevBypass,
     isTeacher: profile?.role?.toUpperCase() === 'TEACHER',
-    isStudent: profile?.role?.toUpperCase() === 'STUDENT'
+    isStudent: profile?.role?.toUpperCase() === 'STUDENT',
+    isAdmin: profile?.role?.toUpperCase() === 'ADMIN'
   };
 
   return (

@@ -14,7 +14,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import CalendarContainer from '../../components/CalendarContainer';
 
 export default function TeacherCalendar() {
-  const { user } = useAuth();
+  const { user, isDevBypass } = useAuth();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(startOfDay(new Date()));
   const [routines, setRoutines] = useState([]);
@@ -36,9 +36,24 @@ export default function TeacherCalendar() {
       fetchRoutines();
       fetchSchedules();
     }
+
+    // Storage listener to sync across tabs in mock mode
+    const handleStorageChange = (e) => {
+      if (e.key === 'zumba_mock_schedules' || e.key === 'zumba_mock_routines') {
+        fetchSchedules();
+        fetchRoutines();
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, [user, currentMonth]);
 
   const fetchRoutines = async () => {
+    if (isDevBypass) {
+      const mockRoutines = JSON.parse(localStorage.getItem('zumba_mock_routines') || '[]');
+      setRoutines(mockRoutines);
+      return;
+    }
     const { data } = await supabase
       .from('routines')
       .select('*')
@@ -49,6 +64,27 @@ export default function TeacherCalendar() {
   const fetchSchedules = async () => {
     const firstDay = startOfMonth(currentMonth);
     const lastDay = endOfMonth(currentMonth);
+
+    if (isDevBypass) {
+      const mockSchedules = JSON.parse(localStorage.getItem('zumba_mock_schedules') || '[]');
+      const mockRoutines = JSON.parse(localStorage.getItem('zumba_mock_routines') || '[]');
+      
+      const filtered = mockSchedules
+        .filter(s => {
+          const match = String(s.teacher_id).trim() === String(user.id).trim();
+          const notCancelled = s.status !== 'CANCELLED';
+          const startTime = new Date(s.start_time);
+          const inRange = startTime >= firstDay && startTime <= lastDay;
+          return match && notCancelled && inRange;
+        })
+        .map(s => ({
+          ...s,
+          routines: mockRoutines.find(r => r.id === s.routine_id) || { name: 'Routine' }
+        }));
+      
+      setSchedules(filtered);
+      return;
+    }
 
     const { data, error } = await supabase
       .from('schedules')
@@ -73,7 +109,7 @@ export default function TeacherCalendar() {
       const [hours, minutes] = formData.start_time.split(':');
       fullStartTime.setHours(parseInt(hours), parseInt(minutes));
 
-      const { error } = await supabase.from('schedules').insert([{
+      const newSchedule = {
         routine_id: formData.routine_id,
         teacher_id: user.id,
         start_time: fullStartTime.toISOString(),
@@ -81,9 +117,16 @@ export default function TeacherCalendar() {
         location: formData.location,
         max_seats: formData.max_seats,
         status: 'SCHEDULED'
-      }]);
+      };
 
-      if (error) throw error;
+      if (isDevBypass) {
+        const existing = JSON.parse(localStorage.getItem('zumba_mock_schedules') || '[]');
+        localStorage.setItem('zumba_mock_schedules', JSON.stringify([...existing, { ...newSchedule, id: 'mock-s' + Date.now() }]));
+      } else {
+        const { error } = await supabase.from('schedules').insert([newSchedule]);
+        if (error) throw error;
+      }
+
       toast.success('Class scheduled successfully!');
       setIsModalOpen(false);
       fetchSchedules();
@@ -99,7 +142,7 @@ export default function TeacherCalendar() {
       <div className="max-w-7xl mx-auto">
         <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-12 gap-6">
           <div className="flex items-center gap-4">
-            <a href="/teacher/dashboard" className="p-3 bg-white rounded-2xl border border-rose-petal/10 hover:bg-rose-petal/5 transition-all shadow-sm">
+            <a href="/teacher/dashboard" className="p-3 bg-white rounded-2xl border border-theatre-dark/15 hover:bg-rose-petal/5 transition-all shadow-sm">
               <ChevronLeft className="w-5 h-5 text-rose-bloom" />
             </a>
             <div>
@@ -117,7 +160,7 @@ export default function TeacherCalendar() {
           </button>
         </header>
 
-        <section className="bg-white/40 p-10 rounded-[3.5rem] border border-white/50 shadow-2xl shadow-rose-bloom/5">
+        <section className="bg-white/40 p-10 rounded-[3.5rem] border border-apricot/60 shadow-2xl shadow-rose-bloom/5">
           <CalendarContainer 
             role="teacher"
             events={schedules}
@@ -133,7 +176,7 @@ export default function TeacherCalendar() {
         {isModalOpen && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 sm:p-10">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsModalOpen(false)} className="absolute inset-0 bg-rose-petal/20 backdrop-blur-md" />
-            <motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} className="bg-white w-full max-w-xl p-10 rounded-[3rem] relative z-20 overflow-hidden shadow-2xl border border-rose-petal/20">
+            <motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} className="bg-white w-full max-w-xl p-10 rounded-[3rem] relative z-20 overflow-hidden shadow-2xl border border-apricot/40">
                <div className="flex justify-between items-center mb-10">
                   <div className="flex items-center gap-4">
                     <div className="p-3 bg-rose-bloom/10 rounded-2xl">
@@ -177,7 +220,7 @@ export default function TeacherCalendar() {
                         required
                         value={formData.start_time}
                         onChange={(e) => setFormData({...formData, start_time: e.target.value})}
-                        className="w-full bg-bloom-white border border-rose-petal/20 rounded-2xl py-5 px-6 focus:outline-none focus:border-rose-bloom transition-all font-bold text-zumba-dark"
+                        className="w-full bg-bloom-white border border-apricot/40 rounded-2xl py-5 px-6 focus:outline-none focus:border-rose-bloom transition-all font-bold text-zumba-dark"
                       />
                     </div>
                     <div className="space-y-2">
@@ -188,7 +231,7 @@ export default function TeacherCalendar() {
                         placeholder="Default"
                         value={formData.price}
                         onChange={(e) => setFormData({...formData, price: e.target.value})}
-                        className="w-full bg-bloom-white border border-rose-petal/20 rounded-2xl py-5 px-6 focus:outline-none focus:border-rose-bloom transition-all font-bold text-zumba-dark"
+                        className="w-full bg-bloom-white border border-apricot/40 rounded-2xl py-5 px-6 focus:outline-none focus:border-rose-bloom transition-all font-bold text-zumba-dark"
                       />
                     </div>
                   </div>

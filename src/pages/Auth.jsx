@@ -27,79 +27,87 @@ export default function Auth() {
   });
   const [role, setRole] = useState(initialRole); // 'student' or 'teacher'
 
-  // Redirect if already logged in
+  // Redirect if already logged in (Teachers/Admins)
   useEffect(() => {
     if (user && profile) {
-      const targetPath = profile.role?.toUpperCase() === 'TEACHER' ? '/teacher/dashboard' : '/student/dashboard';
-      navigate(targetPath);
+      const uRole = profile.role?.toUpperCase();
+      if (uRole === 'ADMIN') navigate('/admin/dashboard');
+      else if (uRole === 'TEACHER') navigate('/teacher/dashboard');
+      // Students (Guests) are handled separately via localStorage in their dashboard
     }
   }, [user, profile, navigate]);
 
-  const handleGoogleLogin = async () => {
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: window.location.origin + '/onboarding'
-        }
-      });
-      if (error) throw error;
-    } catch (error) {
-      toast.error(error.message);
+  const handleGuestEntrance = () => {
+    if (!formData.fullName || !formData.stageCode) {
+      toast.error('Please provide your name and the stage code.');
+      return;
     }
+    
+    setLoading(true);
+    // Guest Persistence Logic
+    const guestId = 'guest-' + Math.random().toString(36).substr(2, 9);
+    const guestProfile = {
+      id: guestId,
+      full_name: formData.fullName,
+      role: 'STUDENT',
+      stage_code: formData.stageCode.toUpperCase().trim(),
+      is_guest: true
+    };
+    
+    localStorage.setItem('zumba_guest_session', JSON.stringify(guestProfile));
+    localStorage.setItem('pending_teacher_code', guestProfile.stage_code);
+    
+    setTimeout(() => {
+      setLoading(false);
+      navigate('/student/dashboard');
+      toast.success(`Welcome to the stage, ${formData.fullName}!`);
+    }, 800);
   };
 
   const handleAuth = async (e) => {
     e.preventDefault();
+    
+    if (role === 'student') {
+      handleGuestEntrance();
+      return;
+    }
+
     setLoading(true);
 
     if (isDevBypass) {
-      if (role === 'student' && formData.stageCode) {
-        localStorage.setItem('pending_teacher_code', formData.stageCode);
+      // In mock mode, we simulate account existence check
+      const savedProfiles = JSON.parse(localStorage.getItem('zumba_mock_profiles') || '{}');
+      const existingProfile = Object.values(savedProfiles).find(p => p.email === formData.email);
+
+      if (isLogin && !existingProfile) {
+        toast.error('Instructor account not found. Please sign up first.');
+        setLoading(false);
+        return;
       }
-      if (isLogin) {
-        signInMock(formData.email, role, formData.fullName || formData.email.split('@')[0]);
-        const targetPath = role === 'teacher' ? '/teacher/dashboard' : '/student/dashboard';
-        navigate(targetPath);
-      } else {
-        signInMock(formData.email, role, formData.fullName || formData.email.split('@')[0]);
-        navigate('/onboarding');
-      }
+
+      signInMock(formData.email, 'teacher', formData.fullName || formData.email.split('@')[0]);
+      navigate(isLogin ? '/teacher/dashboard' : '/onboarding');
       setLoading(false);
       return;
     }
 
     try {
-      if (role === 'student' && formData.stageCode) {
-        localStorage.setItem('pending_teacher_code', formData.stageCode);
-      }
-
       if (isLogin) {
-        if (role === 'student') {
-          // Passwordless entrance for students
-          const { error } = await supabase.auth.signInWithOtp({ 
-            email: formData.email,
-            options: { emailRedirectTo: window.location.origin + '/onboarding' } 
-          });
-          if (error) throw error;
-          toast.success('Magic link sent! Check your email to enter the stage.');
-        } else {
-          // Standard login for teachers
-          const { error } = await supabase.auth.signInWithPassword({ email: formData.email, password: formData.password });
-          if (error) throw error;
-          toast.success('Welcome back, Instructor!');
-          navigate('/teacher/dashboard');
-        }
+        // Standard login for teachers
+        const { error } = await supabase.auth.signInWithPassword({ 
+          email: formData.email, 
+          password: formData.password 
+        });
+        if (error) throw error;
+        toast.success('Welcome back, Instructor!');
+        navigate('/teacher/dashboard');
       } else {
-        // Register logic for both
+        // Register logic for teachers
         const { data, error } = await supabase.auth.signUp({ 
           email: formData.email, 
           password: formData.password,
           options: {
-            data: {
-              full_name: formData.fullName,
-              role: role
-            },
+            data: { full_name: formData.fullName, role: 'teacher' },
             emailRedirectTo: window.location.origin + '/onboarding'
           }
         });
@@ -107,18 +115,14 @@ export default function Auth() {
         if (error) throw error;
         
         if (data.user) {
-          const { error: profileError } = await supabase
-            .from('profiles')
-            .upsert({ 
-              id: data.user.id, 
-              full_name: formData.fullName, 
-              role: role 
-            });
-          
-          if (profileError) console.error('Profile creation error:', profileError);
+          await supabase.from('profiles').upsert({ 
+            id: data.user.id, 
+            full_name: formData.fullName, 
+            role: 'teacher' 
+          });
         }
         
-        toast.success('Stage door is open! Check your email to confirm.');
+        toast.success('Instructor account created! Check your email to confirm.');
       }
     } catch (error) {
       toast.error(error.message);
@@ -129,6 +133,15 @@ export default function Auth() {
 
   return (
     <div className="min-h-screen bg-bloom-white flex items-center justify-center p-6 sm:p-10 font-sans overflow-hidden relative">
+      {/* Floating Home Button */}
+      <a 
+        href="/" 
+        className="fixed top-8 left-8 z-50 p-4 bg-white/80 backdrop-blur-md rounded-2xl border border-apricot/20 text-rose-bloom hover:bg-rose-bloom hover:text-white transition-all shadow-xl shadow-rose-bloom/5 group flex items-center gap-2"
+        title="Back to Home"
+      >
+        <Sparkles className="w-5 h-5 group-hover:rotate-12 transition-transform" />
+        <span className="text-[10px] font-black uppercase tracking-widest pr-2">Home</span>
+      </a>
       <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
         <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-rose-bloom blur-[150px] rounded-full" />
         <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-lavender blur-[150px] rounded-full" />
@@ -167,9 +180,33 @@ export default function Auth() {
           animate={{ opacity: 1, x: 0 }}
           className="bg-bloom-white/80 backdrop-blur-3xl p-10 sm:p-16 rounded-[4rem] border border-apricot/20 shadow-2xl shadow-rose-bloom/5"
         >
-          <div className="mb-12">
+          {/* Role Tab Switcher */}
+          <div className="flex p-1.5 bg-rose-bloom/5 rounded-[1.5rem] border border-rose-bloom/10 mb-10">
+            <button
+              onClick={() => setRole('student')}
+              className={`flex-1 py-3 px-6 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                role === 'student' 
+                ? 'bg-rose-bloom text-white shadow-lg shadow-rose-bloom/20' 
+                : 'text-rose-bloom/40 hover:text-rose-bloom'
+              }`}
+            >
+              Student
+            </button>
+            <button
+              onClick={() => setRole('teacher')}
+              className={`flex-1 py-3 px-6 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                role === 'teacher' 
+                ? 'bg-rose-bloom text-white shadow-lg shadow-rose-bloom/20' 
+                : 'text-rose-bloom/40 hover:text-rose-bloom'
+              }`}
+            >
+              Teacher
+            </button>
+          </div>
+
+          <div className="mb-10">
             <h2 className="text-4xl font-black text-theatre-dark mb-3">
-              {role === 'teacher' ? (isLogin ? 'Instructor Login.' : 'Instructor Join.') : 'Student Entrance.'}
+              {role === 'teacher' ? (isLogin ? 'Theatre Entrance.' : 'Theatre Join.') : 'Theatre Entrance.'}
             </h2>
             <p className="font-bold text-rose-bloom/40 uppercase tracking-widest text-xs">
               {role === 'teacher' ? 'Access your stage command center' : 'Step onto your private stage'}
@@ -177,7 +214,8 @@ export default function Auth() {
           </div>
 
           <form onSubmit={handleAuth} className="space-y-8">
-            {!isLogin && (
+            {/* Full Name - Required for Guest Student and Instructor Sign Up */}
+            {(role === 'student' || (role === 'teacher' && !isLogin)) && (
               <div className="space-y-3">
                 <label className="text-[10px] font-black uppercase tracking-widest text-[#4A3B3E]/40 ml-2">Full Name</label>
                 <div className="relative">
@@ -194,39 +232,43 @@ export default function Auth() {
               </div>
             )}
 
-            <div className="space-y-3">
-              <label className="text-[10px] font-black uppercase tracking-widest text-[#4A3B3E]/40 ml-2">Email Address</label>
-              <div className="relative">
-                <input 
-                  type="email" 
-                  value={formData.email}
-                  onChange={(e) => setFormData({...formData, email: e.target.value})}
-                  className="w-full bg-bloom-white border border-rose-petal/20 rounded-2xl py-5 px-6 pl-14 focus:outline-none focus:border-rose-bloom transition-all font-bold text-theatre-dark"
-                  placeholder="name@example.com"
-                  required
-                />
-                <Mail className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-rose-bloom/40" />
-              </div>
-            </div>
-
-            {(role === 'teacher' || !isLogin) && (
-              <div className="space-y-3">
-                <label className="text-[10px] font-black uppercase tracking-widest text-[#4A3B3E]/40 ml-2">Secure Password</label>
-                <div className="relative">
-                  <input 
-                    type="password" 
-                    value={formData.password}
-                    onChange={(e) => setFormData({...formData, password: e.target.value})}
-                    className="w-full bg-bloom-white border border-rose-petal/20 rounded-2xl py-5 px-6 pl-14 focus:outline-none focus:border-rose-bloom transition-all font-bold text-theatre-dark"
-                    placeholder="••••••••"
-                    required
-                  />
-                  <Lock className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-rose-bloom/40" />
+            {/* Email & Password - Only for Teachers */}
+            {role === 'teacher' && (
+              <>
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-[#4A3B3E]/40 ml-2">Email Address</label>
+                  <div className="relative">
+                    <input 
+                      type="email" 
+                      value={formData.email}
+                      onChange={(e) => setFormData({...formData, email: e.target.value})}
+                      className="w-full bg-bloom-white border border-rose-petal/20 rounded-2xl py-5 px-6 pl-14 focus:outline-none focus:border-rose-bloom transition-all font-bold text-theatre-dark"
+                      placeholder="name@example.com"
+                      required
+                    />
+                    <Mail className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-rose-bloom/40" />
+                  </div>
                 </div>
-              </div>
+
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-[#4A3B3E]/40 ml-2">Secure Password</label>
+                  <div className="relative">
+                    <input 
+                      type="password" 
+                      value={formData.password}
+                      onChange={(e) => setFormData({...formData, password: e.target.value})}
+                      className="w-full bg-bloom-white border border-rose-petal/20 rounded-2xl py-5 px-6 pl-14 focus:outline-none focus:border-rose-bloom transition-all font-bold text-theatre-dark"
+                      placeholder="••••••••"
+                      required
+                    />
+                    <Lock className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-rose-bloom/40" />
+                  </div>
+                </div>
+              </>
             )}
 
-            {role === 'student' && isLogin && (
+            {/* Stage Code - Only for Students */}
+            {role === 'student' && (
               <div className="space-y-3">
                 <label className="text-[10px] font-black uppercase tracking-widest text-rose-bloom ml-2 font-black">Stage Code</label>
                 <div className="relative">
@@ -244,32 +286,6 @@ export default function Auth() {
               </div>
             )}
 
-            {!isLogin && (
-              <div className="space-y-3">
-                <label className="text-[10px] font-black uppercase tracking-widest text-[#4A3B3E]/40 ml-2">Tell us who you are</label>
-                <div className="grid grid-cols-2 gap-4">
-                  <button
-                    type="button"
-                    onClick={() => setRole('student')}
-                    className={`py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] transition-all border ${
-                      role === 'student' ? 'bg-rose-bloom text-white border-rose-bloom shadow-lg shadow-rose-bloom/20' : 'bg-white text-theatre-dark/40 border-rose-petal/10 hover:bg-rose-petal/5'
-                    }`}
-                  >
-                    Dancer
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setRole('teacher')}
-                    className={`py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] transition-all border ${
-                      role === 'teacher' ? 'bg-theatre-dark text-white border-theatre-dark shadow-lg' : 'bg-white text-theatre-dark/40 border-rose-petal/10 hover:bg-rose-petal/5'
-                    }`}
-                  >
-                    Instructor
-                  </button>
-                </div>
-              </div>
-            )}
-
             <button 
               type="submit" 
               disabled={loading}
@@ -277,38 +293,31 @@ export default function Auth() {
             >
               {loading ? <div className="w-6 h-6 border-4 border-white/20 border-t-white rounded-full animate-spin" /> : (
                 <>
-                  {isLogin ? 'Enter Theatre' : 'Join Theatre'}
+                  {role === 'student' ? 'Enter Theatre' : (isLogin ? 'Enter Theatre' : 'Join Theatre')}
                   <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </>
               )}
             </button>
           </form>
 
-          <div className="my-10 flex items-center gap-4">
-            <div className="h-px flex-1 bg-rose-petal/20" />
-            <span className="text-[10px] font-black uppercase tracking-widest text-[#4A3B3E]/20">Modern Access</span>
-            <div className="h-px flex-1 bg-rose-petal/20" />
-          </div>
-
-          {role === 'teacher' && (
-            <div className="grid grid-cols-1">
+          <div className="mt-12 text-center space-y-4 flex flex-col items-center">
+            {role === 'teacher' && (
               <button 
-                onClick={handleGoogleLogin}
-                className="flex items-center justify-center gap-3 py-5 bg-white rounded-2xl border border-rose-petal/10 hover:bg-rose-petal/5 transition-all text-xs font-bold text-theatre-dark/60 shadow-sm"
+                type="button"
+                onClick={() => setIsLogin(!isLogin)}
+                className="text-[10px] font-black uppercase tracking-[0.2em] text-[#4A3B3E]/40 hover:text-rose-bloom transition-colors"
               >
-                <Chrome className="w-5 h-5 text-[#4285F4]" /> Continue with Google
+                {isLogin ? "Need a Theatre Entrance? Step inside" : "Already leading? Sign back in"}
               </button>
-            </div>
-          )}
+            )}
 
-          {role === 'teacher' && (
-            <button 
-              onClick={() => setIsLogin(!isLogin)}
-              className="w-full text-center mt-12 text-[10px] font-black uppercase tracking-[0.2em] text-[#4A3B3E]/40 hover:text-rose-bloom transition-colors"
+            <a 
+              href="/"
+              className="text-[10px] font-black uppercase tracking-[0.2em] text-rose-bloom/40 hover:text-rose-bloom transition-colors pt-4 border-t border-apricot/10 w-32"
             >
-              {isLogin ? "Need an Instructor Entrance? Step inside" : "Already leading? Sign back in"}
-            </button>
-          )}
+              ← Back to Theatre
+            </a>
+          </div>
         </motion.div>
       </div>
     </div>

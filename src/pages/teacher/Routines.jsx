@@ -138,7 +138,7 @@ export default function Routines() {
       <div className="max-w-7xl mx-auto">
         <header className="flex justify-between items-center mb-12">
           <div className="flex items-center gap-6">
-             <a href="/teacher/dashboard" className="p-4 bg-white rounded-2xl border border-apricot/20 hover:bg-apricot/5 transition-all shadow-sm">
+             <a href="/teacher/dashboard" className="p-4 bg-white rounded-2xl border border-apricot/50 hover:bg-apricot/5 transition-all shadow-sm">
                <ChevronLeft className="w-5 h-5 text-rose-bloom" />
              </a>
              <div>
@@ -164,7 +164,7 @@ export default function Routines() {
             <div className="w-10 h-10 border-4 border-rose-bloom/20 border-t-rose-bloom rounded-full animate-spin" />
           </div>
         ) : routines.length === 0 ? (
-          <div className="glass p-20 rounded-[4rem] text-center border-dashed border-2 border-apricot/20">
+          <div className="glass p-20 rounded-[4rem] text-center border-dashed border-2 border-apricot/40">
              <Package className="w-20 h-20 text-rose-bloom/10 mx-auto mb-6" />
              <h3 className="text-2xl font-black mb-2 text-theatre-dark">No Routines Yet</h3>
              <p className="text-theatre-dark/40 max-w-sm mx-auto font-medium">Create your first class template using the button above to start scheduling your sessions.</p>
@@ -178,14 +178,14 @@ export default function Routines() {
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.9 }}
-                  key={routine.id}                   className="glass p-8 rounded-[3rem] relative group border border-apricot/20 hover:border-rose-bloom transition-all duration-500 hover:-translate-y-2 shadow-xl shadow-rose-bloom/5"
+                  key={routine.id}                   className="glass p-8 rounded-[3rem] relative group border border-apricot/50 hover:border-rose-bloom transition-all duration-500 hover:-translate-y-2 shadow-xl shadow-rose-bloom/5"
                 >
                   <div className="absolute top-6 right-6 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                     <button onClick={() => openEdit(routine)} className="p-3 bg-white/60 rounded-xl hover:bg-white text-theatre-dark/40 hover:text-rose-bloom border border-apricot/10 transition-all"><Edit2 className="w-4 h-4" /></button>
-                     <button onClick={() => deleteRoutine(routine.id)} className="p-3 bg-white/60 rounded-xl hover:bg-red-50 text-theatre-dark/40 hover:text-red-500 border border-apricot/10 transition-all"><Trash2 className="w-4 h-4" /></button>
+                     <button onClick={() => openEdit(routine)} className="p-3 bg-white/60 rounded-xl hover:bg-white text-theatre-dark/40 hover:text-rose-bloom border border-apricot/30 transition-all"><Edit2 className="w-4 h-4" /></button>
+                     <button onClick={() => deleteRoutine(routine.id)} className="p-3 bg-white/60 rounded-xl hover:bg-red-50 text-theatre-dark/40 hover:text-red-500 border border-apricot/30 transition-all"><Trash2 className="w-4 h-4" /></button>
                   </div>
 
-                  <div className="w-16 h-16 bg-gradient-to-br from-rose-bloom/10 to-apricot/10 rounded-[2rem] flex items-center justify-center mb-8 border border-apricot/10 group-hover:rotate-6 transition-transform">
+                  <div className="w-16 h-16 bg-gradient-to-br from-rose-bloom/10 to-apricot/10 rounded-[2rem] flex items-center justify-center mb-8 border border-apricot/30 group-hover:rotate-6 transition-transform">
                     <Package className="w-7 h-7 text-rose-bloom" />
                   </div>
 
@@ -223,7 +223,7 @@ export default function Routines() {
                 initial={{ opacity: 0, scale: 0.9, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                className="glass w-full max-w-xl p-10 rounded-[3rem] relative z-20 border border-white/10"
+                className="glass w-full max-w-xl p-10 rounded-[3rem] relative z-20 border border-white/20"
               >
                 <div className="flex justify-between items-center mb-10">
                    <h2 className="text-3xl font-black">{editingRoutine ? 'Edit Routine' : 'New Routine'}</h2>
@@ -239,7 +239,7 @@ export default function Routines() {
                       placeholder="e.g. Zumba High Intensity"
                       value={formData.name}
                       onChange={(e) => setFormData({...formData, name: e.target.value})}
-                      className="w-full bg-white/5 border border-white/10 rounded-2xl py-5 px-6 focus:outline-none focus:border-purple-500 transition-all font-bold"
+                      className="w-full bg-white/5 border border-white/20 rounded-2xl py-5 px-6 focus:outline-none focus:border-purple-500 transition-all font-bold"
                     />
                   </div>
 
@@ -250,7 +250,7 @@ export default function Routines() {
                       rows={3}
                       value={formData.description}
                       onChange={(e) => setFormData({...formData, description: e.target.value})}
-                      className="w-full bg-white/5 border border-white/10 rounded-2xl py-5 px-6 focus:outline-none focus:border-purple-500 transition-all font-bold resize-none"
+                      className="w-full bg-white/5 border border-white/20 rounded-2xl py-5 px-6 focus:outline-none focus:border-purple-500 transition-all font-bold resize-none"
                     />
                   </div>
 
@@ -264,7 +264,7 @@ export default function Routines() {
                           required
                           value={formData.duration_minutes}
                           onChange={(e) => setFormData({...formData, duration_minutes: parseInt(e.target.value)})}
-                          className="w-full bg-white/5 border border-white/10 rounded-2xl py-5 pl-14 pr-6 focus:outline-none focus:border-purple-500 transition-all font-bold"
+                          className="w-full bg-white/5 border border-white/20 rounded-2xl py-5 pl-14 pr-6 focus:outline-none focus:border-purple-500 transition-all font-bold"
                         />
                       </div>
                     </div>
@@ -278,7 +278,7 @@ export default function Routines() {
                           required
                           value={formData.default_price}
                           onChange={(e) => setFormData({...formData, default_price: parseFloat(e.target.value)})}
-                          className="w-full bg-white/5 border border-white/10 rounded-2xl py-5 pl-14 pr-6 focus:outline-none focus:border-purple-500 transition-all font-bold"
+                          className="w-full bg-white/5 border border-white/20 rounded-2xl py-5 pl-14 pr-6 focus:outline-none focus:border-purple-500 transition-all font-bold"
                         />
                       </div>
                     </div>

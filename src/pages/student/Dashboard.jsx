@@ -12,7 +12,13 @@ import { toast } from 'sonner';
 import CalendarContainer from '../../components/CalendarContainer';
 
 export default function StudentDashboard() {
-  const { profile, signOut, isDevBypass, fetchProfile } = useAuth();
+  const { profile: authProfile, signOut, isDevBypass, fetchProfile } = useAuth();
+  const [guestProfile, setGuestProfile] = useState(() => {
+    return JSON.parse(localStorage.getItem('zumba_guest_session') || 'null');
+  });
+  
+  const profile = authProfile || guestProfile;
+  
   const [allSchedules, setAllSchedules] = useState([]);
   const [loading, setLoading] = useState(true);
   const [linkingCode, setLinkingCode] = useState('');
@@ -28,12 +34,46 @@ export default function StudentDashboard() {
   const navigate = useNavigate();
 
   useEffect(() => {
+    // If we have a guest session but no linked_teacher_id, try to resolve it from the stage_code
+    if (guestProfile && !guestProfile.linked_teacher_id && guestProfile.stage_code) {
+      resolveGuestTeacher(guestProfile.stage_code);
+    }
+  }, [guestProfile]);
+
+  const resolveGuestTeacher = async (code) => {
+    try {
+      let teacher = null;
+      if (isDevBypass) {
+        const savedProfiles = JSON.parse(localStorage.getItem('zumba_mock_profiles') || '{}');
+        teacher = Object.values(savedProfiles).find(p => 
+          p.invite_code?.toUpperCase() === code.toUpperCase().trim()
+        );
+      } else {
+        const { data } = await supabase
+          .from('profiles')
+          .select('id, full_name')
+          .eq('invite_code', code.toUpperCase().trim())
+          .single();
+        teacher = data;
+      }
+
+      if (teacher) {
+        const updated = { ...guestProfile, linked_teacher_id: teacher.id };
+        setGuestProfile(updated);
+        localStorage.setItem('zumba_guest_session', JSON.stringify(updated));
+      }
+    } catch (err) {
+      console.error('Guest resolve teacher error:', err);
+    }
+  };
+
+  useEffect(() => {
     fetchAllAvailableSchedules();
     if (profile?.linked_teacher_id) {
       fetchTeacherProfile(profile.linked_teacher_id);
-    } else {
+    } else if (!profile?.is_guest) {
       setTeacherProfile(null);
-      // Auto-link if code exists in localStorage from Auth
+      // Auto-link if code exists in localStorage from Auth (for legacy or logged in flow)
       const pendingCode = localStorage.getItem('pending_teacher_code');
       if (pendingCode && profile?.role?.toUpperCase() === 'STUDENT') {
         handleAutoLink(pendingCode);
@@ -42,14 +82,17 @@ export default function StudentDashboard() {
 
     // Storage listener to sync across tabs in mock mode
     const handleStorageChange = (e) => {
-      if (e.key === 'zumba_mock_schedules' || e.key === 'zumba_mock_routines' || e.key === 'zumba_mock_profiles') {
+      if (e.key === 'zumba_mock_schedules' || e.key === 'zumba_mock_routines' || e.key === 'zumba_mock_profiles' || e.key === 'zumba_guest_session') {
+        if (e.key === 'zumba_guest_session') {
+           setGuestProfile(JSON.parse(e.newValue || 'null'));
+        }
         fetchAllAvailableSchedules();
         if (profile?.linked_teacher_id) fetchTeacherProfile(profile.linked_teacher_id);
       }
     };
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
-  }, [profile?.linked_teacher_id, profile?.role]);
+  }, [profile?.linked_teacher_id, profile?.role, guestProfile?.id]);
 
   const handleAutoLink = async (code) => {
     if (linking) return;
@@ -227,7 +270,7 @@ export default function StudentDashboard() {
       .from('bookings')
       .select('*, schedules(start_time, routines(name))')
       .eq('student_id', profile.id)
-      .in('payment_status', ['PAID', 'PENDING']);
+      .in('payment_status', ['PAID', 'PENDING', 'VOID']);
 
     if (error) {
       console.error('Error fetching my bookings:', error);
@@ -302,33 +345,33 @@ export default function StudentDashboard() {
           <div className="flex gap-4">
              <button 
               onClick={() => navigate('/student/bookings')}
-              className="px-8 py-5 bg-white border border-apricot/20 text-rose-bloom rounded-[2rem] font-black uppercase tracking-widest text-xs shadow-sm flex items-center gap-3 hover:-translate-y-1 transition-all"
+              className="px-8 py-5 bg-white border border-apricot/40 text-rose-bloom rounded-[2rem] font-black uppercase tracking-widest text-xs shadow-sm flex items-center gap-3 hover:-translate-y-1 transition-all"
              >
                 <Ticket className="w-5 h-5 text-rose-bloom" />
                 My Bookings
              </button>
              <a 
                href="/student/settings" 
-               className="p-5 bg-white rounded-2xl border border-apricot/20 hover:bg-apricot/5 transition-all shadow-sm flex items-center justify-center"
+               className="p-5 bg-white rounded-2xl border border-apricot/40 hover:bg-apricot/5 transition-all shadow-sm flex items-center justify-center"
                title="Settings"
              >
                 <SettingsIcon className="w-6 h-6 text-rose-bloom" />
              </a>
              <button 
                onClick={signOut}
-               className="p-5 bg-white rounded-2xl border border-rose-petal/10 hover:bg-rose-petal/5 transition-all shadow-sm flex items-center justify-center"
+               className="p-5 bg-white rounded-2xl border border-theatre-dark/20 hover:bg-rose-petal/5 transition-all shadow-sm flex items-center justify-center"
                title="Sign Out"
              >
                 <LogOut className="w-6 h-6 text-rose-bloom" />
              </button>
-             <button className="p-5 bg-white rounded-2xl border border-rose-petal/10 hover:bg-rose-petal/5 transition-all shadow-sm">
+             <button className="p-5 bg-white rounded-2xl border border-theatre-dark/20 hover:bg-rose-petal/5 transition-all shadow-sm">
                 <Heart className="w-6 h-6 text-rose-bloom" />
              </button>
           </div>
         </header>
 
         {!profile?.linked_teacher_id ? (
-          <div className="flex flex-col items-center justify-center py-32 bg-white/40 backdrop-blur-xl rounded-[4rem] border-2 border-dashed border-apricot/20">
+          <div className="flex flex-col items-center justify-center py-32 bg-white/40 backdrop-blur-xl rounded-[4rem] border-2 border-dashed border-apricot/50">
              <div className="w-24 h-24 bg-rose-bloom/10 rounded-full flex items-center justify-center mb-10">
                 <Lock className="w-10 h-10 text-rose-bloom shadow-glow" />
              </div>
@@ -341,7 +384,7 @@ export default function StudentDashboard() {
                   placeholder="CODE (e.g. ZUMBA-1234)"
                   value={linkingCode}
                   onChange={(e) => setLinkingCode(e.target.value)}
-                  className="w-full bg-white border border-apricot/30 rounded-2xl py-6 px-8 focus:outline-none focus:border-rose-bloom transition-all font-mono font-black text-center text-xl tracking-widest text-rose-bloom shadow-xl shadow-rose-bloom/5 uppercase"
+                  className="w-full bg-white border border-apricot/60 rounded-2xl py-6 px-8 focus:outline-none focus:border-rose-bloom transition-all font-mono font-black text-center text-xl tracking-widest text-rose-bloom shadow-xl shadow-rose-bloom/5 uppercase"
                 />
                 <button 
                   disabled={linking || !linkingCode}
@@ -354,10 +397,10 @@ export default function StudentDashboard() {
           </div>
         ) : (
           <div className="grid grid-cols-1 xl:grid-cols-4 gap-12 items-start">
-            <section className="xl:col-span-3 bg-bloom-white/80 p-10 rounded-[3.5rem] border border-apricot/40 shadow-2xl shadow-rose-bloom/5">
+            <section className="xl:col-span-3 bg-bloom-white/80 p-10 rounded-[3.5rem] border border-apricot/60 shadow-2xl shadow-rose-bloom/5">
               <div className="flex justify-between items-center mb-10">
                  <h3 className="text-2xl font-black text-rose-bloom tracking-tight capitalize">{teacherProfile?.full_name || 'Instructor'}'s Class</h3>
-                 <div className="p-3 bg-white rounded-xl border border-rose-petal/10 text-[10px] font-black text-rose-bloom/60 uppercase tracking-widest">
+                 <div className="p-3 bg-white rounded-xl border border-theatre-dark/20 text-[10px] font-black text-rose-bloom/60 uppercase tracking-widest">
                    Private Access
                  </div>
               </div>
@@ -397,7 +440,7 @@ export default function StudentDashboard() {
                             </div>
                           ) : (
                             <button 
-                              onClick={() => navigate(`/student/book/${slot.id}`)}
+                              onClick={() => navigate(`/student/book/${profile.linked_teacher_id}?sessionId=${slot.id}`)}
                               className="w-full py-4 bg-theatre-dark text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-2 hover:bg-rose-bloom transition-colors"
                             >
                               <Ticket className="w-4 h-4" /> Pay
@@ -406,7 +449,7 @@ export default function StudentDashboard() {
                         </div>
                       ))
                   ) : (
-                    <div className="py-20 text-center text-theatre-dark/20 font-black uppercase tracking-[0.2em] text-[10px] border-2 border-dashed border-apricot/10 rounded-[2rem]">
+                    <div className="py-20 text-center text-theatre-dark/20 font-black uppercase tracking-[0.2em] text-[10px] border-2 border-dashed border-apricot/40 rounded-[2rem]">
                       No sessions today
                     </div>
                   )}
@@ -435,7 +478,7 @@ export default function StudentDashboard() {
                       await fetchProfile();
                     }
                   }}
-                  className="w-full py-4 bg-red-500/5 border border-red-500/10 rounded-2xl text-red-500 font-black uppercase tracking-widest text-[10px] hover:bg-red-500 hover:text-white transition-all flex items-center justify-center gap-2"
+                  className="w-full py-4 bg-red-500/5 border border-red-500/30 rounded-2xl text-red-500 font-black uppercase tracking-widest text-[10px] hover:bg-red-500 hover:text-white transition-all flex items-center justify-center gap-2"
                  >
                    <X className="w-4 h-4" /> Disconnect Stage
                  </button>
@@ -458,14 +501,14 @@ export default function StudentDashboard() {
 
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
               <div className="lg:col-span-1 space-y-8">
-                <div className="bg-white/70 backdrop-blur-3xl p-8 rounded-[3rem] border border-rose-petal/10 shadow-xl shadow-rose-bloom/5 relative overflow-hidden group">
+                <div className="bg-white/70 backdrop-blur-3xl p-8 rounded-[3rem] border border-theatre-dark/20 shadow-xl shadow-rose-bloom/5 relative overflow-hidden group">
                   <div className="absolute -right-6 -top-6 w-24 h-24 bg-rose-bloom/5 rounded-full blur-2xl group-hover:bg-rose-bloom/10 transition-all" />
                   <CalendarIcon className="w-10 h-10 text-rose-bloom mb-6 opacity-40" />
                   <div className="text-[10px] font-black text-rose-bloom uppercase tracking-widest mb-1">Total Sessions</div>
                   <div className="text-4xl font-black text-theatre-dark">{studentStats.totalSessions}</div>
                 </div>
 
-                <div className="bg-white/70 backdrop-blur-3xl p-10 rounded-[3rem] border border-rose-petal/10 shadow-2xl shadow-rose-bloom/5">
+                <div className="bg-white/70 backdrop-blur-3xl p-10 rounded-[3rem] border border-theatre-dark/20 shadow-2xl shadow-rose-bloom/5">
                   <div className="flex justify-between items-center mb-8">
                     <h3 className="text-xl font-black text-theatre-dark">Routine Mix</h3>
                     <PieChart className="w-5 h-5 text-rose-bloom opacity-40" />
@@ -488,7 +531,7 @@ export default function StudentDashboard() {
                 </div>
               </div>
 
-              <div className="lg:col-span-3 bg-white/70 backdrop-blur-3xl p-10 rounded-[3.5rem] border border-rose-petal/10 shadow-2xl shadow-rose-bloom/5 relative overflow-hidden">
+              <div className="lg:col-span-3 bg-white/70 backdrop-blur-3xl p-10 rounded-[3.5rem] border border-theatre-dark/20 shadow-2xl shadow-rose-bloom/5 relative overflow-hidden">
                 <div className="flex justify-between items-center mb-16">
                    <div>
                       <h3 className="text-2xl font-black text-theatre-dark mb-1">Rhythm Trends</h3>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../api/supabaseClient';
-import { Calendar as CalendarIcon, Users, TrendingUp, Plus, LogOut, Settings as SettingsIcon, Package, Sparkles, X, Save, Clock, MapPin, Trash2, ShieldCheck, ArrowRight } from 'lucide-react';
+import { Calendar as CalendarIcon, Users, TrendingUp, Plus, LogOut, Settings as SettingsIcon, Package, Sparkles, X, Save, Clock, MapPin, Trash2, ShieldCheck, ArrowRight, RefreshCw, Copy, Lock } from 'lucide-react';
 import CalendarContainer from '../../components/CalendarContainer';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -11,9 +11,12 @@ export default function TeacherDashboard() {
   const { profile, signOut, user, isDevBypass } = useAuth();
   const [schedules, setSchedules] = useState([]);
   const [routines, setRoutines] = useState([]);
+  const [bookings, setBookings] = useState([]);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false);
+  const [selectedSessionForAttendance, setSelectedSessionForAttendance] = useState(null);
   const [modalLoading, setModalLoading] = useState(false);
   const [isAddingRoutine, setIsAddingRoutine] = useState(false);
   const [newRoutineData, setNewRoutineData] = useState({
@@ -35,19 +38,23 @@ export default function TeacherDashboard() {
     if (user) {
         fetchRoutines();
         fetchAllSchedules();
+        fetchBookings();
         ensureInviteCode();
     }
 
     // Storage listener to sync across tabs in mock mode
     const handleStorageChange = (e) => {
-      if (e.key === 'zumba_mock_schedules' || e.key === 'zumba_mock_routines') {
+      if (e.key === 'zumba_mock_schedules' || e.key === 'zumba_mock_routines' || e.key === 'zumba_mock_bookings') {
         fetchAllSchedules();
         fetchRoutines();
+        fetchBookings();
       }
     };
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
   }, [user, profile]);
+
+
 
   const fetchRoutines = async () => {
     if (isDevBypass) {
@@ -99,19 +106,51 @@ export default function TeacherDashboard() {
         await supabase.from('profiles').update({ invite_code: newCode }).eq('id', user.id);
       }
       setInviteCode(newCode);
+      return newCode;
     } catch (e) {
       console.error('Code generation failed', e);
+      throw e;
     }
   };
+
+  const handleRefreshInviteCode = async () => {
+    const toastId = toast.loading('Refreshing stage code...');
+    try {
+      const newCode = `ZUMBA-${profile.full_name?.split(' ')[0].toUpperCase() || 'STAGE'}-${Math.floor(1000 + Math.random() * 9000)}`;
+      
+      if (isDevBypass) {
+        const mockProfile = JSON.parse(localStorage.getItem('zumba_mock_profile') || '{}');
+        mockProfile.invite_code = newCode;
+        localStorage.setItem('zumba_mock_profile', JSON.stringify(mockProfile));
+        
+        const savedProfiles = JSON.parse(localStorage.getItem('zumba_mock_profiles') || '{}');
+        if (savedProfiles[user.id]) {
+          savedProfiles[user.id].invite_code = newCode;
+          localStorage.setItem('zumba_mock_profiles', JSON.stringify(savedProfiles));
+        }
+      } else {
+        const { error } = await supabase.from('profiles').update({ invite_code: newCode }).eq('id', user.id);
+        if (error) throw error;
+      }
+      
+      setInviteCode(newCode);
+      toast.success('Stage code refreshed!', { id: toastId });
+    } catch (error) {
+      toast.error('Failed to refresh code', { id: toastId });
+    }
+  };
+
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text);
+    toast.success('Code copied to clipboard!');
+  };
   const fetchAllSchedules = async () => {
+    let schedulesData = [];
     if (isDevBypass) {
         const mockSchedules = JSON.parse(localStorage.getItem('zumba_mock_schedules') || '[]');
         const mockRoutines = JSON.parse(localStorage.getItem('zumba_mock_routines') || '[]');
         
-        console.log('[Sync Debug] Teacher ID:', user.id);
-        console.log('[Sync Debug] Total mock schedules in storage (Teacher view):', mockSchedules.length);
-
-        const filteredAndEnriched = mockSchedules
+        schedulesData = mockSchedules
             .filter(s => {
                 const match = String(s.teacher_id).trim() === String(user.id).trim();
                 const notCancelled = s.status !== 'CANCELLED';
@@ -121,22 +160,43 @@ export default function TeacherDashboard() {
                 ...s,
                 routines: mockRoutines.find(r => r.id === s.routine_id) || { name: 'Routine' }
             }));
-            
-        console.log('[Sync Debug] Found schedules for this teacher (Teacher view):', filteredAndEnriched.length);
+    } else {
+        const { data, error } = await supabase
+          .from('schedules')
+          .select('*, routines(name, duration_minutes)')
+          .eq('teacher_id', user.id);
         
-        setSchedules(filteredAndEnriched);
-        setLoading(false);
-        return;
+        if (error) console.error('Fetch error:', error);
+        schedulesData = data || [];
     }
-    console.log('Fetching teacher schedules for:', user.id);
-    const { data, error } = await supabase
-      .from('schedules')
-      .select('*, routines(name, duration_minutes)')
-      .eq('teacher_id', user.id);
-    
-    if (error) console.error('Fetch error:', error);
-    setSchedules(data || []);
+
+    setSchedules(schedulesData);
+    fetchBookings(schedulesData);
     setLoading(false);
+  };
+
+  const fetchBookings = async (currentSchedules) => {
+    const activeSchedules = currentSchedules || schedules;
+    if (isDevBypass) {
+      const mockBookings = JSON.parse(localStorage.getItem('zumba_mock_bookings') || '[]');
+      const mockProfiles = JSON.parse(localStorage.getItem('zumba_mock_profiles') || '{}');
+      
+      const enriched = mockBookings.map(b => ({
+        ...b,
+        student: mockProfiles[b.student_id] || { full_name: 'Unknown Student' }
+      }));
+      setBookings(enriched);
+      return;
+    }
+
+    if (!activeSchedules || activeSchedules.length === 0) return;
+
+    const { data } = await supabase
+      .from('bookings')
+      .select('*, student:student_id(full_name, avatar_url, email)')
+      .in('schedule_id', activeSchedules.map(s => s.id));
+    
+    setBookings(data || []);
   };
 
   const handleQuickRoutineSubmit = async (e) => {
@@ -251,18 +311,66 @@ export default function TeacherDashboard() {
               <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-theatre-dark/90 mt-1">Teacher Dashboard</p>
             </div>
           </div>
-          <div className="flex gap-4">
-             <a href="/teacher/settings" className="p-4 bg-bloom-white rounded-2xl border border-apricot/40 hover:bg-apricot/5 transition-all shadow-sm">
-               <SettingsIcon className="w-5 h-5 text-rose-bloom" />
+          <div className="flex gap-4 items-center">
+             <div className="flex items-center gap-2 bg-white/50 border border-apricot/40 px-4 py-2 rounded-2xl shadow-sm group hover:border-rose-bloom transition-all">
+                <div className="flex flex-col items-start mr-4">
+                  <span className="text-[8px] font-black uppercase tracking-widest text-theatre-dark/30 leading-none mb-1">Stage Code</span>
+                  <span className="text-xs font-black text-rose-bloom font-mono tracking-wider">{inviteCode || '...'}</span>
+                </div>
+                <div className="flex gap-1">
+                  <button 
+                    onClick={() => copyToClipboard(inviteCode)}
+                    className="p-2 hover:bg-rose-bloom/10 rounded-lg text-theatre-dark/40 hover:text-rose-bloom transition-all"
+                    title="Copy Code"
+                  >
+                    <Copy className="w-4 h-4" />
+                  </button>
+                  <button 
+                    onClick={handleRefreshInviteCode}
+                    className="p-2 hover:bg-rose-bloom/10 rounded-lg text-theatre-dark/40 hover:text-rose-bloom transition-all"
+                    title="Refresh Code"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                  </button>
+                </div>
+             </div>
+             
+             <a href="/teacher/settings" className="p-4 bg-bloom-white rounded-2xl border border-apricot/60 hover:bg-apricot/5 transition-all shadow-sm group">
+               <SettingsIcon className="w-5 h-5 text-rose-bloom group-hover:rotate-45 transition-transform" />
              </a>
-             <button onClick={signOut} className="p-4 bg-white rounded-2xl border border-rose-petal/10 hover:bg-rose-petal/5 transition-all shadow-sm">
+             <button onClick={signOut} className="p-4 bg-white rounded-2xl border border-theatre-dark/20 hover:bg-rose-petal/5 transition-all shadow-sm">
                <LogOut className="w-5 h-5 text-rose-bloom" />
              </button>
           </div>
         </header>
 
-        <div className="grid grid-cols-1 xl:grid-cols-4 gap-12 items-start">
-          <section className="xl:col-span-3 bg-bloom-white/80 p-10 rounded-[3.5rem] border border-apricot/40 shadow-2xl shadow-rose-bloom/5">
+        {!profile?.is_subscribed && (
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-12 p-8 bg-gradient-to-r from-theatre-dark to-[#2A2426] rounded-[3rem] text-white flex flex-col md:flex-row items-center justify-between gap-8 border border-white/10 shadow-2xl relative overflow-hidden group"
+          >
+            <div className="absolute top-0 right-0 w-64 h-64 bg-rose-bloom/10 blur-[100px] rounded-full -mr-20 -mt-20 group-hover:bg-rose-bloom/20 transition-all duration-700" />
+            <div className="flex items-center gap-6 relative z-10">
+              <div className="w-16 h-16 bg-rose-bloom/20 rounded-2xl flex items-center justify-center border border-rose-bloom/30">
+                <ShieldCheck className="w-8 h-8 text-rose-bloom" />
+              </div>
+              <div>
+                <h3 className="text-xl font-black mb-1 italic">Stage Not Activated</h3>
+                <p className="text-xs text-white/60 font-medium">Please activate your platform subscription to manage routines and take bookings.</p>
+              </div>
+            </div>
+            <a 
+              href="/teacher/subscription"
+              className="px-8 py-4 bg-rose-bloom text-white rounded-2xl font-black uppercase tracking-widest text-[10px] flex items-center gap-2 hover:scale-105 active:scale-95 transition-all shadow-xl shadow-rose-bloom/20 relative z-10"
+            >
+              Activate Now <ArrowRight className="w-4 h-4" />
+            </a>
+          </motion.div>
+        )}
+
+        <div className={`grid grid-cols-1 xl:grid-cols-4 gap-12 items-start transition-all duration-700 ${!profile?.is_subscribed ? 'blur-sm pointer-events-none opacity-40 grayscale' : ''}`}>
+          <section className="xl:col-span-3 bg-bloom-white/80 p-10 rounded-[3.5rem] border border-apricot/60 shadow-2xl shadow-rose-bloom/5">
             <div className="flex justify-between items-center mb-10">
                <h3 className="text-2xl font-black text-rose-bloom tracking-tight">Zumba Timings</h3>
             </div>
@@ -292,15 +400,61 @@ export default function TeacherDashboard() {
                   schedules
                     .filter(s => isSameDay(parseISO(s.start_time), selectedDate))
                     .sort((a,b) => a.start_time.localeCompare(b.start_time))
-                    .map((slot, idx) => (
-                      <div key={idx} className="p-5 bg-bloom-white/60 rounded-2xl border border-apricot/30 group hover:border-rose-bloom transition-all">
-                        <div className="text-rose-bloom font-black text-xs mb-1">{format(parseISO(slot.start_time), 'hh:mm a')}</div>
-                        <div className="text-theatre-dark font-bold">{slot.routines?.name}</div>
-                        <div className="flex items-center gap-2 text-[10px] text-theatre-dark/40 mt-2">
-                          <MapPin className="w-3 h-3" /> {slot.location}
+                    .map((slot, idx) => {
+                      const sessionBookings = bookings.filter(b => b.schedule_id === slot.id);
+                      return (
+                        <div 
+                          key={idx} 
+                          onClick={() => {
+                            setSelectedSessionForAttendance({ ...slot, bookings: sessionBookings });
+                            setIsAttendanceModalOpen(true);
+                          }}
+                          className="p-5 bg-bloom-white/60 rounded-2xl border border-apricot/40 group hover:border-rose-bloom transition-all cursor-pointer relative overflow-hidden"
+                        >
+                          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                            <Users className="w-8 h-8" />
+                          </div>
+                          
+                          <div className="text-rose-bloom font-black text-xs mb-1">{format(parseISO(slot.start_time), 'hh:mm a')}</div>
+                          <div className="text-theatre-dark font-bold mb-2">{slot.routines?.name}</div>
+                          
+                          <div className="flex items-center gap-2 mb-3">
+                            <div className="flex -space-x-2">
+                               {sessionBookings.slice(0, 3).map((b, i) => (
+                                 <div key={i} className="w-6 h-6 rounded-full border-2 border-white bg-rose-petal/20 flex items-center justify-center text-[6px] font-black uppercase text-rose-bloom overflow-hidden">
+                                    {b.student?.avatar_url ? (
+                                      <img src={b.student.avatar_url} className="w-full h-full object-cover" />
+                                    ) : (
+                                      b.student?.full_name?.charAt(0) || '?'
+                                    )}
+                                 </div>
+                               ))}
+                            </div>
+                            <span className="text-[9px] font-black text-rose-bloom uppercase tracking-widest">
+                              {sessionBookings.length} Registered
+                            </span>
+                          </div>
+
+                          <div className="space-y-1">
+                             {sessionBookings.slice(0, 2).map((b, i) => (
+                               <div key={i} className="text-[9px] font-bold text-theatre-dark/40 flex items-center gap-1">
+                                  <div className="w-1 h-1 rounded-full bg-rose-bloom" />
+                                  {b.student?.full_name}
+                               </div>
+                             ))}
+                             {sessionBookings.length > 2 && (
+                               <div className="text-[8px] font-black text-rose-bloom/40 ml-2">
+                                  + {sessionBookings.length - 2} more...
+                               </div>
+                             )}
+                          </div>
+
+                          <div className="flex items-center gap-2 text-[10px] text-theatre-dark/40 mt-4 pt-4 border-t border-apricot/20">
+                            <MapPin className="w-3 h-3" /> {slot.location}
+                          </div>
                         </div>
-                      </div>
-                    ))
+                      );
+                    })
                 ) : (
                   <div className="py-12 text-center text-theatre-dark/30 font-bold uppercase tracking-widest text-[10px]">
                     No sessions today
@@ -310,9 +464,20 @@ export default function TeacherDashboard() {
 
             </div>
 
-            <a href="/teacher/reports" className="block glass p-8 rounded-[2.5rem] hover:scale-[1.02] transition-all group">
-              <TrendingUp className="w-10 h-10 text-rose-bloom mb-6 opacity-40" />
-              <div className="text-[10px] font-black text-rose-bloom uppercase tracking-widest mb-1">Growth Energy</div>
+            <a 
+              href={profile?.is_subscribed ? "/teacher/reports" : "/teacher/subscription"} 
+              className="block glass p-8 rounded-[2.5rem] hover:scale-[1.02] transition-all group relative overflow-hidden"
+            >
+              {!profile?.is_subscribed && (
+                <div className="absolute top-6 right-6 flex flex-col items-end gap-2">
+                   <div className="px-3 py-1 bg-theatre-dark/5 border border-theatre-dark/10 rounded-full flex items-center gap-1.5 shadow-sm">
+                      <Lock className="w-3 h-3 text-theatre-dark/40" />
+                      <span className="text-[8px] font-black uppercase tracking-widest text-theatre-dark/40">Premium</span>
+                   </div>
+                </div>
+              )}
+              <TrendingUp className={`w-10 h-10 mb-6 opacity-40 ${profile?.is_subscribed ? 'text-rose-bloom' : 'text-theatre-dark/40'}`} />
+              <div className={`text-[10px] font-black uppercase tracking-widest mb-1 ${profile?.is_subscribed ? 'text-rose-bloom' : 'text-theatre-dark/40'}`}>Growth Energy</div>
               <div className="text-4xl font-black text-theatre-dark">Analytics</div>
             </a>
             
@@ -325,7 +490,7 @@ export default function TeacherDashboard() {
         {isModalOpen && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 sm:p-10">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsModalOpen(false)} className="absolute inset-0 bg-rose-bloom/20 backdrop-blur-md" />
-            <motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} className="bg-bloom-white w-full max-w-xl p-10 rounded-[3rem] relative z-20 overflow-hidden shadow-2xl border border-apricot/30">
+            <motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} className="bg-bloom-white w-full max-w-xl p-10 rounded-[3rem] relative z-20 overflow-hidden shadow-2xl border border-apricot/50">
                <div className="flex justify-between items-center mb-10">
                   <div className="flex items-center gap-4">
                     <div className="p-3 bg-rose-bloom/10 rounded-2xl">
@@ -375,7 +540,7 @@ export default function TeacherDashboard() {
                                 type="number" 
                                 value={newRoutineData.duration_minutes}
                                 onChange={e => setNewRoutineData({...newRoutineData, duration_minutes: parseInt(e.target.value)})}
-                                className="w-full bg-white border border-apricot/20 rounded-xl py-3 px-4 text-sm font-bold focus:border-rose-bloom outline-none transition-all"
+                                className="w-full bg-white border border-apricot/40 rounded-xl py-3 px-4 text-sm font-bold focus:border-rose-bloom outline-none transition-all"
                                />
                              </div>
                              <div className="space-y-1">
@@ -385,7 +550,7 @@ export default function TeacherDashboard() {
                                 step="0.01"
                                 value={newRoutineData.default_price}
                                 onChange={e => setNewRoutineData({...newRoutineData, default_price: parseFloat(e.target.value)})}
-                                className="w-full bg-white border border-apricot/20 rounded-xl py-3 px-4 text-sm font-bold focus:border-rose-bloom outline-none transition-all"
+                                className="w-full bg-white border border-apricot/40 rounded-xl py-3 px-4 text-sm font-bold focus:border-rose-bloom outline-none transition-all"
                                />
                              </div>
                            </div>
@@ -420,7 +585,7 @@ export default function TeacherDashboard() {
                                     price: selected ? selected.default_price : ''
                                   });
                                 }}
-                                className="w-full bg-white/60 border border-apricot/20 rounded-2xl py-5 pl-14 pr-12 focus:outline-none focus:border-rose-bloom transition-all font-bold text-theatre-dark appearance-none cursor-pointer"
+                                className="w-full bg-white/60 border border-apricot/40 rounded-2xl py-5 pl-14 pr-12 focus:outline-none focus:border-rose-bloom transition-all font-bold text-theatre-dark appearance-none cursor-pointer"
                               >
                                 <option value="">Choose a Signature Routine...</option>
                                 {routines.map(r => (
@@ -458,7 +623,7 @@ export default function TeacherDashboard() {
                         required
                         value={formData.start_time}
                         onChange={(e) => setFormData({...formData, start_time: e.target.value})}
-                        className="w-full bg-white/60 border border-apricot/20 rounded-2xl py-5 px-6 focus:outline-none focus:border-rose-bloom transition-all font-bold text-theatre-dark"
+                        className="w-full bg-white/60 border border-apricot/40 rounded-2xl py-5 px-6 focus:outline-none focus:border-rose-bloom transition-all font-bold text-theatre-dark"
                       />
                     </div>
                     <div className="space-y-2">
@@ -469,7 +634,7 @@ export default function TeacherDashboard() {
                         placeholder="Default"
                         value={formData.price}
                         onChange={(e) => setFormData({...formData, price: e.target.value})}
-                        className="w-full bg-white/60 border border-apricot/20 rounded-2xl py-5 px-6 focus:outline-none focus:border-rose-bloom transition-all font-bold text-theatre-dark"
+                        className="w-full bg-white/60 border border-apricot/40 rounded-2xl py-5 px-6 focus:outline-none focus:border-rose-bloom transition-all font-bold text-theatre-dark"
                       />
                     </div>
                   </div>
@@ -493,6 +658,105 @@ export default function TeacherDashboard() {
                     Confirm Schedule
                   </button>
                </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+      {/* Attendance Modal */}
+      <AnimatePresence>
+        {isAttendanceModalOpen && selectedSessionForAttendance && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 sm:p-10">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsAttendanceModalOpen(false)} className="absolute inset-0 bg-theatre-dark/40 backdrop-blur-md" />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }} 
+              animate={{ opacity: 1, scale: 1, y: 0 }} 
+              exit={{ opacity: 0, scale: 0.9, y: 20 }} 
+              className="bg-bloom-white w-full max-w-2xl rounded-[3rem] relative z-20 overflow-hidden shadow-2xl border border-apricot/50"
+            >
+              <div className="p-10 border-b border-apricot/20">
+                <div className="flex justify-between items-start mb-6">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 bg-rose-bloom/10 rounded-2xl">
+                      <Users className="w-6 h-6 text-rose-bloom" />
+                    </div>
+                    <div>
+                      <h2 className="text-3xl font-black text-theatre-dark">Registered Students</h2>
+                      <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-theatre-dark/40 mt-1">
+                        {selectedSessionForAttendance.routines?.name} • {format(parseISO(selectedSessionForAttendance.start_time), 'MMM d, h:mm a')}
+                      </p>
+                    </div>
+                  </div>
+                  <button onClick={() => setIsAttendanceModalOpen(false)} className="p-3 hover:bg-apricot/10 rounded-xl transition-colors text-theatre-dark/30"><X/></button>
+                </div>
+
+                <div className="grid grid-cols-3 gap-4">
+                   <div className="bg-bloom-white p-4 rounded-2xl border border-apricot/30">
+                      <div className="text-[8px] font-black uppercase text-theatre-dark/30 mb-1">Total Booked</div>
+                      <div className="text-xl font-black text-theatre-dark">{selectedSessionForAttendance.bookings.length}</div>
+                   </div>
+                   <div className="bg-bloom-white p-4 rounded-2xl border border-apricot/30">
+                      <div className="text-[8px] font-black uppercase text-theatre-dark/30 mb-1">Remaining</div>
+                      <div className="text-xl font-black text-rose-bloom">{selectedSessionForAttendance.max_seats - selectedSessionForAttendance.bookings.length}</div>
+                   </div>
+                   <div className="bg-bloom-white p-4 rounded-2xl border border-apricot/30">
+                      <div className="text-[8px] font-black uppercase text-theatre-dark/30 mb-1">Capacity</div>
+                      <div className="text-xl font-black text-theatre-dark/40">{selectedSessionForAttendance.max_seats}</div>
+                   </div>
+                </div>
+              </div>
+
+              <div className="max-h-[400px] overflow-y-auto p-10 custom-scrollbar">
+                {selectedSessionForAttendance.bookings.length > 0 ? (
+                  <div className="space-y-4">
+                    {selectedSessionForAttendance.bookings.map((booking, i) => (
+                      <motion.div 
+                        key={i}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: i * 0.05 }}
+                        className="flex items-center justify-between p-4 bg-white rounded-2xl border border-apricot/20 hover:border-rose-bloom/30 transition-all group"
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 rounded-xl bg-rose-petal/10 border border-rose-petal/20 overflow-hidden flex items-center justify-center">
+                            {booking.student?.avatar_url ? (
+                              <img src={booking.student.avatar_url} className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="text-lg font-black text-rose-bloom uppercase">{booking.student?.full_name?.charAt(0)}</div>
+                            )}
+                          </div>
+                          <div>
+                            <div className="font-black text-theatre-dark">{booking.student?.full_name}</div>
+                            <div className="text-[10px] font-bold text-theatre-dark/30 uppercase tracking-widest">{booking.student?.email}</div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                           <div className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest border ${
+                             booking.payment_status === 'PAID' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-rose-bloom/10 text-rose-bloom border-rose-bloom/20'
+                           }`}>
+                             {booking.payment_status}
+                           </div>
+                           <button className="p-2 opacity-0 group-hover:opacity-100 transition-all text-theatre-dark/20 hover:text-theatre-dark">
+                              <ArrowRight className="w-4 h-4" />
+                           </button>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="py-20 text-center">
+                    <div className="w-16 h-16 bg-apricot/5 rounded-full flex items-center justify-center mx-auto mb-6">
+                      <Users className="w-8 h-8 text-theatre-dark/10" />
+                    </div>
+                    <p className="text-sm font-black text-theatre-dark/20 uppercase tracking-[0.2em]">No students registered yet</p>
+                  </div>
+                )}
+              </div>
+
+              <div className="p-10 border-t border-apricot/20 bg-apricot/5">
+                 <button className="w-full py-5 bg-white border border-apricot/30 rounded-2xl text-[10px] font-black uppercase tracking-widest text-theatre-dark hover:bg-white/80 transition-all flex items-center justify-center gap-2">
+                    Export Attendance List
+                 </button>
+              </div>
             </motion.div>
           </div>
         )}

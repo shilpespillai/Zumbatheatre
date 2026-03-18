@@ -8,16 +8,25 @@ import {
 } from 'date-fns';
 import { 
   ChevronLeft, Calendar as CalendarIcon, Clock, MapPin, 
-  Sparkles, ShieldCheck, Heart, Share2, Star
+  Sparkles, ShieldCheck, Heart, Share2, Star,
+  CreditCard, ExternalLink, Banknote
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import CalendarContainer from '../../components/CalendarContainer';
+import { getStripe, createCheckoutSession } from '../../api/stripeService';
 
 export default function StudentBooking() {
   const { teacherId } = useParams();
   const navigate = useNavigate();
-  const { user, isDevBypass } = useAuth();
+  const { user, profile: authProfile, isDevBypass } = useAuth();
+  const [guestProfile, setGuestProfile] = useState(() => {
+    return JSON.parse(localStorage.getItem('zumba_guest_session') || 'null');
+  });
+
+  const profile = authProfile || guestProfile;
+  const isGuest = !!guestProfile && !authProfile;
+
   const [teacher, setTeacher] = useState(null);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(startOfDay(new Date()));
@@ -49,6 +58,8 @@ export default function StudentBooking() {
   const fetchSchedules = async () => {
     const firstDay = startOfMonth(currentMonth);
     const lastDay = endOfMonth(currentMonth);
+    const searchParams = new URLSearchParams(window.location.search);
+    const sessionId = searchParams.get('sessionId');
 
     if (isDevBypass) {
         const mockSchedules = JSON.parse(localStorage.getItem('zumba_mock_schedules') || '[]');
@@ -61,6 +72,15 @@ export default function StudentBooking() {
                 routines: mockRoutines.find(r => r.id === s.routine_id) || { name: 'Routine' }
             }));
         setSchedules(filtered);
+
+        if (sessionId) {
+          const session = filtered.find(s => s.id === sessionId);
+          if (session) {
+            setSelectedSession(session);
+            setSelectedDate(parseISO(session.start_time));
+          }
+        }
+
         setLoading(false);
         return;
     }
@@ -73,13 +93,23 @@ export default function StudentBooking() {
       .gte('start_time', firstDay.toISOString())
       .lte('start_time', lastDay.toISOString());
 
-    setSchedules(data || []);
+    const schedulesData = data || [];
+    setSchedules(schedulesData);
+
+    if (sessionId) {
+      const session = schedulesData.find(s => s.id === sessionId);
+      if (session) {
+        setSelectedSession(session);
+        setSelectedDate(parseISO(session.start_time));
+      }
+    }
+
     setLoading(false);
   };
 
   const handleBooking = async () => {
-    if (!user) {
-      toast.info('Please sign in to book a session');
+    if (!profile) {
+      toast.info('Please join via stage code to book a session');
       navigate('/auth');
       return;
     }
@@ -92,32 +122,50 @@ export default function StudentBooking() {
     toast.loading('Processing your booking...');
 
     try {
+      const paymentMethod = teacher?.payment_settings?.method || 'manual';
+      const paymentConfig = teacher?.payment_settings?.config || {};
+
       if (isDevBypass) {
           // Simulate booking persistence
           const mockBookings = JSON.parse(localStorage.getItem('zumba_mock_bookings') || '[]');
           const newBooking = {
               id: `mock-book-${Date.now()}`,
-              student_id: user.id,
+              student_id: profile.id,
               schedule_id: selectedSession.id,
-              payment_status: 'PAID',
+              payment_method: paymentMethod,
+              payment_status: paymentMethod === 'manual' ? 'PENDING' : 'PAID',
               created_at: new Date().toISOString()
           };
+          
+          if (paymentMethod === 'stripe') {
+            toast.info(`Initializing Stripe with Teacher Key: ${paymentConfig.stripe_public_key?.slice(0, 10)}...`);
+            await createCheckoutSession([{ id: selectedSession.id }], { isMock: true });
+          } else if (paymentMethod === 'paypal') {
+            toast.info(`Redirecting to PayPal: ${paymentConfig.paypal_url}...`);
+            window.open(paymentConfig.paypal_url, '_blank');
+          }
+
           mockBookings.push(newBooking);
           localStorage.setItem('zumba_mock_bookings', JSON.stringify(mockBookings));
           
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          toast.success('Mock Booking successful!');
+          await new Promise(resolve => setTimeout(resolve, 1500));
+          toast.success(paymentMethod === 'manual' ? 'Spot reserved! Please follow instructions.' : 'Mock Payment successful!');
           navigate('/student/dashboard');
           return;
       }
 
-      // In a real implementation, this would redirect to Stripe
-      await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate API call
-
-      toast.success('Booking successful! Redirecting to secure payment...');
-      setTimeout(() => {
-        toast.info('This feature will be integrated with your Stripe account.');
-      }, 1500);
+      // Real Implementation Logic
+      if (paymentMethod === 'stripe') {
+        const stripe = await getStripe(paymentConfig.stripe_public_key);
+        const session = await createCheckoutSession([{ id: selectedSession.id }], { secretKey: paymentConfig.stripe_secret_key });
+        await stripe.redirectToCheckout({ sessionId: session.id });
+      } else if (paymentMethod === 'paypal') {
+        window.location.href = paymentConfig.paypal_url;
+      } else {
+        // Manual Flow
+        toast.success('Spot reserved! Manual payment instructions shown.');
+        navigate('/student/dashboard');
+      }
 
     } catch (error) {
       console.error('Booking error:', error);
@@ -227,25 +275,55 @@ export default function StudentBooking() {
                       </div>
 
                       <div className="space-y-4 px-2">
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm font-bold opacity-40">Available Seats</span>
-                          <span className="text-sm font-black text-rose-petal">12 / 20</span>
+                        <div className="flex justify-between items-center text-rose-bloom/40 text-[8px] font-black uppercase tracking-widest bg-rose-bloom/5 p-2 rounded-lg border border-rose-bloom/10 mb-4">
+                           <span>Collection via</span>
+                           <span className="text-rose-bloom flex items-center gap-1">
+                              {teacher?.payment_settings?.method === 'stripe' && <><CreditCard className="w-2 h-2" /> Stripe</>}
+                              {teacher?.payment_settings?.method === 'paypal' && <><ExternalLink className="w-2 h-2" /> PayPal</>}
+                              {teacher?.payment_settings?.method === 'manual' && <><Banknote className="w-2 h-2" /> Manual</>}
+                           </span>
                         </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm font-bold opacity-40">Class Credit</span>
-                          <span className="text-xl font-black text-rose-bloom">${selectedSession.price}</span>
+
+                        {teacher?.payment_settings?.method === 'manual' && (
+                          <div className="p-4 bg-white/5 rounded-xl border border-white/10 mb-4">
+                            <div className="text-[8px] font-black text-rose-petal uppercase tracking-[0.2em] mb-2 items-center flex gap-2">
+                              <Landmark className="w-3 h-3" /> Payment Instructions
+                            </div>
+                            <p className="text-[10px] text-white/60 font-medium leading-relaxed italic">
+                              "{teacher.payment_settings.config.bank_instructions}"
+                            </p>
+                          </div>
+                        )}
+
+                        <div className="flex justify-between items-center px-1">
+                          <span className="text-[10px] font-bold opacity-40 uppercase tracking-widest">Available Seats</span>
+                          <span className="text-[10px] font-black text-rose-petal tracking-widest">12 / 20</span>
+                        </div>
+                        <div className="flex justify-between items-center px-1">
+                          <span className="text-[10px] font-bold opacity-40 uppercase tracking-widest">Total Energy</span>
+                          <span className="text-2xl font-black text-rose-bloom tracking-tight">${selectedSession.price}</span>
                         </div>
                       </div>
 
                       <button 
                         onClick={handleBooking}
                         disabled={booking}
-                        className="w-full btn-premium bg-rose-bloom text-white py-6 rounded-[2.5rem] shadow-xl shadow-rose-bloom/30 flex items-center justify-center gap-3"
+                        className="w-full btn-premium bg-rose-bloom text-white py-6 rounded-[2.5rem] shadow-xl shadow-rose-bloom/30 flex items-center justify-center gap-3 active:scale-95 transition-all"
                       >
-                        {booking ? <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" /> : <ShieldCheck className="w-5 h-5" />}
-                        Secure My Spot
+                        {booking ? (
+                          <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                        ) : (
+                          <>
+                            {teacher?.payment_settings?.method === 'stripe' ? <CreditCard className="w-5 h-5" /> : 
+                             teacher?.payment_settings?.method === 'paypal' ? <ExternalLink className="w-5 h-5" /> : 
+                             <ShieldCheck className="w-5 h-5" />}
+                            {teacher?.payment_settings?.method === 'manual' ? 'Reserve My Spot' : 'Pay & Book'}
+                          </>
+                        )}
                       </button>
-                      <p className="text-center text-[10px] font-bold opacity-40 uppercase tracking-widest">Instant Confirmation</p>
+                      <p className="text-center text-[10px] font-bold opacity-40 uppercase tracking-widest">
+                        {teacher?.payment_settings?.method === 'manual' ? 'Manual Confirmation' : 'Instant Confirmation'}
+                      </p>
                     </motion.div>
                   ) : (
                     <motion.div 

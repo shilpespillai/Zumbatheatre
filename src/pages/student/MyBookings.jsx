@@ -9,13 +9,23 @@ import { format, parseISO, isAfter } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function MyBookings() {
-  const { user } = useAuth();
+  const { profile: authProfile } = useAuth();
+  const [guestProfile, setGuestProfile] = useState(() => {
+    return JSON.parse(localStorage.getItem('zumba_guest_session') || 'null');
+  });
+
+  const profile = authProfile || guestProfile;
+
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (user) fetchBookings();
-  }, [user]);
+    if (profile?.id) fetchBookings();
+    else {
+      setBookings([]);
+      setLoading(false);
+    }
+  }, [profile?.id]);
 
   const fetchBookings = async () => {
     try {
@@ -29,7 +39,7 @@ export default function MyBookings() {
             teacher:teacher_id (full_name, avatar_url)
           )
         `)
-        .eq('student_id', user.id)
+        .eq('student_id', profile.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
