@@ -12,15 +12,42 @@ export const getStripe = (customPublicKey) => {
 }
 
 export const createCheckoutSession = async (items, config = {}) => {
-  // Pattern based on FinanceCalculator methodology
-  // config.secretKey would be used in a secure backend context (Supabase Edge Function)
-  console.log('Creating checkout session for:', items, 'with config:', config)
+  const isDevBypass = import.meta.env.VITE_DEV_BYPASS === 'true';
   
-  // In mock mode, we simulate a successful session
-  if (!import.meta.env.VITE_STRIPE_PUBLIC_KEY || config.isMock) {
-    return { id: 'mock_session_' + Date.now(), url: '#' }
+  if (isDevBypass && config.isMock) {
+    console.log('[Stripe] Mock session active for:', items);
+    return { id: 'mock_session_' + Date.now(), url: '#' };
   }
 
-  // Placeholder for real API call to Edge Function
-  return { id: 'session_placeholder' }
+  try {
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+      throw new Error('Supabase configuration missing.');
+    }
+
+    const response = await fetch(`${supabaseUrl}/functions/v1/create-checkout`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${supabaseAnonKey}`
+      },
+      body: JSON.stringify({
+        items,
+        teacherId: config.teacherId, // Used to look up teacher's encrypted key
+        isSubscription: config.isSubscription || false,
+        successUrl: `${window.location.origin}/student/dashboard?payment=success`,
+        cancelUrl: `${window.location.origin}/student/dashboard?payment=cancel`
+      })
+    });
+
+    const session = await response.json();
+    if (session.error) throw new Error(session.error);
+    
+    return session;
+  } catch (error) {
+    console.error('[Stripe] Session creation failed:', error);
+    throw error;
+  }
 }

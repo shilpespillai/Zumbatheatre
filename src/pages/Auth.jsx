@@ -10,7 +10,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function Auth() {
-  const { signInMock, isDevBypass, fetchProfile, user, profile } = useAuth();
+  const { signInMock, clearMockSession, isDevBypass, fetchProfile, user, profile } = useAuth();
   const navigate = useNavigate();
   const searchParams = new URLSearchParams(window.location.search);
   const initialRole = searchParams.get('role') || 'student';
@@ -44,15 +44,32 @@ export default function Auth() {
     }
     
     setLoading(true);
-    // Guest Persistence Logic
-    const guestId = 'guest-' + Math.random().toString(36).substr(2, 9);
+    
+    // Explicitly clear all existing mock sessions via Context to reset React state
+    if (isDevBypass) {
+      clearMockSession();
+    }
+    
+    // Stable Guest ID logic for mock purposes
+    const stableId = 'guest-' + btoa(formData.fullName.toLowerCase().trim() + formData.stageCode.toUpperCase().trim()).replace(/=/g, '').slice(0, 12);
+    
     const guestProfile = {
-      id: guestId,
+      id: stableId,
       full_name: formData.fullName,
       role: 'STUDENT',
       stage_code: formData.stageCode.toUpperCase().trim(),
       is_guest: true
     };
+    
+    // Check if this guest profile already exists in our mock records
+    const savedProfiles = JSON.parse(localStorage.getItem('zumba_mock_profiles') || '{}');
+    if (savedProfiles[stableId]) {
+      // Use existing profile data if found (to preserve linked_teacher_id etc)
+      Object.assign(guestProfile, savedProfiles[stableId]);
+    } else {
+      savedProfiles[stableId] = guestProfile;
+      localStorage.setItem('zumba_mock_profiles', JSON.stringify(savedProfiles));
+    }
     
     localStorage.setItem('zumba_guest_session', JSON.stringify(guestProfile));
     localStorage.setItem('pending_teacher_code', guestProfile.stage_code);
@@ -60,7 +77,7 @@ export default function Auth() {
     setTimeout(() => {
       setLoading(false);
       navigate('/student/dashboard');
-      toast.success(`Welcome to the stage, ${formData.fullName}!`);
+      toast.success(`Welcome back to the stage, ${formData.fullName}!`);
     }, 800);
   };
 

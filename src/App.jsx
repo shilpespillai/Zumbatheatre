@@ -21,6 +21,7 @@ import HowItWorks from './pages/HowItWorks';
 import Contact from './pages/Contact';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { useAuth } from './context/AuthContext';
+import ErrorBoundary from './components/ErrorBoundary';
 
 
 
@@ -49,7 +50,7 @@ const Home = () => {
           <div className="w-12 h-12 bg-zumba-pink rounded-xl flex items-center justify-center rotate-12 shadow-2xl shadow-zumba-pink/20">
             <Play className="w-7 h-7 text-white fill-current" />
           </div>
-          <span className="text-3xl font-black tracking-tighter text-white">ZUMBA<span className="text-zumba-lime text-xl">THEATRE</span></span>
+          <span className="text-3xl font-black tracking-tighter text-white uppercase italic">ZUMBA<span className="text-zumba-lime text-xl not-italic">THEATRE</span></span>
         </div>
         {/* Background Orbs */}
         <div className="absolute top-1/4 -left-20 w-96 h-96 bg-zumba-pink/20 rounded-full blur-[120px] animate-pulse" />
@@ -148,80 +149,82 @@ const Home = () => {
 
 export default function App() {
   return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/auth" element={<Auth />} />
-        <Route path="/admin/auth" element={<AdminAuth />} />
-        <Route path="/how-it-works" element={<HowItWorks />} />
-        <Route path="/contact" element={<Contact />} />
-        <Route path="/onboarding" element={
-          <ProtectedRoute>
-            <Onboarding />
-          </ProtectedRoute>
-        } />
-        
-        {/* Protected Teacher Routes */}
-        <Route path="/teacher/dashboard" element={
-          <ProtectedRoute allowedRoles={['TEACHER']}>
-            <TeacherDashboard />
-          </ProtectedRoute>
-        } />
-        <Route path="/teacher/routines" element={
-          <ProtectedRoute allowedRoles={['TEACHER']}>
-            <Routines />
-          </ProtectedRoute>
-        } />
-        <Route path="/teacher/calendar" element={<Navigate to="/teacher/dashboard" replace />} />
-        <Route path="/teacher/reports" element={
-          <ProtectedRoute allowedRoles={['TEACHER']}>
-            <TeacherReports />
-          </ProtectedRoute>
-        } />
-        <Route path="/teacher/settings" element={
-          <ProtectedRoute allowedRoles={['TEACHER']}>
-            <Settings />
-          </ProtectedRoute>
-        } />
-        <Route path="/teacher/subscription" element={
-          <ProtectedRoute allowedRoles={['TEACHER']}>
-            <TeacherSubscription />
-          </ProtectedRoute>
-        } />
+    <ErrorBoundary>
+      <Router>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/auth" element={<Auth />} />
+          <Route path="/admin/auth" element={<AdminAuth />} />
+          <Route path="/how-it-works" element={<HowItWorks />} />
+          <Route path="/contact" element={<Contact />} />
+          <Route path="/onboarding" element={
+            <ProtectedRoute>
+              <Onboarding />
+            </ProtectedRoute>
+          } />
+          
+          {/* Protected Teacher Routes */}
+          <Route path="/teacher/dashboard" element={
+            <ProtectedRoute allowedRoles={['TEACHER']}>
+              <TeacherDashboard />
+            </ProtectedRoute>
+          } />
+          <Route path="/teacher/routines" element={
+            <ProtectedRoute allowedRoles={['TEACHER']}>
+              <Routines />
+            </ProtectedRoute>
+          } />
+          <Route path="/teacher/calendar" element={<Navigate to="/teacher/dashboard" replace />} />
+          <Route path="/teacher/reports" element={
+            <ProtectedRoute allowedRoles={['TEACHER']}>
+              <TeacherReports />
+            </ProtectedRoute>
+          } />
+          <Route path="/teacher/settings" element={
+            <ProtectedRoute allowedRoles={['TEACHER']}>
+              <Settings />
+            </ProtectedRoute>
+          } />
+          <Route path="/teacher/subscription" element={
+            <ProtectedRoute allowedRoles={['TEACHER']}>
+              <TeacherSubscription />
+            </ProtectedRoute>
+          } />
 
-        {/* Protected Student Routes */}
-        <Route path="/student/dashboard" element={
-          <ProtectedRoute allowedRoles={['STUDENT']}>
-            <StudentDashboard />
-          </ProtectedRoute>
-        } />
-        <Route path="/student/browse" element={<Navigate to="/student/dashboard" replace />} />
-        <Route path="/student/book/:teacherId" element={
-          <ProtectedRoute allowedRoles={['STUDENT']}>
-            <StudentBooking />
-          </ProtectedRoute>
-        } />
-        <Route path="/student/bookings" element={
-          <ProtectedRoute allowedRoles={['STUDENT']}>
-            <MyBookings />
-          </ProtectedRoute>
-        } />
-        <Route path="/student/settings" element={
-          <ProtectedRoute allowedRoles={['STUDENT']}>
-            <Settings />
-          </ProtectedRoute>
-        } />
+          {/* Protected Student Routes */}
+          <Route path="/student/dashboard" element={
+            <ProtectedRoute allowedRoles={['STUDENT']}>
+              <StudentDashboard />
+            </ProtectedRoute>
+          } />
+          <Route path="/student/browse" element={<Navigate to="/student/dashboard" replace />} />
+          <Route path="/student/book/:teacherId" element={
+            <ProtectedRoute allowedRoles={['STUDENT']}>
+              <StudentBooking />
+            </ProtectedRoute>
+          } />
+          <Route path="/student/bookings" element={
+            <ProtectedRoute allowedRoles={['STUDENT']}>
+              <MyBookings />
+            </ProtectedRoute>
+          } />
+          <Route path="/student/settings" element={
+            <ProtectedRoute allowedRoles={['STUDENT']}>
+              <Settings />
+            </ProtectedRoute>
+          } />
 
-        {/* Protected Admin Routes */}
-        <Route path="/admin/dashboard" element={
-          <ProtectedRoute allowedRoles={['ADMIN']}>
-            <AdminDashboard />
-          </ProtectedRoute>
-        } />
+          {/* Protected Admin Routes */}
+          <Route path="/admin/dashboard" element={
+            <ProtectedRoute allowedRoles={['ADMIN']}>
+              <AdminDashboard />
+            </ProtectedRoute>
+          } />
 
-        {/* Fallback */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </Router>
+          {/* Fallback */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Router>
+    </ErrorBoundary>
   );
 }

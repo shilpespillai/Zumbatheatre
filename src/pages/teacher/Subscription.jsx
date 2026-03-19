@@ -67,7 +67,7 @@ export default function TeacherSubscription() {
 
       // Real Implementation
       const stripe = await getStripe(); // Uses Owner's Public Key from ENV
-      const session = await createCheckoutSession([{ priceId: 'price_pro_plan' }]);
+      const session = await createCheckoutSession([{ name: plan.name, price: plan.price }], { isSubscription: true });
       await stripe.redirectToCheckout({ sessionId: session.id });
 
     } catch (error) {

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../api/supabaseClient';
-import { Calendar as CalendarIcon, Users, TrendingUp, Plus, LogOut, Settings as SettingsIcon, Package, Sparkles, X, Save, Clock, MapPin, Trash2, ShieldCheck, ArrowRight, RefreshCw, Copy, Lock } from 'lucide-react';
+import { Calendar as CalendarIcon, Users, TrendingUp, Plus, LogOut, Settings as SettingsIcon, Package, Sparkles, X, Save, Clock, MapPin, Trash2, ShieldCheck, ArrowRight, RefreshCw, Copy, Lock, AlertTriangle } from 'lucide-react';
 import CalendarContainer from '../../components/CalendarContainer';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -33,6 +33,8 @@ export default function TeacherDashboard() {
     location: 'Main Studio',
     max_seats: 20
   });
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+  const [selectedSessionToCancel, setSelectedSessionToCancel] = useState(null);
 
   useEffect(() => {
     if (user) {
@@ -153,8 +155,7 @@ export default function TeacherDashboard() {
         schedulesData = mockSchedules
             .filter(s => {
                 const match = String(s.teacher_id).trim() === String(user.id).trim();
-                const notCancelled = s.status !== 'CANCELLED';
-                return match && notCancelled;
+                return match;
             })
             .map(s => ({
                 ...s,
@@ -289,6 +290,49 @@ export default function TeacherDashboard() {
       toast.error(error.message);
     } finally {
       setModalLoading(false);
+    }
+  };
+
+  const handleCancelSchedule = async (scheduleId) => {
+    try {
+      if (isDevBypass) {
+        // 1. Update Schedule Status
+        const mockSchedules = JSON.parse(localStorage.getItem('zumba_mock_schedules') || '[]');
+        const updatedSchedules = mockSchedules.map(s => 
+          s.id === scheduleId ? { ...s, status: 'CANCELLED' } : s
+        );
+        const cancelledSession = mockSchedules.find(s => s.id === scheduleId);
+        localStorage.setItem('zumba_mock_schedules', JSON.stringify(updatedSchedules));
+
+        // 2. Issue Credits to Students
+        const mockBookings = JSON.parse(localStorage.getItem('zumba_mock_bookings') || '[]');
+        const paidBookings = mockBookings.filter(b => b.schedule_id === scheduleId && b.payment_status === 'PAID');
+        
+        if (paidBookings.length > 0) {
+          const mockCredits = JSON.parse(localStorage.getItem('zumba_mock_credits') || '{}');
+          
+          paidBookings.forEach(booking => {
+            const studentId = booking.student_id;
+            const teacherId = user.id;
+            const refundAmount = cancelledSession.price || 0;
+            
+            if (!mockCredits[studentId]) mockCredits[studentId] = {};
+            mockCredits[studentId][teacherId] = (mockCredits[studentId][teacherId] || 0) + refundAmount;
+          });
+          
+          localStorage.setItem('zumba_mock_credits', JSON.stringify(mockCredits));
+          toast.success(`Session cancelled. Credits issued to ${paidBookings.length} students.`);
+        } else {
+          toast.success('Session cancelled.');
+        }
+      } else {
+        const { error } = await supabase.from('schedules').update({ status: 'CANCELLED' }).eq('id', scheduleId);
+        if (error) throw error;
+        toast.success('Session cancelled.');
+      }
+      fetchAllSchedules();
+    } catch (error) {
+      toast.error('Failed to cancel session');
     }
   };
 
@@ -439,7 +483,7 @@ export default function TeacherDashboard() {
                              {sessionBookings.slice(0, 2).map((b, i) => (
                                <div key={i} className="text-[9px] font-bold text-theatre-dark/40 flex items-center gap-1">
                                   <div className="w-1 h-1 rounded-full bg-rose-bloom" />
-                                  {b.student?.full_name}
+                                  {b.student?.full_name} {b.payment_method === 'CREDITS' && <span className="text-rose-bloom font-black ml-1">(Credits)</span>}
                                </div>
                              ))}
                              {sessionBookings.length > 2 && (
@@ -449,8 +493,26 @@ export default function TeacherDashboard() {
                              )}
                           </div>
 
-                          <div className="flex items-center gap-2 text-[10px] text-theatre-dark/40 mt-4 pt-4 border-t border-apricot/20">
-                            <MapPin className="w-3 h-3" /> {slot.location}
+                          <div className="flex items-center justify-between mt-4 pt-4 border-t border-apricot/20">
+                            <div className="flex items-center gap-2 text-[10px] text-theatre-dark/40">
+                              <MapPin className="w-3 h-3" /> {slot.location}
+                            </div>
+                            {slot.status === 'CANCELLED' ? (
+                              <div className="text-[10px] font-black text-rose-bloom uppercase tracking-tighter bg-rose-bloom/5 px-3 py-1 rounded-lg">
+                                Cancelled
+                              </div>
+                            ) : (
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedSessionToCancel(slot);
+                                  setIsCancelModalOpen(true);
+                                }}
+                                className="text-[10px] font-black text-rose-bloom/40 hover:text-rose-bloom uppercase tracking-tighter transition-colors"
+                              >
+                                Cancel Session
+                              </button>
+                            )}
                           </div>
                         </div>
                       );
@@ -662,6 +724,55 @@ export default function TeacherDashboard() {
           </div>
         )}
       </AnimatePresence>
+      {/* Stylish Cancellation Modal */}
+      <AnimatePresence>
+        {isCancelModalOpen && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-6">
+            <motion.div 
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }} 
+              exit={{ opacity: 0 }} 
+              onClick={() => setIsCancelModalOpen(false)} 
+              className="absolute inset-0 bg-theatre-dark/60 backdrop-blur-xl" 
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }} 
+              animate={{ opacity: 1, scale: 1, y: 0 }} 
+              exit={{ opacity: 0, scale: 0.9, y: 20 }} 
+              className="bg-white max-w-md w-full p-10 rounded-[3rem] relative z-20 shadow-2xl border border-rose-bloom/20 text-center"
+            >
+              <div className="w-20 h-20 bg-rose-bloom/10 rounded-full flex items-center justify-center mx-auto mb-8">
+                <AlertTriangle className="w-10 h-10 text-rose-bloom" />
+              </div>
+              
+              <h2 className="text-3xl font-black text-theatre-dark mb-4 italic">Lowering the Curtain?</h2>
+              <p className="text-theatre-dark/60 font-medium text-sm mb-10 leading-relaxed px-4">
+                Are you sure you want to cancel <span className="text-rose-bloom font-black">"{selectedSessionToCancel?.routines?.name}"</span>? 
+                This will automatically issue credits to all registered students for your stage.
+              </p>
+
+              <div className="flex flex-col gap-4">
+                <button 
+                  onClick={() => {
+                    handleCancelSchedule(selectedSessionToCancel.id);
+                    setIsCancelModalOpen(false);
+                  }}
+                  className="w-full py-5 bg-rose-bloom text-white rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-rose-petal transition-all shadow-xl shadow-rose-bloom/20"
+                >
+                  Yes, Cancel & Refund
+                </button>
+                <button 
+                  onClick={() => setIsCancelModalOpen(false)}
+                  className="w-full py-5 bg-theatre-dark/5 text-theatre-dark/40 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-theatre-dark/10 transition-all border border-theatre-dark/5"
+                >
+                  Keep Scheduled
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* Attendance Modal */}
       <AnimatePresence>
         {isAttendanceModalOpen && selectedSessionForAttendance && (
@@ -733,7 +844,7 @@ export default function TeacherDashboard() {
                            <div className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest border ${
                              booking.payment_status === 'PAID' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-rose-bloom/10 text-rose-bloom border-rose-bloom/20'
                            }`}>
-                             {booking.payment_status}
+                             {booking.payment_status === 'PAID' ? (booking.payment_method === 'CREDITS' ? 'Paid (Credits)' : 'Paid') : booking.payment_status}
                            </div>
                            <button className="p-2 opacity-0 group-hover:opacity-100 transition-all text-theatre-dark/20 hover:text-theatre-dark">
                               <ArrowRight className="w-4 h-4" />

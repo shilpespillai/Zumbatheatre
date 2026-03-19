@@ -11,6 +11,11 @@ import { isSameDay, format, parseISO, subDays, eachDayOfInterval } from 'date-fn
 import { toast } from 'sonner';
 import CalendarContainer from '../../components/CalendarContainer';
 
+const SEED_TEACHERS = [
+  { id: 'seed-smruti-3617', full_name: 'Smruti Pillai', invite_code: 'ZUMBA-SMRUTIPILLAI-3617', role: 'TEACHER' },
+  { id: 'seed-angella-5640', full_name: 'Angella', invite_code: 'ZUMBA-ANGELLA-5640', role: 'TEACHER' }
+];
+
 export default function StudentDashboard() {
   const { profile: authProfile, signOut, isDevBypass, fetchProfile } = useAuth();
   const [guestProfile, setGuestProfile] = useState(() => {
@@ -31,82 +36,80 @@ export default function StudentDashboard() {
     routineVariety: [],
     attendanceTrend: []
   });
+  const [studentCredits, setStudentCredits] = useState(0);
   const navigate = useNavigate();
 
   useEffect(() => {
-    // If we have a guest session but no linked_teacher_id, try to resolve it from the stage_code
-    if (guestProfile && !guestProfile.linked_teacher_id && guestProfile.stage_code) {
-      resolveGuestTeacher(guestProfile.stage_code);
-    }
-  }, [guestProfile]);
-
-  const resolveGuestTeacher = async (code) => {
-    try {
-      let teacher = null;
-      if (isDevBypass) {
-        const savedProfiles = JSON.parse(localStorage.getItem('zumba_mock_profiles') || '{}');
-        teacher = Object.values(savedProfiles).find(p => 
-          p.invite_code?.toUpperCase() === code.toUpperCase().trim()
-        );
-      } else {
-        const { data } = await supabase
-          .from('profiles')
-          .select('id, full_name')
-          .eq('invite_code', code.toUpperCase().trim())
-          .single();
-        teacher = data;
+    if (isDevBypass) {
+      const savedProfiles = JSON.parse(localStorage.getItem('zumba_mock_profiles') || '{}');
+      let updated = false;
+      SEED_TEACHERS.forEach(t => {
+        if (!savedProfiles[t.id]) {
+          savedProfiles[t.id] = t;
+          updated = true;
+        }
+      });
+      if (updated) {
+        localStorage.setItem('zumba_mock_profiles', JSON.stringify(savedProfiles));
+        console.log('[Dashboard] Seeded mock teachers:', SEED_TEACHERS.map(t => t.full_name).join(', '));
       }
-
-      if (teacher) {
-        const updated = { ...guestProfile, linked_teacher_id: teacher.id };
-        setGuestProfile(updated);
-        localStorage.setItem('zumba_guest_session', JSON.stringify(updated));
-      }
-    } catch (err) {
-      console.error('Guest resolve teacher error:', err);
     }
-  };
+  }, [isDevBypass]);
 
   useEffect(() => {
-    fetchAllAvailableSchedules();
-    if (profile?.linked_teacher_id) {
+    const pendingCode = localStorage.getItem('pending_teacher_code');
+    const currentCode = profile?.stage_code || guestProfile?.stage_code;
+    
+    console.log('[Dashboard] Sync check:', { pendingCode, linkedId: profile?.linked_teacher_id, currentCode });
+
+    if (pendingCode) {
+      syncTeacherLink(pendingCode);
+    } else if (profile?.linked_teacher_id) {
       fetchTeacherProfile(profile.linked_teacher_id);
-    } else if (!profile?.is_guest) {
-      setTeacherProfile(null);
-      // Auto-link if code exists in localStorage from Auth (for legacy or logged in flow)
-      const pendingCode = localStorage.getItem('pending_teacher_code');
-      if (pendingCode && profile?.role?.toUpperCase() === 'STUDENT') {
-        handleAutoLink(pendingCode);
-      }
+      fetchAllAvailableSchedules(profile.linked_teacher_id);
+    } else if (currentCode && !profile?.linked_teacher_id) {
+      syncTeacherLink(currentCode);
+    } else {
+      setLoading(false);
     }
 
-    // Storage listener to sync across tabs in mock mode
     const handleStorageChange = (e) => {
       if (e.key === 'zumba_mock_schedules' || e.key === 'zumba_mock_routines' || e.key === 'zumba_mock_profiles' || e.key === 'zumba_guest_session') {
         if (e.key === 'zumba_guest_session') {
-           setGuestProfile(JSON.parse(e.newValue || 'null'));
+           const newGuest = JSON.parse(e.newValue || 'null');
+           setGuestProfile(newGuest);
+           if (newGuest?.linked_teacher_id) {
+             fetchTeacherProfile(newGuest.linked_teacher_id);
+             fetchAllAvailableSchedules(newGuest.linked_teacher_id);
+           }
+        } else {
+           fetchAllAvailableSchedules(profile?.linked_teacher_id);
+           if (profile?.linked_teacher_id) fetchTeacherProfile(profile.linked_teacher_id);
         }
-        fetchAllAvailableSchedules();
-        if (profile?.linked_teacher_id) fetchTeacherProfile(profile.linked_teacher_id);
       }
     };
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
-  }, [profile?.linked_teacher_id, profile?.role, guestProfile?.id]);
+  }, [profile?.linked_teacher_id, profile?.role, guestProfile?.id, guestProfile?.stage_code]);
 
-  const handleAutoLink = async (code) => {
-    if (linking) return;
-    console.log('[Dashboard] Auto-linking stage code:', code);
+  const syncTeacherLink = async (code) => {
+    if (!code || linking) return;
     setLinking(true);
+    console.log('[Dashboard] Syncing teacher link for code:', code);
+
     try {
       let teacher = null;
-
       if (isDevBypass) {
-        const savedProfiles = JSON.parse(localStorage.getItem('zumba_mock_profiles') || '{}');
-        teacher = Object.values(savedProfiles).find(p => 
-          p.invite_code?.toUpperCase() === code.toUpperCase().trim() && 
-          p.role?.toUpperCase() === 'TEACHER'
-        );
+        // Prioritize SEED_TEACHERS for reliable testing
+        teacher = SEED_TEACHERS.find(t => t.invite_code === code.toUpperCase().trim());
+        
+        if (!teacher) {
+          const savedProfiles = JSON.parse(localStorage.getItem('zumba_mock_profiles') || '{}');
+          teacher = Object.values(savedProfiles).find(p => 
+            p.invite_code?.toUpperCase() === code.toUpperCase().trim() && 
+            p.role?.toUpperCase() === 'TEACHER'
+          );
+        }
       } else {
         const { data } = await supabase
           .from('profiles')
@@ -116,34 +119,71 @@ export default function StudentDashboard() {
         teacher = data;
       }
 
+      console.log('[Dashboard] Teacher lookup result:', teacher ? `Found ${teacher.full_name} (ID: ${teacher.id})` : 'Not found');
+
       if (teacher) {
-        console.log('[Dashboard] Found teacher for auto-link:', teacher.full_name);
-        if (isDevBypass) {
-          const mockProfile = JSON.parse(localStorage.getItem('zumba_mock_profile') || '{}');
-          mockProfile.linked_teacher_id = teacher.id;
-          localStorage.setItem('zumba_mock_profile', JSON.stringify(mockProfile));
-          
-          const savedProfiles = JSON.parse(localStorage.getItem('zumba_mock_profiles') || '{}');
-          if (savedProfiles[mockProfile.id]) {
-            savedProfiles[mockProfile.id].linked_teacher_id = teacher.id;
-            localStorage.setItem('zumba_mock_profiles', JSON.stringify(savedProfiles));
+        // 1. Update Persistent Auth Profile (Supabase or Mock)
+        if (profile?.id) {
+          if (isDevBypass) {
+            const mProfStr = localStorage.getItem('zumba_mock_profile');
+            const mProf = mProfStr ? JSON.parse(mProfStr) : {};
+            mProf.linked_teacher_id = teacher.id;
+            localStorage.setItem('zumba_mock_profile', JSON.stringify(mProf));
+            
+            const savedProfiles = JSON.parse(localStorage.getItem('zumba_mock_profiles') || '{}');
+            if (savedProfiles[profile.id]) {
+              savedProfiles[profile.id].linked_teacher_id = teacher.id;
+              localStorage.setItem('zumba_mock_profiles', JSON.stringify(savedProfiles));
+            }
+          } else {
+            const { error: updateError } = await supabase
+              .from('profiles')
+              .update({ linked_teacher_id: teacher.id })
+              .eq('id', profile.id);
+            if (updateError) console.error('[Dashboard] Supabase update error:', updateError);
           }
-        } else {
-          await supabase
-            .from('profiles')
-            .update({ linked_teacher_id: teacher.id })
-            .eq('id', profile.id);
         }
+
+        // 2. Update Guest Profile (if applicable)
+        const guestSessStr = localStorage.getItem('zumba_guest_session');
+        const guestSess = guestSessStr ? JSON.parse(guestSessStr) : null;
+        if (guestSess || !profile?.id) {
+          const updatedGuest = guestSess || { id: 'guest-' + Date.now(), role: 'STUDENT', is_guest: true };
+          updatedGuest.linked_teacher_id = teacher.id;
+          updatedGuest.stage_code = code.toUpperCase().trim();
+          localStorage.setItem('zumba_guest_session', JSON.stringify(updatedGuest));
+          setGuestProfile(updatedGuest);
+        }
+        
         localStorage.removeItem('pending_teacher_code');
+        
+        // 3. Sync with Global Context
         await fetchProfile();
+        
         toast.success(`Connected to instructor: ${teacher.full_name}`);
+        // Ensure immediate data fetch with the new ID explicitly
+        await fetchTeacherProfile(teacher.id);
+        await fetchAllAvailableSchedules(teacher.id);
       } else {
-        console.warn('[Dashboard] Auto-link failed: Teacher code not found.');
+        console.warn('[Dashboard] Link failed: Teacher code not found:', code);
+        localStorage.removeItem('pending_teacher_code');
+        
+        // Clear invalid stage code from guest session to prevent loop
+        const guestSessStr = localStorage.getItem('zumba_guest_session');
+        const guestSess = guestSessStr ? JSON.parse(guestSessStr) : null;
+        if (guestSess && guestSess.stage_code === code) {
+          delete guestSess.stage_code;
+          localStorage.setItem('zumba_guest_session', JSON.stringify(guestSess));
+          setGuestProfile(guestSess);
+        }
+        
+        if (code !== '') toast.error('Invalid stage code. Please check with your instructor.');
       }
     } catch (err) {
-      console.error('[Dashboard] Auto-link error:', err);
+      console.error('[Dashboard] Sync error:', err);
     } finally {
       setLinking(false);
+      setLoading(false);
     }
   };
 
@@ -166,37 +206,47 @@ export default function StudentDashboard() {
     }
   }, [myBookings, allSchedules]);
 
-  const fetchAllAvailableSchedules = async () => {
-    if (!profile?.linked_teacher_id) {
+  useEffect(() => {
+    if (profile?.id && profile?.linked_teacher_id) {
+      fetchStudentCredits();
+    }
+  }, [profile?.id, profile?.linked_teacher_id]);
+
+  const fetchStudentCredits = () => {
+    if (isDevBypass) {
+      const mockCredits = JSON.parse(localStorage.getItem('zumba_mock_credits') || '{}');
+      const studentId = profile.id;
+      const teacherId = profile.linked_teacher_id;
+      const balance = mockCredits[studentId]?.[teacherId] || 0;
+      setStudentCredits(balance);
+    }
+  };
+
+  const fetchAllAvailableSchedules = async (explicitTeacherId) => {
+    const teacherId = explicitTeacherId || profile?.linked_teacher_id;
+    if (!teacherId) {
       setAllSchedules([]);
       setLoading(false);
       return;
     }
     
     setLoading(true);
-    console.log('Fetching available schedules...');
+    console.log('[Dashboard] Fetching schedules for teacher:', teacherId);
 
     if (isDevBypass) {
       const mockSchedules = JSON.parse(localStorage.getItem('zumba_mock_schedules') || '[]');
       const mockRoutines = JSON.parse(localStorage.getItem('zumba_mock_routines') || '[]');
       const mockProfiles = JSON.parse(localStorage.getItem('zumba_mock_profiles') || '{}');
       
-      console.log('[Sync Debug] Local linked_teacher_id:', profile.linked_teacher_id);
-      console.log('[Sync Debug] Total mock schedules in storage:', mockSchedules.length);
-
       const teacherSchedules = mockSchedules
-        .filter(s => {
-          const match = String(s.teacher_id).trim() === String(profile.linked_teacher_id).trim();
-          const notCancelled = s.status !== 'CANCELLED';
-          return match && notCancelled;
-        })
+        .filter(s => String(s.teacher_id).trim() === String(teacherId).trim())
         .map(s => ({
           ...s,
           routines: mockRoutines.find(r => r.id === s.routine_id) || { name: 'Routine' },
           profiles: { full_name: mockProfiles[s.teacher_id]?.full_name || 'Instructor' }
         }));
       
-      console.log('[Sync Debug] Found schedules for this teacher:', teacherSchedules.length);
+      console.log(`[Dashboard] Found ${teacherSchedules.length} schedules for teacher ${teacherId}`);
       
       setAllSchedules(teacherSchedules);
       setLoading(false);
@@ -206,7 +256,7 @@ export default function StudentDashboard() {
     const { data, error } = await supabase
       .from('schedules')
       .select('*, routines(name, duration_minutes), profiles(full_name)')
-      .eq('teacher_id', profile.linked_teacher_id)
+      .eq('teacher_id', teacherId)
       .eq('status', 'SCHEDULED');
     
     if (error) console.error('Fetch error:', error);
@@ -214,7 +264,10 @@ export default function StudentDashboard() {
     setLoading(false);
   };
 
-  const fetchTeacherProfile = async (teacherId) => {
+  const fetchTeacherProfile = async (explicitTeacherId) => {
+    const teacherId = explicitTeacherId || profile?.linked_teacher_id;
+    if (!teacherId) return;
+
     if (isDevBypass) {
       const mockProfiles = JSON.parse(localStorage.getItem('zumba_mock_profiles') || '{}');
       const teacher = mockProfiles[teacherId];
@@ -326,7 +379,49 @@ export default function StudentDashboard() {
   const handleJoinStage = async (e) => {
     e.preventDefault();
     if (!linkingCode || linking) return;
-    handleAutoLink(linkingCode);
+    syncTeacherLink(linkingCode);
+  };
+
+  const handleDisconnect = async () => {
+    setLoading(true);
+    try {
+      // 1. Clear Supabase Persistence (if authenticated)
+      if (!isDevBypass && profile?.id) {
+        await supabase.from('profiles').update({ linked_teacher_id: null }).eq('id', profile.id);
+      }
+
+      // 2. Clear Local Persistence (Mock & Guest)
+      const mProfStr = localStorage.getItem('zumba_mock_profile');
+      const mockProfile = mProfStr ? JSON.parse(mProfStr) : {};
+      if (mockProfile.id) {
+        delete mockProfile.linked_teacher_id;
+        localStorage.setItem('zumba_mock_profile', JSON.stringify(mockProfile));
+
+        const savedProfiles = JSON.parse(localStorage.getItem('zumba_mock_profiles') || '{}');
+        if (savedProfiles[mockProfile.id]) {
+          delete savedProfiles[mockProfile.id].linked_teacher_id;
+          localStorage.setItem('zumba_mock_profiles', JSON.stringify(savedProfiles));
+        }
+      }
+
+      localStorage.removeItem('zumba_guest_session');
+      localStorage.removeItem('pending_teacher_code');
+      setGuestProfile(null);
+
+      // 3. Sync and Reset
+      await fetchProfile();
+      toast.success('Stage presence cleared. You can now join a new instructor.');
+      
+      // Delay slightly then redirect for a clean slate
+      setTimeout(() => {
+        window.location.href = '/'; 
+      }, 500);
+    } catch (err) {
+      console.error('[Dashboard] Disconnect error:', err);
+      toast.error('Failed to disconnect cleanly.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -434,7 +529,11 @@ export default function StudentDashboard() {
                             <MapPin className="w-3 h-3" /> {slot.location}
                           </div>
                           
-                          {myBookings.some(b => b.schedule_id === slot.id && b.payment_status === 'PAID') ? (
+                          {slot.status === 'CANCELLED' ? (
+                            <div className="w-full py-4 bg-rose-bloom/5 border border-rose-bloom/20 text-rose-bloom rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-2">
+                              <X className="w-4 h-4" /> Cancelled
+                            </div>
+                          ) : myBookings.some(b => b.schedule_id === slot.id && b.payment_status === 'PAID') ? (
                             <div className="w-full py-4 bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-2">
                               <CheckCircle2 className="w-4 h-4" /> Paid
                             </div>
@@ -456,28 +555,15 @@ export default function StudentDashboard() {
                 </div>
               </div>
 
-              <div className="glass p-8 rounded-[2.5rem] text-center">
-                 <h3 className="text-xs font-black text-rose-bloom uppercase tracking-widest mb-4">Current Stage</h3>
+              <div className="glass p-8 rounded-[2.5rem] text-center bg-gradient-to-br from-white/40 to-rose-bloom/5 border-rose-bloom/10">
+                 <h3 className="text-xs font-black text-rose-bloom uppercase tracking-widest mb-2">Stage Credits</h3>
+                 <div className="text-4xl font-black text-theatre-dark mb-2">${studentCredits.toFixed(2)}</div>
+                 <p className="text-[9px] font-bold text-theatre-dark/40 mb-8 max-w-xs mx-auto italic text-center">Exclusive to {teacherProfile?.full_name || 'Instructor'}</p>
+                 <div className="h-px w-full bg-apricot/20 mb-8" />
+                 <h3 className="text-[10px] font-black text-theatre-dark/40 uppercase tracking-widest mb-4 font-mono">Current Stage</h3>
                  <p className="text-[10px] font-bold text-theatre-dark/60 mb-8 max-w-xs mx-auto">Connected to {teacherProfile?.full_name || 'Instructor'}</p>
                  <button 
-                  onClick={async () => {
-                    if (confirm('Disconnect from this instructor? You will need their code to rejoin.')) {
-                      if (isDevBypass) {
-                        const mockProfile = JSON.parse(localStorage.getItem('zumba_mock_profile') || '{}');
-                        delete mockProfile.linked_teacher_id;
-                        localStorage.setItem('zumba_mock_profile', JSON.stringify(mockProfile));
-
-                        const savedProfiles = JSON.parse(localStorage.getItem('zumba_mock_profiles') || '{}');
-                        if (savedProfiles[mockProfile.id]) {
-                          delete savedProfiles[mockProfile.id].linked_teacher_id;
-                          localStorage.setItem('zumba_mock_profiles', JSON.stringify(savedProfiles));
-                        }
-                      } else {
-                        await supabase.from('profiles').update({ linked_teacher_id: null }).eq('id', profile.id);
-                      }
-                      await fetchProfile();
-                    }
-                  }}
+                  onClick={handleDisconnect}
                   className="w-full py-4 bg-red-500/5 border border-red-500/30 rounded-2xl text-red-500 font-black uppercase tracking-widest text-[10px] hover:bg-red-500 hover:text-white transition-all flex items-center justify-center gap-2"
                  >
                    <X className="w-4 h-4" /> Disconnect Stage

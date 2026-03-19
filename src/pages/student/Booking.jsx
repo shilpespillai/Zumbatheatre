@@ -9,7 +9,7 @@ import {
 import { 
   ChevronLeft, Calendar as CalendarIcon, Clock, MapPin, 
   Sparkles, ShieldCheck, Heart, Share2, Star,
-  CreditCard, ExternalLink, Banknote
+  CreditCard, ExternalLink, Banknote, Landmark
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -34,11 +34,22 @@ export default function StudentBooking() {
   const [loading, setLoading] = useState(true);
   const [selectedSession, setSelectedSession] = useState(null);
   const [booking, setBooking] = useState(false);
+  const [studentCredits, setStudentCredits] = useState(0);
 
   useEffect(() => {
     fetchTeacher();
     fetchSchedules();
-  }, [teacherId, currentMonth]);
+    if (profile?.id && teacherId) {
+      fetchCredits();
+    }
+  }, [teacherId, currentMonth, profile?.id]);
+
+  const fetchCredits = () => {
+    if (isDevBypass) {
+      const mockCredits = JSON.parse(localStorage.getItem('zumba_mock_credits') || '{}');
+      setStudentCredits(mockCredits[profile.id]?.[teacherId] || 0);
+    }
+  };
 
   const fetchTeacher = async () => {
     if (isDevBypass) {
@@ -107,7 +118,7 @@ export default function StudentBooking() {
     setLoading(false);
   };
 
-  const handleBooking = async () => {
+  const handleBooking = async (paymentType = 'normal') => {
     if (!profile) {
       toast.info('Please join via stage code to book a session');
       navigate('/auth');
@@ -122,11 +133,43 @@ export default function StudentBooking() {
     toast.loading('Processing your booking...');
 
     try {
+      if (paymentType === 'credits') {
+        if (studentCredits < selectedSession.price) {
+          toast.error('Insufficient credits for this stage.');
+          setBooking(false);
+          return;
+        }
+
+        if (isDevBypass) {
+          // Deduct credits
+          const mockCredits = JSON.parse(localStorage.getItem('zumba_mock_credits') || '{}');
+          mockCredits[profile.id][teacherId] -= selectedSession.price;
+          localStorage.setItem('zumba_mock_credits', JSON.stringify(mockCredits));
+
+          // Create booking
+          const mockBookings = JSON.parse(localStorage.getItem('zumba_mock_bookings') || '[]');
+          mockBookings.push({
+            id: `mock-book-${Date.now()}`,
+            student_id: profile.id,
+            schedule_id: selectedSession.id,
+            payment_method: 'CREDITS',
+            payment_status: 'PAID',
+            created_at: new Date().toISOString()
+          });
+          localStorage.setItem('zumba_mock_bookings', JSON.stringify(mockBookings));
+
+          await new Promise(resolve => setTimeout(resolve, 800));
+          toast.success('Booked instantly using your credits!');
+          navigate('/student/dashboard');
+          return;
+        }
+      }
+
       const paymentMethod = teacher?.payment_settings?.method || 'manual';
       const paymentConfig = teacher?.payment_settings?.config || {};
 
       if (isDevBypass) {
-          // Simulate booking persistence
+          // Simulate regular booking persistence
           const mockBookings = JSON.parse(localStorage.getItem('zumba_mock_bookings') || '[]');
           const newBooking = {
               id: `mock-book-${Date.now()}`,
@@ -157,7 +200,12 @@ export default function StudentBooking() {
       // Real Implementation Logic
       if (paymentMethod === 'stripe') {
         const stripe = await getStripe(paymentConfig.stripe_public_key);
-        const session = await createCheckoutSession([{ id: selectedSession.id }], { secretKey: paymentConfig.stripe_secret_key });
+        const session = await createCheckoutSession([{ 
+          name: selectedSession.routine?.name || 'Zumba Session', 
+          price: selectedSession.price || 15 
+        }], { 
+          teacherId: selectedSession.teacher_id 
+        });
         await stripe.redirectToCheckout({ sessionId: session.id });
       } else if (paymentMethod === 'paypal') {
         window.location.href = paymentConfig.paypal_url;
@@ -303,6 +351,21 @@ export default function StudentBooking() {
                           <span className="text-[10px] font-bold opacity-40 uppercase tracking-widest">Total Energy</span>
                           <span className="text-2xl font-black text-rose-bloom tracking-tight">${selectedSession.price}</span>
                         </div>
+                      </div>
+
+                      {studentCredits >= selectedSession.price && (
+                        <button 
+                          onClick={() => handleBooking('credits')}
+                          disabled={booking}
+                          className="w-full py-5 bg-rose-bloom text-white border border-rose-bloom/30 text-rose-bloom rounded-[2.5rem] flex items-center justify-center gap-3 hover:bg-rose-bloom/80 transition-all font-black uppercase tracking-widest text-xs mb-2 shadow-lg shadow-rose-bloom/20"
+                        >
+                          <Sparkles className="w-5 h-5 text-white" /> Use ${selectedSession.price} Credits
+                        </button>
+                      )}
+
+                      <div className="px-6 py-3 bg-white/5 rounded-2xl border border-white/5 text-center mb-6">
+                         <div className="text-[8px] font-black text-white/20 uppercase tracking-[0.3em] mb-1">Your Stage Credits</div>
+                         <div className="text-sm font-black text-rose-petal">${studentCredits.toFixed(2)}</div>
                       </div>
 
                       <button 

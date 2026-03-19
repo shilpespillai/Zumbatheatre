@@ -10,6 +10,11 @@ export const AuthProvider = ({ children }) => {
   const isDevBypass = import.meta.env.VITE_DEV_BYPASS === 'true';
 
   useEffect(() => {
+    // Production Safety Check
+    if (isDevBypass && import.meta.env.PROD) {
+      console.warn('CRITICAL: VITE_DEV_BYPASS is enabled in a production build. This is a security risk.');
+    }
+
     // Check for mock user first if bypass is enabled
     if (isDevBypass) {
       const mockUser = localStorage.getItem('zumba_mock_user');
@@ -125,10 +130,17 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
   };
 
+  const clearMockSession = () => {
+    localStorage.removeItem('zumba_mock_user');
+    localStorage.removeItem('zumba_mock_profile');
+    localStorage.removeItem('zumba_guest_session');
+    setUser(null);
+    setProfile(null);
+  };
+
   const signOut = async () => {
     if (isDevBypass) {
-      localStorage.removeItem('zumba_mock_user');
-      localStorage.removeItem('zumba_mock_profile');
+      clearMockSession();
     }
     await supabase.auth.signOut();
     setUser(null);
@@ -142,6 +154,7 @@ export const AuthProvider = ({ children }) => {
     loading,
     signOut,
     signInMock,
+    clearMockSession,
     fetchProfile,
     isDevBypass,
     isTeacher: profile?.role?.toUpperCase() === 'TEACHER',
