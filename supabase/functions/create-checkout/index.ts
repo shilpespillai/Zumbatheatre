@@ -7,7 +7,35 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-serve(async (req) => {
+// Function to decrypt data using AES-GCM
+async function decrypt(hexCiphertext: string, masterKeyStr: string) {
+  const enc = new TextEncoder();
+  const keyBuffer = enc.encode(masterKeyStr.padEnd(32, '0').slice(0, 32));
+  const key = await crypto.subtle.importKey(
+    "raw",
+    keyBuffer,
+    "AES-GCM",
+    false,
+    ["decrypt"]
+  );
+
+  const combined = new Uint8Array(
+    hexCiphertext.match(/.{1,2}/g)!.map(byte => parseInt(byte, 16))
+  );
+
+  const iv = combined.slice(0, 12);
+  const ciphertext = combined.slice(12);
+
+  const decrypted = await crypto.subtle.decrypt(
+    { name: "AES-GCM", iv },
+    key,
+    ciphertext
+  );
+
+  return new TextDecoder().decode(decrypted);
+}
+
+serve(async (req: Request) => {
   // Handle CORS
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -29,7 +57,6 @@ serve(async (req) => {
       stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY') ?? '';
     } else if (teacherId) {
       // Collect session fee for a specific teacher
-      // 2. Fetch Teacher's ENCRYPTED Secret Key from the secure table
       const { data: secretData, error: secretError } = await supabaseAdmin
         .from('instructor_secrets')
         .select('encrypted_secret_key')
@@ -40,14 +67,11 @@ serve(async (req) => {
         throw new Error('Instructor has not configured their payment stage correctly.');
       }
 
-      // 3. DECRYPT Key (Conceptual logic using a master master key)
+      // 3. DECRYPT Key using AES-GCM
       const masterKey = Deno.env.get('MASTER_ENCRYPTION_KEY');
       if (!masterKey) throw new Error('System encryption key not configured.');
       
-      // Decryption implementation (e.g., using Web Crypto API or similar)
-      // For now, we assume keys are stored securely. 
-      // If we implement encryption, we would decrypt it here.
-      stripeSecretKey = secretData.encrypted_secret_key;
+      stripeSecretKey = await decrypt(secretData.encrypted_secret_key, masterKey);
     }
 
     if (!stripeSecretKey) {
@@ -60,16 +84,25 @@ serve(async (req) => {
     });
 
     // 4. Create Stripe Checkout Session
-    const lineItems = items.map(item => ({
-      price_data: {
-        currency: 'usd',
-        product_data: {
-          name: item.name || 'Zumba Theatre Session',
+    const lineItems = items.map((item: any) => {
+      // For subscriptions, Stripe prefers a pre-defined 'price' ID from the dashboard
+      if (isSubscription && item.priceId) {
+        return { price: item.priceId, quantity: 1 };
+      }
+      
+      // Fallback/Default for one-time payments
+      return {
+        price_data: {
+          currency: 'usd',
+          product_data: {
+            name: item.name || 'Zumba Theatre Session',
+          },
+          unit_amount: Math.round(Number(item.price || 15) * 100), // convert to cents
+          ...(isSubscription && { recurring: { interval: 'month' } }) // Inline recurring if no Price ID
         },
-        unit_amount: Math.round(Number(item.price) * 100), // convert to cents
-      },
-      quantity: 1,
-    }));
+        quantity: 1,
+      };
+    });
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
@@ -84,7 +117,7 @@ serve(async (req) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     );
 
-  } catch (error) {
+  } catch (error: any) {
     return new Response(
       JSON.stringify({ error: error.message }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }

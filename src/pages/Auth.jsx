@@ -8,6 +8,8 @@ import {
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Turnstile } from '@marsidev/react-turnstile';
+import Honeypot from '../components/Honeypot';
 
 export default function Auth() {
   const { signInMock, clearMockSession, isDevBypass, fetchProfile, user, profile } = useAuth();
@@ -23,9 +25,12 @@ export default function Auth() {
     email: initialEmail,
     password: '',
     fullName: '',
-    stageCode: initialCode
+    stageCode: initialCode,
+    website: '' // Honeypot trap
   });
   const [role, setRole] = useState(initialRole); // 'student' or 'teacher'
+  const [turnstileToken, setTurnstileToken] = useState(null);
+  const turnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY || '1x00000000000000000000AA'; // Standard test key
 
   // Redirect if already logged in (Teachers/Admins)
   useEffect(() => {
@@ -83,6 +88,19 @@ export default function Auth() {
 
   const handleAuth = async (e) => {
     e.preventDefault();
+
+    // 1. Honeypot check: If the hidden 'website' field is filled, it's a bot.
+    if (formData.website) {
+      console.warn('Bot detected via Honeypot trap.');
+      toast.error('Security verification failed.');
+      return;
+    }
+
+    // 2. Turnstile check (if not in dev bypass)
+    if (!isDevBypass && !turnstileToken) {
+      toast.error('Please complete the security challenge.');
+      return;
+    }
     
     if (role === 'student') {
       handleGuestEntrance();
@@ -303,9 +321,28 @@ export default function Auth() {
               </div>
             )}
 
+            {/* Bot Protection Layer */}
+            <div className="space-y-4">
+              <Honeypot 
+                value={formData.website} 
+                onChange={(e) => setFormData({...formData, website: e.target.value})} 
+              />
+              
+              {!isDevBypass && (
+                <div className="flex justify-center transform scale-90 sm:scale-100">
+                  <Turnstile 
+                    siteKey={turnstileSiteKey} 
+                    onSuccess={(token) => setTurnstileToken(token)}
+                    onError={() => setTurnstileToken(null)}
+                    onExpire={() => setTurnstileToken(null)}
+                  />
+                </div>
+              )}
+            </div>
+
             <button 
               type="submit" 
-              disabled={loading}
+              disabled={loading || (!isDevBypass && !turnstileToken)}
               className="w-full btn-premium bg-gradient-to-r from-rose-bloom to-rose-petal text-white py-6 rounded-[2rem] flex items-center justify-center gap-3 shadow-2xl shadow-rose-bloom/30 group disabled:opacity-50"
             >
               {loading ? <div className="w-6 h-6 border-4 border-white/20 border-t-white rounded-full animate-spin" /> : (

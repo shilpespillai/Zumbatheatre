@@ -14,7 +14,7 @@ export default function TeacherSubscription() {
   const { profile, isDevBypass, fetchProfile } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [price, setPrice] = useState(49);
+  const [price, setPrice] = useState(10);
 
   useEffect(() => {
     fetchPrice();
@@ -30,6 +30,7 @@ export default function TeacherSubscription() {
   const plan = {
     name: 'Master Stage Pro',
     price: price,
+    priceId: 'price_1TCfcsJkmG8taKBQjuX6Wcga', // New Master Stage Pro Price ID from Stripe
     features: [
       'Unlimited Student Bookings',
       'Choose your own Payment System',
@@ -67,7 +68,13 @@ export default function TeacherSubscription() {
 
       // Real Implementation
       const stripe = await getStripe(); // Uses Owner's Public Key from ENV
-      const session = await createCheckoutSession([{ name: plan.name, price: plan.price }], { isSubscription: true });
+      const session = await createCheckoutSession([{ 
+        name: plan.name, 
+        price: plan.price,
+        priceId: plan.priceId // Standard Stripe Price ID for recurring billing
+      }], { 
+        isSubscription: true 
+      });
       await stripe.redirectToCheckout({ sessionId: session.id });
 
     } catch (error) {
@@ -145,7 +152,7 @@ export default function TeacherSubscription() {
               <span className="px-4 py-1.5 bg-rose-bloom/10 text-rose-bloom rounded-full text-[10px] font-black uppercase tracking-widest leading-none">Best Value</span>
               <h3 className="text-3xl font-black mt-4">{plan.name}</h3>
               <div className="flex items-baseline gap-2 mt-2">
-                <span className="text-5xl font-black text-theatre-dark tracking-tighter">${plan.price}</span>
+                <span className="text-5xl font-black text-theatre-dark tracking-tighter">$10</span>
                 <span className="text-sm font-bold text-theatre-dark/40">/ month</span>
               </div>
             </div>

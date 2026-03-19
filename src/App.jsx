@@ -9,6 +9,7 @@ import Routines from './pages/teacher/Routines';
 import TeacherCalendar from './pages/teacher/Calendar';
 import TeacherReports from './pages/teacher/Reports';
 import TeacherSubscription from './pages/teacher/Subscription';
+import TeacherPaymentSettings from './pages/teacher/PaymentSettings';
 import StudentDashboard from './pages/student/Dashboard';
 import StudentBrowse from './pages/student/Browse';
 import StudentBooking from './pages/student/Booking';
@@ -188,6 +189,11 @@ export default function App() {
           <Route path="/teacher/subscription" element={
             <ProtectedRoute allowedRoles={['TEACHER']}>
               <TeacherSubscription />
+            </ProtectedRoute>
+          } />
+          <Route path="/teacher/payments" element={
+            <ProtectedRoute allowedRoles={['TEACHER']}>
+              <TeacherPaymentSettings />
             </ProtectedRoute>
           } />
 

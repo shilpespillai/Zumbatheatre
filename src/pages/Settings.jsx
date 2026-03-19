@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { supabase } from '../api/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import { 
@@ -277,9 +278,25 @@ export default function Settings() {
 
                         <div className="space-y-6">
                            {paymentSettings.method === 'stripe' && (
-                             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+                             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+                               <div className="p-6 bg-rose-bloom/5 border border-rose-bloom/10 rounded-2xl flex items-start gap-4">
+                                 <Shield className="w-6 h-6 text-rose-bloom shrink-0 mt-1" />
+                                 <div className="space-y-2">
+                                   <h4 className="text-sm font-black uppercase tracking-widest text-theatre-dark">Hardened Security</h4>
+                                   <p className="text-[10px] font-bold text-theatre-dark/40 leading-relaxed uppercase tracking-tight">
+                                     To protect your financial data, Stripe Secret Keys are now managed through our encrypted Edge Activation system. 
+                                   </p>
+                                   <Link 
+                                     to="/teacher/payments"
+                                     className="inline-flex items-center gap-2 text-xs font-black text-rose-bloom hover:gap-3 transition-all uppercase tracking-widest pt-2"
+                                   >
+                                     Configure Secure Payouts <ExternalLink className="w-4 h-4" />
+                                   </Link>
+                                 </div>
+                               </div>
+                               
                                <div className="space-y-2">
-                                  <label className="text-[10px] font-black uppercase tracking-widest text-theatre-dark/30 ml-1">Stripe Public Key</label>
+                                  <label className="text-[10px] font-black uppercase tracking-widest text-theatre-dark/30 ml-1">Stripe Public Key (Required for Checkout)</label>
                                   <input
                                     type="text"
                                     value={paymentSettings.config.stripe_public_key}
@@ -289,19 +306,6 @@ export default function Settings() {
                                     })}
                                     className="w-full bg-white border border-apricot/20 rounded-xl py-4 px-6 font-mono text-sm"
                                     placeholder="pk_test_..."
-                                  />
-                               </div>
-                               <div className="space-y-2">
-                                  <label className="text-[10px] font-black uppercase tracking-widest text-theatre-dark/30 ml-1">Stripe Secret Key</label>
-                                  <input
-                                    type="password"
-                                    value={paymentSettings.config.stripe_secret_key}
-                                    onChange={(e) => setPaymentSettings({
-                                      ...paymentSettings, 
-                                      config: { ...paymentSettings.config, stripe_secret_key: e.target.value }
-                                    })}
-                                    className="w-full bg-white border border-apricot/20 rounded-xl py-4 px-6 font-mono text-sm"
-                                    placeholder="sk_test_..."
                                   />
                                </div>
                              </motion.div>
