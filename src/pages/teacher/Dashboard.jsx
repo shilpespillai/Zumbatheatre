@@ -293,6 +293,43 @@ export default function TeacherDashboard() {
     }
   };
 
+  const handleMarkAsPaid = async (bookingId) => {
+    try {
+      if (isDevBypass) {
+        const mockBookings = JSON.parse(localStorage.getItem('zumba_mock_bookings') || '[]');
+        const updatedBookings = mockBookings.map(b => 
+          b.id === bookingId ? { ...b, payment_status: 'PAID', payment_method: 'MANUAL' } : b
+        );
+        localStorage.setItem('zumba_mock_bookings', JSON.stringify(updatedBookings));
+      } else {
+        const { error } = await supabase
+          .from('bookings')
+          .update({ payment_status: 'PAID', payment_method: 'MANUAL' })
+          .eq('id', bookingId);
+        if (error) throw error;
+      }
+      
+      toast.success('Payment confirmed!');
+      
+      // Update local state for both modals
+      const updatedBookingsState = bookings.map(b => 
+        b.id === bookingId ? { ...b, payment_status: 'PAID', payment_method: 'MANUAL' } : b
+      );
+      setBookings(updatedBookingsState);
+      
+      if (selectedSessionForAttendance) {
+        setSelectedSessionForAttendance({
+          ...selectedSessionForAttendance,
+          bookings: selectedSessionForAttendance.bookings.map(b => 
+            b.id === bookingId ? { ...b, payment_status: 'PAID', payment_method: 'MANUAL' } : b
+          )
+        });
+      }
+    } catch (error) {
+      toast.error('Failed to update payment status');
+    }
+  };
+
   const handleCancelSchedule = async (scheduleId) => {
     try {
       if (isDevBypass) {
@@ -823,6 +860,16 @@ export default function TeacherDashboard() {
                            }`}>
                              {booking.payment_status === 'PAID' ? (booking.payment_method === 'CREDITS' ? 'Paid (Credits)' : 'Paid') : booking.payment_status}
                            </div>
+                           {booking.payment_status === 'PENDING' && (
+                             <button 
+                               onClick={() => handleMarkAsPaid(booking.id)}
+                               className="p-2 bg-emerald-500/10 hover:bg-emerald-500 text-emerald-500 hover:text-white rounded-xl transition-all flex items-center gap-2 group/btn"
+                               title="Confirm Cash Payment"
+                             >
+                                <span className="text-[8px] font-black uppercase tracking-widest hidden group-hover/btn:block">Mark Paid</span>
+                                <Plus className="w-4 h-4" />
+                             </button>
+                           )}
                            <button className="p-2 opacity-0 group-hover:opacity-100 transition-all text-theatre-dark/20 hover:text-theatre-dark">
                               <ArrowRight className="w-4 h-4" />
                            </button>
