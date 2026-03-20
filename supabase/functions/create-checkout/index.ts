@@ -114,7 +114,10 @@ serve(async (req: Request) => {
       client_reference_id: req.headers.get('x-user-id') || '', 
       metadata: {
         userId: req.headers.get('x-user-id') || '',
-        isSubscription: String(isSubscription)
+        isSubscription: String(isSubscription),
+        scheduleId: !isSubscription ? items[0]?.id : '',
+        teacherId: teacherId || '',
+        amount: !isSubscription ? String(items[0]?.price || 15) : ''
       }
     });
 

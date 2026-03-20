@@ -42,15 +42,55 @@ serve(async (req) => {
         const subscriptionId = session.subscription as string
 
         if (userId) {
-          console.log(`✅ Subscription completed for user: ${userId}`)
-          await supabaseAdmin
-            .from('profiles')
-            .update({
-              is_subscribed: true,
-              stripe_customer_id: customerId,
-              stripe_subscription_id: subscriptionId
-            })
-            .eq('id', userId)
+          const isSubscription = session.metadata?.isSubscription === 'true'
+
+          if (isSubscription) {
+            console.log(`✅ Subscription completed for user: ${userId}`)
+            await supabaseAdmin
+              .from('profiles')
+              .update({
+                is_subscribed: true,
+                stripe_customer_id: customerId,
+                stripe_subscription_id: subscriptionId
+              })
+              .eq('id', userId)
+          } else {
+            // ONE-OFF BOOKING LOGIC
+            const scheduleId = session.metadata?.scheduleId
+            const teacherId = session.metadata?.teacherId
+            const amount = Number(session.metadata?.amount || 0)
+
+            console.log(`✅ One-off booking completed for user: ${userId}, schedule: ${scheduleId}`)
+
+            // 1. Create Booking Record
+            const { data: bookingData, error: bookingErr } = await supabaseAdmin
+              .from('bookings')
+              .insert({
+                student_id: userId,
+                schedule_id: scheduleId,
+                amount: amount,
+                payment_method: 'STRIPE',
+                payment_status: 'PAID'
+              })
+              .select()
+              .single()
+
+            if (bookingErr) {
+              console.error(`❌ Booking Insertion Error: ${bookingErr.message}`)
+            } else if (bookingData) {
+              // 2. Create Payment Record (for reports)
+              const { error: paymentErr } = await supabaseAdmin
+                .from('payments')
+                .insert({
+                  booking_id: bookingData.id,
+                  student_id: userId,
+                  teacher_id: teacherId,
+                  amount: amount,
+                  status: 'SUCCEEDED'
+                })
+              if (paymentErr) console.error(`❌ Payment Insertion Error: ${paymentErr.message}`)
+            }
+          }
         }
         break
       }
