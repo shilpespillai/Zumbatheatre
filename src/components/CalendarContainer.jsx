@@ -82,6 +82,7 @@ export default function CalendarContainer({ events, onDateClick, onEventClick, o
         {days.map(day => {
           const isSelected = isSameDay(day, selectedDate);
           const isCurrentMonth = isSameMonth(day, monthStart);
+          const isPast = startOfDay(day) < startOfDay(new Date());
           const dayEvents = events.filter(e => isSameDay(parseISO(e.start_time || e.date), day));
 
           return (
@@ -93,7 +94,9 @@ export default function CalendarContainer({ events, onDateClick, onEventClick, o
               }}
               className={`min-h-[120px] p-4 bg-bloom-white/80 transition-all cursor-pointer relative group ${
                 !isCurrentMonth ? 'bg-bloom-white/50 opacity-30' : 'hover:bg-bloom-white'
-              } ${isSelected ? 'ring-2 ring-inset ring-rose-bloom/50 bg-apricot/5' : ''}`}
+              } ${isSelected ? 'ring-2 ring-inset ring-rose-bloom/50 bg-apricot/5' : ''} ${
+                isPast ? 'opacity-50 grayscale hover:opacity-100' : ''
+              }`}
             >
               <span className={`text-sm font-black ${isSameDay(day, new Date()) ? 'text-rose-bloom' : 'text-theatre-dark/60'}`}>
                 {format(day, 'd')}
@@ -111,7 +114,7 @@ export default function CalendarContainer({ events, onDateClick, onEventClick, o
                   <div className="text-[9px] font-bold text-rose-bloom pl-1">+{dayEvents.length - 3} more</div>
                 )}
               </div>
-              {role === 'teacher' && isCurrentMonth && (
+              {role === 'teacher' && isCurrentMonth && !isPast && (
                 <button 
                   onClick={(e) => { e.stopPropagation(); onAddClick(day); }}
                   className="absolute bottom-3 right-3 p-1.5 bg-rose-bloom text-white rounded-lg opacity-0 group-hover:opacity-100 transition-all scale-75 group-hover:scale-100 shadow-lg shadow-rose-bloom/20"
@@ -135,11 +138,22 @@ export default function CalendarContainer({ events, onDateClick, onEventClick, o
       <div className="grid grid-cols-7 gap-4">
         {days.map(day => {
           const dayEvents = events.filter(e => isSameDay(parseISO(e.start_time), day));
+          const isPast = startOfDay(day) < startOfDay(new Date());
+          const isSelected = isSameDay(day, selectedDate);
+
           return (
-            <div key={day.toString()} className="space-y-4">
-              <div className={`p-4 rounded-[1.5rem] text-center border transition-all ${
-                isSameDay(day, new Date()) ? 'bg-rose-bloom text-white border-rose-bloom shadow-lg shadow-rose-bloom/20' : 'bg-bloom-white border-apricot/30'
-              }`}>
+            <div key={day.toString()} className={`space-y-4 ${isPast ? 'opacity-50 grayscale hover:opacity-100' : ''}`}>
+              <div 
+                onClick={() => {
+                  setSelectedDate(day);
+                  if (onDateClick) onDateClick(day);
+                }}
+                className={`p-4 rounded-[1.5rem] text-center border transition-all cursor-pointer ${
+                  isSameDay(day, new Date()) ? 'bg-rose-bloom text-white border-rose-bloom shadow-lg shadow-rose-bloom/20' : 
+                  isSelected ? 'bg-apricot/20 border-rose-bloom/30 text-rose-bloom' : 
+                  'bg-bloom-white border-apricot/30'
+                }`}
+              >
                 <div className={`text-[10px] font-black uppercase tracking-widest ${isSameDay(day, new Date()) ? 'text-white/60' : 'text-theatre-dark/80'}`}>
                   {format(day, 'EEE')}
                 </div>

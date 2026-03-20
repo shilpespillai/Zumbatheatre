@@ -18,24 +18,33 @@ export const ProtectedRoute = ({ children, allowedRoles = [] }) => {
     );
   }
 
-  // If not logged in and not a guest, redirect to auth
-  if (!user && !isGuest) {
+  // 1. If not logged in and not a guest, redirect to auth
+  if (!user && !isGuest && !loading) {
     return <Navigate to="/auth" state={{ from: location }} replace />;
   }
 
-  // Handle Role Protection for Guests
-  if (isGuest && allowedRoles.length > 0 && !allowedRoles.includes('STUDENT')) {
-    return <Navigate to="/student/dashboard" replace />;
-  }
-
-  // Handle Role Protection for Authenticated Users
-  if (user && !profile && location.pathname !== '/onboarding') {
+  // 2. Handle Onboarding - if user exists but has no profile role yet
+  if (user && !profile?.role && !loading && location.pathname !== '/onboarding') {
     return <Navigate to="/onboarding" replace />;
   }
 
-  if (user && allowedRoles.length > 0 && !allowedRoles.map(r => r.toUpperCase()).includes(profile?.role?.toUpperCase())) {
-    const redirectPath = profile?.role?.toUpperCase() === 'TEACHER' ? '/teacher/dashboard' : '/student/dashboard';
-    return <Navigate to={redirectPath} replace />;
+  // 3. Handle Role Protection for Authenticated Users (Real Users take priority)
+  if (user && profile?.role && allowedRoles.length > 0) {
+    const userRole = profile.role.toUpperCase();
+    const isAllowed = allowedRoles.map(r => r.toUpperCase()).includes(userRole);
+    
+    if (!isAllowed) {
+      const redirectPath = userRole === 'TEACHER' ? '/teacher/dashboard' : '/student/dashboard';
+      if (location.pathname !== redirectPath) {
+        return <Navigate to={redirectPath} replace />;
+      }
+    }
+    return children;
+  }
+
+  // 4. Handle Role Protection for Guests (Only if no real user)
+  if (isGuest && !user && allowedRoles.length > 0 && !allowedRoles.includes('STUDENT')) {
+    return <Navigate to="/student/dashboard" replace />;
   }
 
   return children;

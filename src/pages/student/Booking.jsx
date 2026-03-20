@@ -35,6 +35,7 @@ export default function StudentBooking() {
   const [selectedSession, setSelectedSession] = useState(null);
   const [booking, setBooking] = useState(false);
   const [studentCredits, setStudentCredits] = useState(0);
+  const [selectedMethod, setSelectedMethod] = useState(null);
 
   useEffect(() => {
     fetchTeacher();
@@ -46,24 +47,51 @@ export default function StudentBooking() {
 
   const fetchCredits = () => {
     if (isDevBypass) {
-      const mockCredits = JSON.parse(localStorage.getItem('zumba_mock_credits') || '{}');
-      setStudentCredits(mockCredits[profile.id]?.[teacherId] || 0);
+      const mockCredits = JSON.parse(localStorage.getItem('zumba_mock_credits') || '[]');
+      if (Array.isArray(mockCredits)) {
+        const credit = mockCredits.find(c => c.student_id === profile.id && c.teacher_id === teacherId);
+        setStudentCredits(credit?.balance || 0);
+      } else {
+        // Fallback or migration if needed (though Dashboard should handle it)
+        setStudentCredits(mockCredits[profile.id]?.[teacherId] || 0);
+      }
     }
   };
 
   const fetchTeacher = async () => {
+    let teacherData = null;
     if (isDevBypass) {
       const mockProfiles = JSON.parse(localStorage.getItem('zumba_mock_profiles') || '{}');
-      setTeacher(mockProfiles[teacherId] || null);
-      return;
+      teacherData = mockProfiles[teacherId] || null;
+    } else {
+      const { data } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', teacherId)
+        .single();
+      teacherData = data;
     }
 
-    const { data } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', teacherId)
-      .single();
-    setTeacher(data);
+    if (teacherData) {
+      const settings = teacherData.payment_settings || {};
+      const config = settings.config || {};
+      const enabledMethods = settings.enabledMethods || [];
+      
+      let available = [];
+      if (enabledMethods.length > 0) {
+        available = enabledMethods;
+      } else {
+        // Fallback for legacy data
+        if (config.stripe_public_key) available.push('stripe');
+        if (config.paypal_url) available.push('paypal');
+        if (config.bank_instructions) available.push('manual');
+      }
+      
+      if (available.length > 0) {
+        setSelectedMethod(settings.method || available[0]);
+      }
+      setTeacher(teacherData);
+    }
   };
 
   const fetchSchedules = async () => {
@@ -130,9 +158,44 @@ export default function StudentBooking() {
     }
 
     setBooking(true);
+    
+    if (new Date(selectedSession.start_time) < new Date()) {
+      toast.error('This session has already expired.');
+      setBooking(false);
+      return;
+    }
+
     toast.loading('Processing your booking...');
 
     try {
+      // 1. Prevent Duplicate Bookings
+      if (isDevBypass) {
+        const mockBookings = JSON.parse(localStorage.getItem('zumba_mock_bookings') || '[]');
+        const alreadyBooked = mockBookings.some(b => 
+          b.student_id === profile.id && 
+          b.schedule_id === selectedSession.id &&
+          b.payment_status !== 'CANCELLED' &&
+          b.payment_status !== 'VOID'
+        );
+        if (alreadyBooked) {
+          toast.error('You have already reserved a spot for this session.');
+          setBooking(false);
+          return;
+        }
+      } else {
+        const { data: existingBookings, error: checkError } = await supabase
+          .from('bookings')
+          .select('id')
+          .eq('student_id', profile.id)
+          .eq('schedule_id', selectedSession.id)
+          .not('payment_status', 'in', '("CANCELLED","VOID")');
+        
+        if (existingBookings && existingBookings.length > 0) {
+          toast.error('You have already reserved a spot for this session.');
+          setBooking(false);
+          return;
+        }
+      }
       if (paymentType === 'credits') {
         if (studentCredits < selectedSession.price) {
           toast.error('Insufficient credits for this stage.');
@@ -140,32 +203,89 @@ export default function StudentBooking() {
           return;
         }
 
-        if (isDevBypass) {
-          // Deduct credits
-          const mockCredits = JSON.parse(localStorage.getItem('zumba_mock_credits') || '{}');
-          mockCredits[profile.id][teacherId] -= selectedSession.price;
-          localStorage.setItem('zumba_mock_credits', JSON.stringify(mockCredits));
+          // Update Credits in DB (Migration handle_credit_update handles logic, but here we explicitly deduct)
+          if (!isDevBypass) {
+            const { data: currentCredits, error: fetchErr } = await supabase
+              .from('credits')
+              .select('balance')
+              .eq('student_id', profile.id)
+              .eq('teacher_id', teacherId)
+              .single();
 
-          // Create booking
-          const mockBookings = JSON.parse(localStorage.getItem('zumba_mock_bookings') || '[]');
-          mockBookings.push({
-            id: `mock-book-${Date.now()}`,
-            student_id: profile.id,
-            schedule_id: selectedSession.id,
-            payment_method: 'CREDITS',
-            payment_status: 'PAID',
-            created_at: new Date().toISOString()
-          });
-          localStorage.setItem('zumba_mock_bookings', JSON.stringify(mockBookings));
+            if (fetchErr) throw fetchErr;
+
+            const { error: creditError } = await supabase
+              .from('credits')
+              .update({ balance: (Number(currentCredits.balance) || 0) - selectedSession.price })
+              .eq('student_id', profile.id)
+              .eq('teacher_id', teacherId);
+            
+            if (creditError) throw creditError;
+          }
+
+          // Create booking in Supabase
+          if (!isDevBypass) {
+            const { data: bookingData, error: bookingError } = await supabase
+              .from('bookings')
+              .insert({
+                student_id: profile.id,
+                schedule_id: selectedSession.id,
+                amount: selectedSession.price,
+                payment_method: 'CREDITS',
+                payment_status: 'PAID'
+              })
+              .select()
+              .single();
+            
+            if (bookingError) {
+              console.error('[Booking] Credit booking error:', bookingError);
+              toast.error('Reservation failed. Please try again.');
+              setBooking(false);
+              return;
+            }
+
+            // Log payment record to ensure it shows up in reports
+            await supabase.from('payments').insert({
+              booking_id: bookingData.id,
+              student_id: profile.id,
+              teacher_id: teacherId,
+              amount: selectedSession.price,
+              status: 'SUCCEEDED'
+            });
+          }
+
+          if (isDevBypass) {
+            // Deduct credits (using ARRAY structure)
+            const mockCredits = JSON.parse(localStorage.getItem('zumba_mock_credits') || '[]');
+            const creditIndex = mockCredits.findIndex(c => c.student_id === profile.id && c.teacher_id === teacherId);
+            
+            if (creditIndex !== -1) {
+              mockCredits[creditIndex].balance -= selectedSession.price;
+              mockCredits[creditIndex].last_updated = new Date().toISOString();
+            }
+            localStorage.setItem('zumba_mock_credits', JSON.stringify(mockCredits));
+
+            // Create booking
+            const mockBookings = JSON.parse(localStorage.getItem('zumba_mock_bookings') || '[]');
+            mockBookings.push({
+              id: `mock-book-${Date.now()}`,
+              student_id: profile.id,
+              schedule_id: selectedSession.id,
+              amount: selectedSession.price,
+              payment_method: 'CREDITS',
+              payment_status: 'PAID',
+              created_at: new Date().toISOString()
+            });
+            localStorage.setItem('zumba_mock_bookings', JSON.stringify(mockBookings));
+          }
 
           await new Promise(resolve => setTimeout(resolve, 800));
           toast.success('Booked instantly using your credits!');
           navigate('/student/dashboard');
           return;
-        }
       }
 
-      const paymentMethod = teacher?.payment_settings?.method || 'manual';
+      const paymentMethod = selectedMethod || 'manual';
       const paymentConfig = teacher?.payment_settings?.config || {};
 
       if (isDevBypass) {
@@ -175,6 +295,7 @@ export default function StudentBooking() {
               id: `mock-book-${Date.now()}`,
               student_id: profile.id,
               schedule_id: selectedSession.id,
+              amount: selectedSession.price,
               payment_method: paymentMethod,
               payment_status: paymentMethod === 'manual' ? 'PENDING' : 'PAID',
               created_at: new Date().toISOString()
@@ -210,7 +331,24 @@ export default function StudentBooking() {
       } else if (paymentMethod === 'paypal') {
         window.location.href = paymentConfig.paypal_url;
       } else {
-        // Manual Flow
+        // Manual Flow Insertion in Supabase
+        const { error: manualError } = await supabase
+          .from('bookings')
+          .insert({
+            student_id: profile.id,
+            schedule_id: selectedSession.id,
+            amount: selectedSession.price,
+            payment_method: 'MANUAL',
+            payment_status: 'PENDING'
+          });
+
+        if (manualError) {
+          console.error('[Booking] Manual reservation error:', manualError);
+          toast.error('Failed to reserve spot. Please try again.');
+          setBooking(false);
+          return;
+        }
+
         toast.success('Spot reserved! Manual payment instructions shown.');
         navigate('/student/dashboard');
       }
@@ -323,16 +461,73 @@ export default function StudentBooking() {
                       </div>
 
                       <div className="space-y-4 px-2">
-                        <div className="flex justify-between items-center text-rose-bloom/40 text-[8px] font-black uppercase tracking-widest bg-rose-bloom/5 p-2 rounded-lg border border-rose-bloom/10 mb-4">
-                           <span>Collection via</span>
-                           <span className="text-rose-bloom flex items-center gap-1">
-                              {teacher?.payment_settings?.method === 'stripe' && <><CreditCard className="w-2 h-2" /> Stripe</>}
-                              {teacher?.payment_settings?.method === 'paypal' && <><ExternalLink className="w-2 h-2" /> PayPal</>}
-                              {teacher?.payment_settings?.method === 'manual' && <><Banknote className="w-2 h-2" /> Manual</>}
-                           </span>
+                        <div className="space-y-3 mb-6">
+                           <div className="text-[10px] font-black text-rose-bloom/40 uppercase tracking-[0.2em] ml-1">Choose Payment Mode</div>
+                           <div className="grid grid-cols-1 gap-2">
+                              {(() => {
+                                const config = teacher?.payment_settings?.config || {};
+                                const enabledMethods = teacher?.payment_settings?.enabledMethods || [];
+                                
+                                // Helper to check if method is enabled AND configured
+                                const isAvailable = (id) => {
+                                  let isConfigured = false;
+                                  if (id === 'stripe') isConfigured = !!config.stripe_public_key;
+                                  if (id === 'paypal') isConfigured = !!config.paypal_url;
+                                  if (id === 'manual') isConfigured = !!config.bank_instructions;
+
+                                  // If legacy (no enabledMethods array), use config check
+                                  if (!enabledMethods || enabledMethods.length === 0) {
+                                    return isConfigured;
+                                  }
+                                  // If modern, must be in enabledMethods array AND configured
+                                  return enabledMethods.includes(id) && isConfigured;
+                                };
+
+                                return (
+                                  <>
+                                    {isAvailable('stripe') && (
+                                      <button 
+                                        onClick={() => setSelectedMethod('stripe')}
+                                        className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${selectedMethod === 'stripe' ? 'bg-rose-bloom/10 border-rose-bloom text-rose-bloom shadow-lg shadow-rose-bloom/10' : 'bg-white/5 border-white/10 text-white/40 hover:border-white/20'}`}
+                                      >
+                                        <div className="flex items-center gap-3">
+                                          <CreditCard className="w-4 h-4" />
+                                          <span className="text-[10px] font-black uppercase tracking-widest">Stripe</span>
+                                        </div>
+                                        {selectedMethod === 'stripe' && <Sparkles className="w-3 h-3" />}
+                                      </button>
+                                    )}
+                                    {isAvailable('paypal') && (
+                                      <button 
+                                        onClick={() => setSelectedMethod('paypal')}
+                                        className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${selectedMethod === 'paypal' ? 'bg-rose-bloom/10 border-rose-bloom text-rose-bloom shadow-lg shadow-rose-bloom/10' : 'bg-white/5 border-white/10 text-white/40 hover:border-white/20'}`}
+                                      >
+                                        <div className="flex items-center gap-3">
+                                          <ExternalLink className="w-4 h-4" />
+                                          <span className="text-[10px] font-black uppercase tracking-widest">PayPal</span>
+                                        </div>
+                                        {selectedMethod === 'paypal' && <Sparkles className="w-3 h-3" />}
+                                      </button>
+                                    )}
+                                    {isAvailable('manual') && (
+                                      <button 
+                                        onClick={() => setSelectedMethod('manual')}
+                                        className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${selectedMethod === 'manual' ? 'bg-rose-bloom/10 border-rose-bloom text-rose-bloom shadow-lg shadow-rose-bloom/10' : 'bg-white/5 border-white/10 text-white/40 hover:border-white/20'}`}
+                                      >
+                                        <div className="flex items-center gap-3 text-left">
+                                          <Banknote className="w-4 h-4" />
+                                          <span className="text-[10px] font-black uppercase tracking-widest">Bank Transfer</span>
+                                        </div>
+                                        {selectedMethod === 'manual' && <Sparkles className="w-3 h-3" />}
+                                      </button>
+                                    )}
+                                  </>
+                                );
+                              })()}
+                           </div>
                         </div>
 
-                        {teacher?.payment_settings?.method === 'manual' && (
+                        {selectedMethod === 'manual' && teacher?.payment_settings?.config?.bank_instructions && (
                           <div className="p-4 bg-white/5 rounded-xl border border-white/10 mb-4">
                             <div className="text-[8px] font-black text-rose-petal uppercase tracking-[0.2em] mb-2 items-center flex gap-2">
                               <Landmark className="w-3 h-3" /> Payment Instructions
@@ -353,39 +548,48 @@ export default function StudentBooking() {
                         </div>
                       </div>
 
-                      {studentCredits >= selectedSession.price && (
-                        <button 
-                          onClick={() => handleBooking('credits')}
-                          disabled={booking}
-                          className="w-full py-5 bg-rose-bloom text-white border border-rose-bloom/30 text-rose-bloom rounded-[2.5rem] flex items-center justify-center gap-3 hover:bg-rose-bloom/80 transition-all font-black uppercase tracking-widest text-xs mb-2 shadow-lg shadow-rose-bloom/20"
-                        >
-                          <Sparkles className="w-5 h-5 text-white" /> Use ${selectedSession.price} Credits
-                        </button>
-                      )}
-
-                      <div className="px-6 py-3 bg-white/5 rounded-2xl border border-white/5 text-center mb-6">
-                         <div className="text-[8px] font-black text-white/20 uppercase tracking-[0.3em] mb-1">Your Stage Credits</div>
-                         <div className="text-sm font-black text-rose-petal">${studentCredits.toFixed(2)}</div>
-                      </div>
-
-                      <button 
-                        onClick={handleBooking}
-                        disabled={booking}
-                        className="w-full btn-premium bg-rose-bloom text-white py-6 rounded-[2.5rem] shadow-xl shadow-rose-bloom/30 flex items-center justify-center gap-3 active:scale-95 transition-all"
-                      >
-                        {booking ? (
-                          <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                        ) : (
+                      {(() => {
+                        const isExpired = selectedSession && new Date(selectedSession.start_time) < new Date();
+                        return (
                           <>
-                            {teacher?.payment_settings?.method === 'stripe' ? <CreditCard className="w-5 h-5" /> : 
-                             teacher?.payment_settings?.method === 'paypal' ? <ExternalLink className="w-5 h-5" /> : 
-                             <ShieldCheck className="w-5 h-5" />}
-                            {teacher?.payment_settings?.method === 'manual' ? 'Reserve My Spot' : 'Pay & Book'}
+                            {studentCredits >= selectedSession.price && (
+                              <button 
+                                onClick={() => handleBooking('credits')}
+                                disabled={booking || isExpired}
+                                className="w-full py-5 bg-rose-bloom text-white border border-rose-bloom/30 text-rose-bloom rounded-[2.5rem] flex items-center justify-center gap-3 hover:bg-rose-bloom/80 transition-all font-black uppercase tracking-widest text-xs mb-2 shadow-lg shadow-rose-bloom/20 disabled:opacity-30 disabled:cursor-not-allowed"
+                              >
+                                <Sparkles className="w-5 h-5 text-white" /> Use ${selectedSession.price} Credits
+                              </button>
+                            )}
+
+                            <div className="px-6 py-3 bg-white/5 rounded-2xl border border-white/5 text-center mb-6">
+                               <div className="text-[8px] font-black text-white/20 uppercase tracking-[0.3em] mb-1">Your Stage Credits</div>
+                               <div className="text-sm font-black text-rose-petal">${studentCredits.toFixed(2)}</div>
+                            </div>
+
+                            <button 
+                              onClick={handleBooking}
+                              disabled={booking || isExpired}
+                              className="w-full btn-premium bg-rose-bloom text-white py-6 rounded-[2.5rem] shadow-xl shadow-rose-bloom/30 flex items-center justify-center gap-3 active:scale-95 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                            >
+                              {booking ? (
+                                <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                              ) : isExpired ? (
+                                'Session Expired'
+                              ) : (
+                                <>
+                                  {selectedMethod === 'stripe' ? <CreditCard className="w-5 h-5" /> : 
+                                   selectedMethod === 'paypal' ? <ExternalLink className="w-5 h-5" /> : 
+                                   <ShieldCheck className="w-5 h-5" />}
+                                  {selectedMethod === 'manual' ? 'Reserve My Spot' : 'Pay Online & Book'}
+                                </>
+                              )}
+                            </button>
                           </>
-                        )}
-                      </button>
+                        );
+                      })()}
                       <p className="text-center text-[10px] font-bold opacity-40 uppercase tracking-widest">
-                        {teacher?.payment_settings?.method === 'manual' ? 'Manual Confirmation' : 'Instant Confirmation'}
+                        {selectedMethod === 'manual' ? 'Manual Confirmation' : 'Instant Confirmation'}
                       </p>
                     </motion.div>
                   ) : (

@@ -3,13 +3,14 @@ import { supabase } from '../../api/supabaseClient';
 import { useAuth } from '../../context/AuthContext';
 import { 
   Calendar, Clock, MapPin, ChevronLeft, 
-  Ticket, AlertCircle, CheckCircle2, XCircle, Sparkles
+  Ticket, AlertCircle, CheckCircle2, XCircle, Sparkles, X, Octagon
 } from 'lucide-react';
-import { format, parseISO, isAfter } from 'date-fns';
+import { format, parseISO, isAfter, isSameDay, addDays, subDays, startOfDay } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
+import { toast } from 'sonner';
 
 export default function MyBookings() {
-  const { profile: authProfile } = useAuth();
+  const { profile: authProfile, isDevBypass, user } = useAuth();
   const [guestProfile, setGuestProfile] = useState(() => {
     return JSON.parse(localStorage.getItem('zumba_guest_session') || 'null');
   });
@@ -18,6 +19,9 @@ export default function MyBookings() {
 
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedDate, setSelectedDate] = useState(startOfDay(new Date()));
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+  const [bookingToCancel, setBookingToCancel] = useState(null);
 
   useEffect(() => {
     if (profile?.id) fetchBookings();
@@ -25,9 +29,39 @@ export default function MyBookings() {
       setBookings([]);
       setLoading(false);
     }
-  }, [profile?.id]);
+  }, [profile?.id, user]);
 
   const fetchBookings = async () => {
+    if (!profile?.id) return;
+
+    if (isDevBypass) {
+      const mockBookings = JSON.parse(localStorage.getItem('zumba_mock_bookings') || '[]');
+      const mockSchedules = JSON.parse(localStorage.getItem('zumba_mock_schedules') || '[]');
+      const mockRoutines = JSON.parse(localStorage.getItem('zumba_mock_routines') || '[]');
+      const mockProfiles = JSON.parse(localStorage.getItem('zumba_mock_profiles') || '{}');
+      
+      const enrichedBookings = mockBookings
+        .filter(b => b.student_id === profile.id)
+        .map(b => {
+          const schedule = mockSchedules.find(s => s.id === b.schedule_id);
+          const routine = schedule ? mockRoutines.find(r => r.id === schedule.routine_id) : null;
+          const teacher = schedule ? mockProfiles[schedule.teacher_id] : null;
+          return {
+            ...b,
+            schedules: {
+              ...schedule,
+              routines: routine || { name: 'Routine', duration_minutes: 60 },
+              teacher: teacher || { full_name: 'Instructor' }
+            }
+          };
+        })
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      
+      setBookings(enrichedBookings);
+      setLoading(false);
+      return;
+    }
+
     try {
       const { data, error } = await supabase
         .from('bookings')
@@ -51,12 +85,91 @@ export default function MyBookings() {
     }
   };
 
+  const handleCancelBooking = async () => {
+    if (!bookingToCancel) return;
+    
+    try {
+      if (isDevBypass) {
+        // 1. Process Credit Refund (Universal - any payment method gets credit back)
+        let mockCredits = JSON.parse(localStorage.getItem('zumba_mock_credits') || '[]');
+        
+        // Safety: If it's an object, convert to array
+        if (!Array.isArray(mockCredits)) {
+          console.log('[Migration] Converting old object-based credits in MyBookings...');
+          const newArray = [];
+          Object.entries(mockCredits).forEach(([sId, teachers]) => {
+            Object.entries(teachers).forEach(([tId, bal]) => {
+              newArray.push({ id: `mig-${Date.now()}`, student_id: sId, teacher_id: tId, balance: bal, last_updated: new Date().toISOString() });
+            });
+          });
+          mockCredits = newArray;
+        }
+
+        const teacherId = bookingToCancel.schedules.teacher_id;
+        const refundAmount = bookingToCancel.price || 0;
+
+        const creditIndex = mockCredits.findIndex(c => c.student_id === profile.id && c.teacher_id === teacherId);
+        if (creditIndex !== -1) {
+          mockCredits[creditIndex].balance += refundAmount;
+        } else {
+          mockCredits.push({
+            id: 'c-' + Date.now(),
+            student_id: profile.id,
+            teacher_id: teacherId,
+            balance: refundAmount,
+            last_updated: new Date().toISOString()
+          });
+        }
+        localStorage.setItem('zumba_mock_credits', JSON.stringify(mockCredits));
+
+        // 2. Update Booking Status
+        const mockBookings = JSON.parse(localStorage.getItem('zumba_mock_bookings') || '[]');
+        const updatedBookings = mockBookings.map(b => 
+          b.id === bookingToCancel.id ? { ...b, status: 'CANCELLED', payment_status: 'CANCELLED' } : b
+        );
+        localStorage.setItem('zumba_mock_bookings', JSON.stringify(updatedBookings));
+        
+        console.log(`[REFUND] Student ${profile.id} cancelled. Credit of ${refundAmount} issued.`);
+      } else {
+        // Real Supabase logic would ideally use a database function or transaction
+        const { error } = await supabase
+          .from('bookings')
+          .update({ status: 'CANCELLED', payment_status: 'CANCELLED' })
+          .eq('id', bookingToCancel.id);
+        if (error) throw error;
+        
+        // Note: Real world would need a balance update here too
+      }
+      
+      toast.success('Reservation cancelled. Credits have been refunded to your account.');
+      setIsCancelModalOpen(false);
+      setBookingToCancel(null);
+      fetchBookings();
+    } catch (error) {
+      console.error('Error cancelling booking:', error);
+      toast.error('Failed to cancel reservation');
+    }
+  };
+
   const getStatusColor = (status, startTime) => {
-    if (status === 'PAID') return 'text-rose-bloom bg-rose-bloom/10 border-rose-bloom/20';
-    if (status === 'REFUNDED') return 'text-theatre-dark/40 bg-zinc-100 border-zinc-200';
-    if (!isAfter(parseISO(startTime), new Date())) return 'text-theatre-dark/20 bg-zinc-50 border-zinc-100';
+    const isPast = !isAfter(parseISO(startTime), new Date());
+    if (status === 'REFUNDED' || status === 'CANCELLED') return 'text-theatre-dark/40 bg-zinc-100 border-zinc-200';
+    if (isPast) return 'text-theatre-dark/40 bg-zinc-100 border-zinc-200 opacity-60';
+    
+    if (status === 'PAID') return 'text-emerald-600 bg-emerald-500/10 border-emerald-500/20';
+    if (status === 'PENDING') return 'text-orange-600 bg-orange-500/10 border-orange-500/20';
     return 'text-peach bg-peach/10 border-peach/20';
   };
+
+  const filteredBookings = bookings.filter(b => 
+    b.schedules?.start_time && 
+    isSameDay(parseISO(b.schedules.start_time), selectedDate) &&
+    (b.payment_status === 'PAID' || b.payment_status === 'PENDING') &&
+    b.status !== 'CANCELLED'
+  );
+
+  // Day Picker Logic
+  const days = Array.from({ length: 7 }, (_, i) => addDays(subDays(new Date(), 3), i));
 
   return (
     <div className="min-h-screen bg-bloom-white text-theatre-dark p-6 sm:p-10 font-sans relative overflow-hidden">
@@ -67,79 +180,125 @@ export default function MyBookings() {
       </div>
 
       <div className="max-w-5xl mx-auto relative z-10">
-        <header className="flex items-center gap-6 mb-16">
-           <a href="/student/dashboard" className="p-4 bg-white rounded-2xl border border-rose-petal/10 hover:bg-rose-petal/5 transition-all shadow-sm">
-             <ChevronLeft className="w-6 h-6 text-rose-bloom" />
-           </a>
-           <div>
-            <h1 className="text-4xl font-black text-theatre-dark mb-1">My Theatre Sessions.</h1>
-            <p className="text-rose-bloom/40 font-bold uppercase tracking-[0.2em] text-[10px]">Manage your energy and upcoming rhythms</p>
-          </div>
+        <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-16 gap-8">
+           <div className="flex items-center gap-6">
+            <a href="/student/dashboard" className="p-4 bg-white rounded-2xl border border-rose-petal/10 hover:bg-rose-petal/5 transition-all shadow-sm">
+              <ChevronLeft className="w-6 h-6 text-rose-bloom" />
+            </a>
+            <div>
+              <h1 className="text-4xl font-black text-theatre-dark mb-1">My Theatre Sessions.</h1>
+              <p className="text-rose-bloom/40 font-bold uppercase tracking-[0.2em] text-[10px]">Manage your energy and upcoming rhythms</p>
+            </div>
+           </div>
+
+           {/* Date Scroller */}
+           <div className="flex gap-2 p-2 bg-white/50 backdrop-blur-md rounded-2xl border border-rose-petal/10 overflow-x-auto max-w-full no-scrollbar">
+              {days.map((day, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setSelectedDate(startOfDay(day))}
+                  className={`px-6 py-3 rounded-xl transition-all whitespace-nowrap flex flex-col items-center gap-1 ${
+                    isSameDay(day, selectedDate) 
+                    ? 'bg-theatre-dark text-white shadow-lg' 
+                    : 'hover:bg-rose-petal/10 text-theatre-dark/40 font-bold'
+                  }`}
+                >
+                  <span className="text-[10px] uppercase tracking-tighter">{format(day, 'EEE')}</span>
+                  <span className="text-sm font-black">{format(day, 'dd')}</span>
+                </button>
+              ))}
+           </div>
         </header>
 
         {loading ? (
           <div className="flex justify-center py-20">
              <div className="w-12 h-12 border-4 border-rose-bloom/20 border-t-rose-bloom rounded-full animate-spin" />
           </div>
-        ) : bookings.length === 0 ? (
+        ) : filteredBookings.length === 0 ? (
           <div className="bg-white/70 backdrop-blur-xl p-20 rounded-[4rem] text-center border-2 border-dashed border-rose-petal/20 shadow-2xl shadow-rose-bloom/5">
              <Ticket className="w-20 h-20 text-rose-bloom/10 mx-auto mb-8" />
              <h3 className="text-2xl font-black text-theatre-dark/30 mb-4">The Stage is Empty</h3>
-             <p className="text-[#4A3B3E]/40 max-w-sm mx-auto mb-10 font-medium leading-relaxed">You haven't reserved your spot in any sessions yet. Let's find your first instructor!</p>
+             <p className="text-[#4A3B3E]/40 max-w-sm mx-auto mb-10 font-medium leading-relaxed">No sessions found for {format(selectedDate, 'MMM do')}. Check another date or discover new classes!</p>
              <a href="/student/dashboard" className="btn-premium bg-gradient-to-r from-rose-bloom to-rose-petal text-white inline-flex items-center gap-2">Discover Classes <Sparkles className="w-4 h-4" /></a>
           </div>
         ) : (
           <div className="space-y-8">
             <AnimatePresence>
-              {bookings.map((booking, i) => (
-                <motion.div 
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.1 }}
-                  key={booking.id} 
-                  className="bg-white/70 backdrop-blur-xl p-8 rounded-[3rem] border border-rose-petal/10 hover:border-rose-bloom/20 transition-all shadow-xl shadow-rose-bloom/5 flex flex-col md:flex-row gap-8 items-start md:items-center group"
-                >
-                  <div className="w-20 h-20 rounded-[1.5rem] bg-rose-petal/10 flex items-center justify-center overflow-hidden border border-rose-petal/20">
-                     {booking.schedules?.teacher?.avatar_url ? (
-                       <img src={booking.schedules?.teacher?.avatar_url} className="w-full h-full object-cover" alt="Coach" />
-                     ) : (
-                       <Sparkles className="w-8 h-8 text-rose-bloom/40" />
-                     )}
-                  </div>
+              {filteredBookings.map((booking, i) => {
+                const isPast = new Date(booking.schedules?.start_time) < new Date();
+                const isSessionCancelled = booking.schedules?.status === 'CANCELLED';
+                const canCancel = !isPast && !isSessionCancelled && (booking.payment_status === 'PENDING' || booking.payment_status === 'PAID') && booking.status !== 'CANCELLED';
 
-                  <div className="flex-1">
-                     <div className="flex flex-wrap items-center gap-4 mb-3">
-                        <h3 className="text-2xl font-black text-theatre-dark tracking-tight">{booking.schedules?.routines?.name}</h3>
-                        <div className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border shadow-sm ${getStatusColor(booking.payment_status, booking.schedules?.start_time)}`}>
-                          {booking.payment_status === 'PAID' ? 'Confirmed' : booking.payment_status}
-                        </div>
-                     </div>
-                     <p className="text-sm font-bold text-[#4A3B3E]/40 mb-6 uppercase tracking-widest">Instructor: {booking.schedules?.teacher?.full_name}</p>
-                     
-                     <div className="flex flex-wrap gap-8">
-                        <div className="flex items-center gap-2.5 text-xs font-black text-theatre-dark/60">
-                           <Calendar className="w-4 h-4 text-rose-bloom" /> 
-                           {format(parseISO(booking.schedules?.start_time), 'EEEE, MMM do')}
-                        </div>
-                        <div className="flex items-center gap-2.5 text-xs font-black text-theatre-dark/60">
-                           <Clock className="w-4 h-4 text-rose-bloom" /> 
-                           {format(parseISO(booking.schedules?.start_time), 'hh:mm a')}
-                        </div>
-                        <div className="flex items-center gap-2.5 text-xs font-black text-theatre-dark/60">
-                           <MapPin className="w-4 h-4 text-rose-bloom" /> 
-                           {booking.schedules?.location}
-                        </div>
-                     </div>
-                  </div>
+                return (
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    transition={{ delay: i * 0.05 }}
+                    key={booking.id} 
+                    className={`bg-white/70 backdrop-blur-xl p-8 rounded-[3rem] border transition-all shadow-xl shadow-rose-bloom/5 flex flex-col md:flex-row gap-8 items-start md:items-center group ${
+                      isPast ? 'border-zinc-200 opacity-60 grayscale-[0.8]' : 'border-rose-petal/10 hover:border-rose-bloom/20'
+                    }`}
+                  >
+                    <div className="w-20 h-20 rounded-[1.5rem] bg-rose-petal/10 flex items-center justify-center overflow-hidden border border-rose-petal/20">
+                       {booking.schedules?.teacher?.avatar_url ? (
+                         <img src={booking.schedules?.teacher?.avatar_url} className="w-full h-full object-cover" alt="Coach" />
+                       ) : (
+                         <Sparkles className="w-8 h-8 text-rose-bloom/40" />
+                       )}
+                    </div>
 
-                  <div className="w-full md:w-auto flex gap-3">
-                     <button className="flex-1 md:flex-none px-8 py-5 bg-bloom-white rounded-2xl hover:bg-rose-petal/10 transition-colors text-[10px] font-black uppercase tracking-widest text-theatre-dark">Details</button>
-                     {isAfter(parseISO(booking.schedules?.start_time), new Date()) && (
-                       <button className="flex-1 md:flex-none px-8 py-5 bg-rose-bloom text-white rounded-2xl hover:scale-105 transition-all text-[10px] font-black uppercase tracking-widest shadow-lg shadow-rose-bloom/20">Cancel</button>
-                     )}
-                  </div>
-                </motion.div>
-              ))}
+                    <div className="flex-1">
+                       <div className="flex flex-wrap items-center gap-4 mb-3">
+                          <h3 className="text-2xl font-black text-theatre-dark tracking-tight">{booking.schedules?.routines?.name}</h3>
+                          <div className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border shadow-sm ${getStatusColor(booking.payment_status, booking.schedules?.start_time)}`}>
+                            {isSessionCancelled ? 'Session Cancelled' :
+                             booking.status === 'CANCELLED' ? 'Cancelled' : 
+                             booking.payment_status === 'PAID' ? 'Confirmed' : 
+                             booking.payment_status === 'PENDING' ? 'Reserved' : 
+                             booking.payment_status}
+                          </div>
+                          {isPast && (
+                            <span className="text-[8px] font-black uppercase tracking-widest px-2 py-0.5 bg-zinc-100 text-zinc-400 rounded-lg">Completed</span>
+                          )}
+                       </div>
+                       <p className="text-sm font-bold text-[#4A3B3E]/40 mb-6 uppercase tracking-widest">Instructor: {booking.schedules?.teacher?.full_name}</p>
+                       
+                       <div className="flex flex-wrap gap-8">
+                          <div className="flex items-center gap-2.5 text-xs font-black text-theatre-dark/60">
+                             <Calendar className="w-4 h-4 text-rose-bloom" /> 
+                             {format(parseISO(booking.schedules?.start_time), 'EEEE, MMM do')}
+                          </div>
+                          <div className="flex items-center gap-2.5 text-xs font-black text-theatre-dark/60">
+                             <Clock className="w-4 h-4 text-rose-bloom" /> 
+                             {format(parseISO(booking.schedules?.start_time), 'hh:mm a')}
+                          </div>
+                          <div className="flex items-center gap-2.5 text-xs font-black text-theatre-dark/60">
+                             <MapPin className="w-4 h-4 text-rose-bloom" /> 
+                             {booking.schedules?.location}
+                          </div>
+                       </div>
+                    </div>
+
+                    <div className="w-full md:w-auto flex gap-3">
+                       <button className="flex-1 md:flex-none px-8 py-5 bg-bloom-white rounded-2xl hover:bg-rose-petal/10 transition-colors text-[10px] font-black uppercase tracking-widest text-theatre-dark">Details</button>
+                       {canCancel && booking.status !== 'CANCELLED' && (
+                         <button 
+                          onClick={() => { setBookingToCancel(booking); setIsCancelModalOpen(true); }}
+                          className="flex-1 md:flex-none px-8 py-5 bg-rose-bloom text-white rounded-2xl hover:scale-105 transition-all text-[10px] font-black uppercase tracking-widest shadow-lg shadow-rose-bloom/20"
+                         >
+                           Cancel Session
+                         </button>
+                       )}
+                       {isPast && (
+                         <div className="px-8 py-5 bg-zinc-100 text-zinc-400 rounded-2xl text-[10px] font-black uppercase tracking-widest border border-zinc-200">
+                           No Actions
+                         </div>
+                       )}
+                    </div>
+                  </motion.div>
+                );
+              })}
             </AnimatePresence>
           </div>
         )}
@@ -156,12 +315,50 @@ export default function MyBookings() {
               <h3 className="text-2xl font-black text-theatre-dark mb-2 tracking-tight">Theatre Policy</h3>
               <p className="text-sm text-[#4A3B3E]/40 font-bold leading-relaxed max-w-xl uppercase tracking-widest text-[10px]">
                  Cancellations must be made at least 12 hours before the session for a full credit refund. 
-                 Energy is non-transferable but always shared.
+                 Refunds are issued as Theatre Credits.
               </p>
            </div>
            <button className="px-10 py-6 bg-zumba-dark text-white rounded-[2rem] font-black uppercase tracking-widest text-[10px] hover:translate-x-2 transition-all">Theatre Rules</button>
         </motion.div>
       </div>
+
+      {/* Professional Cancellation Modal */}
+      <AnimatePresence>
+        {isCancelModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 sm:p-10">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsCancelModalOpen(false)} className="absolute inset-0 bg-theatre-dark/40 backdrop-blur-md" />
+            <motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} className="bg-white w-full max-w-md p-10 rounded-[3rem] relative z-20 overflow-hidden shadow-2xl border border-rose-petal/20">
+               <div className="flex flex-col items-center text-center mb-8">
+                  <div className="w-16 h-16 bg-rose-bloom/10 rounded-2xl flex items-center justify-center mb-6">
+                    <Octagon className="w-8 h-8 text-rose-bloom" />
+                  </div>
+                  <h2 className="text-3xl font-black text-theatre-dark mb-4 tracking-tight">Wait! Confirm Cancellation?</h2>
+                  <p className="text-sm text-[#4A3B3E]/60 font-medium leading-relaxed">
+                    Are you sure you want to cancel your spot for <span className="text-rose-bloom font-black">{bookingToCancel?.schedules?.routines?.name}</span>?
+                  </p>
+                  <p className="text-[10px] text-rose-bloom font-black uppercase tracking-widest mt-4 p-3 bg-rose-bloom/5 rounded-xl border border-rose-bloom/10">
+                    You will receive {bookingToCancel?.price}$ back as credits.
+                  </p>
+               </div>
+
+               <div className="flex flex-col gap-3">
+                  <button 
+                    onClick={handleCancelBooking}
+                    className="w-full py-5 bg-rose-bloom text-white rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-rose-petal transition-all shadow-xl shadow-rose-bloom/20"
+                  >
+                    Yes, Cancel Spot & Refund
+                  </button>
+                  <button 
+                    onClick={() => setIsCancelModalOpen(false)}
+                    className="w-full py-5 bg-bloom-white text-theatre-dark rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-rose-petal/10 transition-all border border-rose-petal/10"
+                  >
+                    No, Keep My Spot
+                  </button>
+               </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -35,26 +35,36 @@ export default function TeacherDashboard() {
   });
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [selectedSessionToCancel, setSelectedSessionToCancel] = useState(null);
+  const [isErrorModalOpen, setIsErrorModalOpen] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
     if (user) {
-        fetchRoutines();
-        fetchAllSchedules();
-        fetchBookings();
-        ensureInviteCode();
+        setLoading(true);
+        const loadInit = async () => {
+          await fetchRoutines();
+          await fetchAllSchedules();
+          await ensureInviteCode();
+        };
+        loadInit();
     }
+    
+    // Expose for testing
+    window.OPEN_ATTENDANCE = (session) => {
+      setSelectedSessionForAttendance(session);
+      setIsAttendanceModalOpen(true);
+    };
 
     // Storage listener to sync across tabs in mock mode
     const handleStorageChange = (e) => {
       if (e.key === 'zumba_mock_schedules' || e.key === 'zumba_mock_routines' || e.key === 'zumba_mock_bookings') {
         fetchAllSchedules();
         fetchRoutines();
-        fetchBookings();
       }
     };
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
-  }, [user, profile]);
+  }, [user?.id]); // Only depend on user ID to avoid profile-change loops
 
 
 
@@ -264,7 +274,23 @@ export default function TeacherDashboard() {
 
       const fullStartTime = new Date(selectedDate);
       const [hours, minutes] = formData.start_time.split(':');
-      fullStartTime.setHours(parseInt(hours), parseInt(minutes));
+      fullStartTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+      
+      // Prevent scheduling in the past
+      if (fullStartTime < new Date()) {
+        throw new Error('Cannot schedule a session in the past.');
+      }
+
+      // Prevent Duplicate Time Slots
+      const isTaken = schedules.some(s => 
+        s.status !== 'CANCELLED' && 
+        isSameDay(parseISO(s.start_time), fullStartTime) &&
+        format(parseISO(s.start_time), 'HH:mm') === formData.start_time
+      );
+
+      if (isTaken) {
+        throw new Error(`A session is already scheduled for ${formData.start_time} on this day.`);
+      }
 
       const newSchedule = {
         routine_id: formData.routine_id,
@@ -287,7 +313,12 @@ export default function TeacherDashboard() {
       setIsModalOpen(false);
       fetchAllSchedules();
     } catch (error) {
-      toast.error(error.message);
+      if (error.message.includes('past')) {
+        setErrorMessage(error.message);
+        setIsErrorModalOpen(true);
+      } else {
+        toast.error(error.message);
+      }
     } finally {
       setModalLoading(false);
     }
@@ -331,33 +362,52 @@ export default function TeacherDashboard() {
   };
 
   const handleCancelSchedule = async (scheduleId) => {
+    const sessionToCancel = schedules.find(s => s.id === scheduleId);
+    if (sessionToCancel && new Date(sessionToCancel.start_time) < new Date()) {
+      toast.error('Cannot cancel a past session.');
+      return;
+    }
+
     try {
       if (isDevBypass) {
         // 1. Update Schedule Status
         const mockSchedules = JSON.parse(localStorage.getItem('zumba_mock_schedules') || '[]');
-        const updatedSchedules = mockSchedules.map(s => 
-          s.id === scheduleId ? { ...s, status: 'CANCELLED' } : s
-        );
-        const cancelledSession = mockSchedules.find(s => s.id === scheduleId);
+        const updatedSchedules = mockSchedules.map(s => s.id === scheduleId ? { ...s, status: 'CANCELLED' } : s);
         localStorage.setItem('zumba_mock_schedules', JSON.stringify(updatedSchedules));
 
-        // 2. Issue Credits to Students
+        // 2. Process Refunds (Identify PAID & NOT YET CANCELLED bookings BEFORE we update them)
         const mockBookings = JSON.parse(localStorage.getItem('zumba_mock_bookings') || '[]');
-        const paidBookings = mockBookings.filter(b => b.schedule_id === scheduleId && b.payment_status === 'PAID');
-        
+        const paidBookings = mockBookings.filter(b => 
+          b.schedule_id === scheduleId && 
+          b.payment_status === 'PAID' && 
+          b.status !== 'CANCELLED'
+        );
+
+        // 3. Sync: Mark ALL bookings for this schedule as CANCELLED
+        const syncedBookings = mockBookings.map(b => 
+          b.schedule_id === scheduleId ? { ...b, status: 'CANCELLED', payment_status: 'CANCELLED' } : b
+        );
+        localStorage.setItem('zumba_mock_bookings', JSON.stringify(syncedBookings));
+
         if (paidBookings.length > 0) {
-          const mockCredits = JSON.parse(localStorage.getItem('zumba_mock_credits') || '{}');
+          const mockCredits = JSON.parse(localStorage.getItem('zumba_mock_credits') || '[]');
           
           paidBookings.forEach(booking => {
-            const studentId = booking.student_id;
-            const teacherId = user.id;
-            const refundAmount = cancelledSession.price || 0;
-            
-            if (!mockCredits[studentId]) mockCredits[studentId] = {};
-            mockCredits[studentId][teacherId] = (mockCredits[studentId][teacherId] || 0) + refundAmount;
+            const index = mockCredits.findIndex(c => c.student_id === booking.student_id && c.teacher_id === user.id);
+            if (index !== -1) {
+              mockCredits[index].balance += booking.price;
+            } else {
+              mockCredits.push({
+                id: 'c-' + Date.now() + Math.random(),
+                student_id: booking.student_id,
+                teacher_id: user.id,
+                balance: booking.price,
+                last_updated: new Date().toISOString()
+              });
+            }
           });
-          
           localStorage.setItem('zumba_mock_credits', JSON.stringify(mockCredits));
+          console.log(`[REFUND] Processed ${paidBookings.length} refunds. Already cancelled bookings were skipped.`);
           toast.success(`Session cancelled. Credits issued to ${paidBookings.length} students.`);
         } else {
           toast.success('Session cancelled.');
@@ -460,14 +510,18 @@ export default function TeacherDashboard() {
                     .sort((a,b) => a.start_time.localeCompare(b.start_time))
                     .map((slot, idx) => {
                       const sessionBookings = bookings.filter(b => b.schedule_id === slot.id);
+                      const isPast = new Date(slot.start_time) < new Date();
                       return (
                         <div 
                           key={idx} 
                           onClick={() => {
+                            console.log('[DEBUG] Card Clicked for Slot:', slot.id, 'Bookings:', sessionBookings.length);
                             setSelectedSessionForAttendance({ ...slot, bookings: sessionBookings });
                             setIsAttendanceModalOpen(true);
                           }}
-                          className="p-5 bg-bloom-white/60 rounded-2xl border border-apricot/40 group hover:border-rose-bloom transition-all cursor-pointer relative overflow-hidden"
+                          className={`p-5 rounded-2xl border transition-all cursor-pointer relative overflow-hidden ${
+                            isPast ? 'bg-zinc-50 border-zinc-200 opacity-60' : 'bg-bloom-white/60 border-apricot/40 group hover:border-rose-bloom'
+                          }`}
                         >
                           <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                             <Users className="w-8 h-8" />
@@ -514,6 +568,10 @@ export default function TeacherDashboard() {
                             {slot.status === 'CANCELLED' ? (
                               <div className="text-[10px] font-black text-rose-bloom uppercase tracking-tighter bg-rose-bloom/5 px-3 py-1 rounded-lg">
                                 Cancelled
+                              </div>
+                            ) : isPast ? (
+                              <div className="text-[10px] font-black text-zinc-400 uppercase tracking-tighter bg-zinc-100 px-3 py-1 rounded-lg">
+                                Completed
                               </div>
                             ) : (
                               <button 
@@ -787,18 +845,24 @@ export default function TeacherDashboard() {
         )}
       </AnimatePresence>
 
-      {/* Attendance Modal */}
+      {/* Attendance Modal (Inlined for reliability) */}
       <AnimatePresence>
         {isAttendanceModalOpen && selectedSessionForAttendance && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 sm:p-10">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsAttendanceModalOpen(false)} className="absolute inset-0 bg-theatre-dark/40 backdrop-blur-md" />
+            <motion.div 
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }} 
+              exit={{ opacity: 0 }} 
+              onClick={() => setIsAttendanceModalOpen(false)} 
+              className="absolute inset-0 bg-theatre-dark/40 backdrop-blur-md" 
+            />
             <motion.div 
               initial={{ opacity: 0, scale: 0.9, y: 20 }} 
               animate={{ opacity: 1, scale: 1, y: 0 }} 
               exit={{ opacity: 0, scale: 0.9, y: 20 }} 
-              className="bg-bloom-white w-full max-w-2xl rounded-[3rem] relative z-20 overflow-hidden shadow-2xl border border-apricot/50"
+              className="bg-bloom-white w-full max-w-2xl rounded-[3rem] relative z-20 overflow-hidden shadow-2xl border border-apricot/50 flex flex-col max-h-[90vh]"
             >
-              <div className="p-10 border-b border-apricot/20">
+              <div className="p-10 border-b border-apricot/20 shrink-0">
                 <div className="flex justify-between items-start mb-6">
                   <div className="flex items-center gap-4">
                     <div className="p-3 bg-rose-bloom/10 rounded-2xl">
@@ -807,7 +871,7 @@ export default function TeacherDashboard() {
                     <div>
                       <h2 className="text-3xl font-black text-theatre-dark">Registered Students</h2>
                       <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-theatre-dark/40 mt-1">
-                        {selectedSessionForAttendance.routines?.name} • {format(parseISO(selectedSessionForAttendance.start_time), 'MMM d, h:mm a')}
+                        {selectedSessionForAttendance.routines?.name} • {selectedSessionForAttendance.start_time ? format(parseISO(selectedSessionForAttendance.start_time), 'MMM d, h:mm a') : '...'}
                       </p>
                     </div>
                   </div>
@@ -815,27 +879,27 @@ export default function TeacherDashboard() {
                 </div>
 
                 <div className="grid grid-cols-3 gap-4">
-                   <div className="bg-bloom-white p-4 rounded-2xl border border-apricot/30">
+                   <div className="bg-bloom-white p-4 rounded-2xl border border-apricot/30 text-center">
                       <div className="text-[8px] font-black uppercase text-theatre-dark/30 mb-1">Total Booked</div>
-                      <div className="text-xl font-black text-theatre-dark">{selectedSessionForAttendance.bookings.length}</div>
+                      <div className="text-xl font-black text-theatre-dark">{selectedSessionForAttendance.bookings?.length || 0}</div>
                    </div>
-                   <div className="bg-bloom-white p-4 rounded-2xl border border-apricot/30">
+                   <div className="bg-bloom-white p-4 rounded-2xl border border-apricot/30 text-center">
                       <div className="text-[8px] font-black uppercase text-theatre-dark/30 mb-1">Remaining</div>
-                      <div className="text-xl font-black text-rose-bloom">{selectedSessionForAttendance.max_seats - selectedSessionForAttendance.bookings.length}</div>
+                      <div className="text-xl font-black text-rose-bloom">{(selectedSessionForAttendance.max_seats || 0) - (selectedSessionForAttendance.bookings?.length || 0)}</div>
                    </div>
-                   <div className="bg-bloom-white p-4 rounded-2xl border border-apricot/30">
+                   <div className="bg-bloom-white p-4 rounded-2xl border border-apricot/30 text-center">
                       <div className="text-[8px] font-black uppercase text-theatre-dark/30 mb-1">Capacity</div>
                       <div className="text-xl font-black text-theatre-dark/40">{selectedSessionForAttendance.max_seats}</div>
                    </div>
                 </div>
               </div>
 
-              <div className="max-h-[400px] overflow-y-auto p-10 custom-scrollbar">
-                {selectedSessionForAttendance.bookings.length > 0 ? (
+              <div className="overflow-y-auto p-10 custom-scrollbar flex-1">
+                {(selectedSessionForAttendance.bookings?.length || 0) > 0 ? (
                   <div className="space-y-4">
                     {selectedSessionForAttendance.bookings.map((booking, i) => (
                       <motion.div 
-                        key={i}
+                        key={booking.id || i}
                         initial={{ opacity: 0, x: -10 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: i * 0.05 }}
@@ -844,7 +908,7 @@ export default function TeacherDashboard() {
                         <div className="flex items-center gap-4">
                           <div className="w-12 h-12 rounded-xl bg-rose-petal/10 border border-rose-petal/20 overflow-hidden flex items-center justify-center">
                             {booking.student?.avatar_url ? (
-                              <img src={booking.student.avatar_url} className="w-full h-full object-cover" />
+                              <img src={booking.student.avatar_url} className="w-full h-full object-cover" alt={booking.student.full_name} />
                             ) : (
                               <div className="text-lg font-black text-rose-bloom uppercase">{booking.student?.full_name?.charAt(0)}</div>
                             )}
@@ -887,7 +951,7 @@ export default function TeacherDashboard() {
                 )}
               </div>
 
-              <div className="p-10 border-t border-apricot/20 bg-apricot/5">
+              <div className="p-10 border-t border-apricot/20 bg-apricot/5 shrink-0">
                  <button className="w-full py-5 bg-white border border-apricot/30 rounded-2xl text-[10px] font-black uppercase tracking-widest text-theatre-dark hover:bg-white/80 transition-all flex items-center justify-center gap-2">
                     Export Attendance List
                  </button>
@@ -896,7 +960,33 @@ export default function TeacherDashboard() {
           </div>
         )}
       </AnimatePresence>
+      {/* Error Modal */}
+      <AnimatePresence>
+        {isErrorModalOpen && (
+          <div className="fixed inset-0 z-[120] flex items-center justify-center p-6">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsErrorModalOpen(false)} className="absolute inset-0 bg-theatre-dark/60 backdrop-blur-xl" />
+            <motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} className="bg-bloom-white w-full max-w-md p-10 rounded-[3.5rem] relative z-20 text-center shadow-2xl border border-rose-bloom/20">
+              <div className="w-20 h-20 bg-rose-bloom/10 rounded-3xl flex items-center justify-center mx-auto mb-8">
+                <AlertTriangle className="w-10 h-10 text-rose-bloom" />
+              </div>
+              <h2 className="text-3xl font-black text-theatre-dark mb-4 italic">Time Warp Detected.</h2>
+              <p className="text-sm text-theatre-dark/40 font-bold uppercase tracking-widest leading-loose mb-10">
+                {errorMessage || "The rhythm of the stage only flows forward. Past sessions cannot be scheduled."}
+              </p>
+              <button 
+                onClick={() => {
+                  const now = new Date();
+                  setFormData(prev => ({ ...prev, start_time: format(now, 'HH:mm') }));
+                  setIsErrorModalOpen(false);
+                }}
+                className="w-full py-5 bg-theatre-dark text-white rounded-[2rem] text-[10px] font-black uppercase tracking-[0.2em] hover:bg-rose-bloom transition-all shadow-xl shadow-theatre-dark/20"
+              >
+                Sync with Present
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
-

@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { 
   User, Mail, Shield, Save, Camera, 
   ChevronLeft, LogOut, Bell, Lock, Phone, Package,
-  CreditCard, ExternalLink, Banknote, Landmark
+  CreditCard, ExternalLink, Banknote, Landmark, CheckCircle2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -30,7 +30,8 @@ export default function Settings() {
   });
 
   const [paymentSettings, setPaymentSettings] = useState({
-    method: 'manual',
+    method: 'manual', // Default primary
+    enabledMethods: ['manual'], // Multi-selection
     config: {
       stripe_public_key: '',
       stripe_secret_key: '',
@@ -48,7 +49,10 @@ export default function Settings() {
         avatar_url: profile.avatar_url || ''
       });
       if (profile.payment_settings) {
-        setPaymentSettings(profile.payment_settings);
+        setPaymentSettings({
+          ...profile.payment_settings,
+          enabledMethods: profile.payment_settings.enabledMethods || [profile.payment_settings.method || 'manual']
+        });
       }
     }
   }, [profile]);
@@ -258,26 +262,48 @@ export default function Settings() {
                                 { id: 'stripe', label: 'Stripe', icon: CreditCard },
                                 { id: 'paypal', label: 'PayPal', icon: ExternalLink },
                                 { id: 'manual', label: 'Bank/Manual', icon: Banknote },
-                              ].map((m) => (
-                                <button
-                                  key={m.id}
-                                  type="button"
-                                  onClick={() => setPaymentSettings({...paymentSettings, method: m.id})}
-                                  className={`p-6 rounded-2xl border-2 transition-all flex flex-col items-center gap-3 ${
-                                    paymentSettings.method === m.id 
-                                    ? 'bg-white border-rose-bloom text-rose-bloom shadow-lg shadow-rose-bloom/10' 
-                                    : 'bg-white/50 border-apricot/20 text-theatre-dark/40 hover:border-apricot/40'
-                                  }`}
-                                >
-                                  <m.icon className="w-6 h-6" />
-                                  <span className="text-xs font-black uppercase tracking-widest">{m.label}</span>
-                                </button>
-                              ))}
+                              ].map((m) => {
+                                const isEnabled = paymentSettings.enabledMethods?.includes(m.id);
+                                return (
+                                  <button
+                                    key={m.id}
+                                    type="button"
+                                    onClick={() => {
+                                      const current = paymentSettings.enabledMethods || [paymentSettings.method];
+                                      const next = isEnabled 
+                                        ? current.filter(id => id !== m.id)
+                                        : [...current, m.id];
+                                      setPaymentSettings({
+                                        ...paymentSettings, 
+                                        enabledMethods: next,
+                                        // Keep 'method' as the primary fallback
+                                        method: next[0] || 'manual' 
+                                      });
+                                    }}
+                                    className={`p-6 rounded-2xl border-2 transition-all flex flex-col items-center gap-3 relative overflow-hidden ${
+                                      isEnabled 
+                                      ? 'bg-white border-rose-bloom text-rose-bloom shadow-lg shadow-rose-bloom/10' 
+                                      : 'bg-white/50 border-apricot/20 text-theatre-dark/40 hover:border-apricot/40'
+                                    }`}
+                                  >
+                                    {isEnabled && (
+                                      <div className="absolute top-2 right-2">
+                                        <CheckCircle2 className="w-3 h-3 text-rose-bloom" />
+                                      </div>
+                                    )}
+                                    <m.icon className="w-6 h-6" />
+                                    <span className="text-xs font-black uppercase tracking-widest">{m.label}</span>
+                                    <div className="text-[8px] font-bold uppercase opacity-60">
+                                      {isEnabled ? 'Enabled' : 'Disabled'}
+                                    </div>
+                                  </button>
+                                );
+                              })}
                            </div>
                         </div>
 
                         <div className="space-y-6">
-                           {paymentSettings.method === 'stripe' && (
+                           {paymentSettings.enabledMethods?.includes('stripe') && (
                              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
                                <div className="p-6 bg-rose-bloom/5 border border-rose-bloom/10 rounded-2xl flex items-start gap-4">
                                  <Shield className="w-6 h-6 text-rose-bloom shrink-0 mt-1" />
@@ -311,7 +337,7 @@ export default function Settings() {
                              </motion.div>
                            )}
 
-                           {paymentSettings.method === 'paypal' && (
+                           {paymentSettings.enabledMethods?.includes('paypal') && (
                              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-2">
                                 <label className="text-[10px] font-black uppercase tracking-widest text-theatre-dark/30 ml-1">PayPal.me Link or Email</label>
                                 <input
@@ -327,7 +353,7 @@ export default function Settings() {
                              </motion.div>
                            )}
 
-                           {paymentSettings.method === 'manual' && (
+                           {paymentSettings.enabledMethods?.includes('manual') && (
                              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-2">
                                 <label className="text-[10px] font-black uppercase tracking-widest text-theatre-dark/30 ml-1">Payment Instructions (Bank Details)</label>
                                 <textarea

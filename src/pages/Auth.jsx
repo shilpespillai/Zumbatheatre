@@ -55,8 +55,9 @@ export default function Auth() {
       clearMockSession();
     }
     
-    // Stable Guest ID logic for mock purposes
-    const stableId = 'guest-' + btoa(formData.fullName.toLowerCase().trim() + formData.stageCode.toUpperCase().trim()).replace(/=/g, '').slice(0, 12);
+    // Valid UUID format for guest ID to satisfy Supabase/Postgres constraints
+    const uuidV4 = '00000000-0000-4000-8000-' + btoa(formData.fullName.toLowerCase().trim() + formData.stageCode.toUpperCase().trim()).replace(/[^a-f0-9]/g, '').slice(0, 12).padEnd(12, '0');
+    const stableId = uuidV4;
     
     const guestProfile = {
       id: stableId,
