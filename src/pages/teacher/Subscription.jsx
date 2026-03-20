@@ -21,16 +21,20 @@ export default function TeacherSubscription() {
   }, []);
 
   const fetchPrice = async () => {
-    const config = await getSystemConfig();
-    if (config?.subscription_price) {
-      setPrice(config.subscription_price);
+    try {
+      const config = await getSystemConfig();
+      if (config?.subscription_price) {
+        setPrice(config.subscription_price);
+      }
+    } catch (e) {
+      console.error('Failed to fetch price config:', e);
     }
   };
 
-  const plan = {
+  const plan = useMemo(() => ({
     name: 'Master Stage Pro',
     price: price,
-    priceId: 'price_1TCfcsJkmG8taKBQjuX6Wcga', // New Master Stage Pro Price ID from Stripe
+    priceId: 'price_1TCfcsJkmG8taKBQjuX6Wcga',
     features: [
       'Unlimited Student Bookings',
       'Choose your own Payment System',
@@ -38,7 +42,15 @@ export default function TeacherSubscription() {
       'Custom Routine Templates',
       'Priority Stage Support'
     ]
-  };
+  }), [price]);
+
+  if (!profile && !isDevBypass) {
+    return (
+      <div className="min-h-screen bg-bloom-white flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-rose-bloom/20 border-t-rose-bloom rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   const handleSubscribe = async () => {
     setLoading(true);
@@ -54,7 +66,7 @@ export default function TeacherSubscription() {
         localStorage.setItem('zumba_mock_profile', JSON.stringify(mockProfile));
         
         const savedProfiles = JSON.parse(localStorage.getItem('zumba_mock_profiles') || '{}');
-        if (savedProfiles[profile.id]) {
+        if (profile?.id && savedProfiles[profile.id]) {
           savedProfiles[profile.id].is_subscribed = true;
           localStorage.setItem('zumba_mock_profiles', JSON.stringify(savedProfiles));
         }

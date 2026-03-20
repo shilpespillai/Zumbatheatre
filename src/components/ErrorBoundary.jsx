@@ -16,7 +16,18 @@ class ErrorBoundary extends React.Component {
   }
 
   handleReset = () => {
-    localStorage.removeItem('zumba_guest_session'); // Clear potentially corrupt session
+    // Clear all potential zumba-related state
+    const keysToRemove = [
+      'zumba_guest_session',
+      'zumba_mock_user',
+      'zumba_mock_profile',
+      'zumba_mock_profiles',
+      'zumba_mock_schedules',
+      'zumba_mock_routines',
+      'zumba_mock_bookings',
+      'zumba_system_config'
+    ];
+    keysToRemove.forEach(key => localStorage.removeItem(key));
     window.location.href = '/';
   };
 
