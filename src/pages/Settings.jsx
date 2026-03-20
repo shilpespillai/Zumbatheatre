@@ -350,9 +350,9 @@ export default function Settings() {
                                  <h4 className="text-sm font-black uppercase tracking-widest mb-1">Platform Subscription</h4>
                                  <p className="text-[10px] opacity-60">Status: {profile?.is_subscribed ? 'Active' : 'Inactive'}</p>
                               </div>
-                              {!profile?.is_subscribed && (
-                                <button type="button" className="px-5 py-2 bg-rose-bloom rounded-xl text-[10px] font-black uppercase tracking-widest">Activate Stage</button>
-                              )}
+                               {!profile?.is_subscribed && (
+                                 <Link to="/teacher/subscription" className="px-5 py-2 bg-rose-bloom rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-transform">Activate Stage</Link>
+                               )}
                            </div>
                         </div>
                       </motion.div>

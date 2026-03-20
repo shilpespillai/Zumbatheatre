@@ -110,6 +110,12 @@ serve(async (req: Request) => {
       mode: isSubscription ? 'subscription' : 'payment',
       success_url: successUrl,
       cancel_url: cancelUrl,
+      // Pass the User ID to identify them in the webhook
+      client_reference_id: req.headers.get('x-user-id') || '', 
+      metadata: {
+        userId: req.headers.get('x-user-id') || '',
+        isSubscription: String(isSubscription)
+      }
     });
 
     return new Response(

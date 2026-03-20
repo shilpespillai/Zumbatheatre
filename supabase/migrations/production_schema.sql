@@ -19,6 +19,8 @@ CREATE TABLE public.profiles (
     invite_code TEXT UNIQUE,
     linked_teacher_id UUID REFERENCES public.profiles(id),
     is_subscribed BOOLEAN DEFAULT FALSE,
+    stripe_customer_id TEXT,
+    stripe_subscription_id TEXT,
     payment_settings JSONB DEFAULT '{"method": "manual", "config": {}}',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()

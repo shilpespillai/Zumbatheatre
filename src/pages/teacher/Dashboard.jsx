@@ -388,32 +388,9 @@ export default function TeacherDashboard() {
           </div>
         </header>
 
-        {!profile?.is_subscribed && (
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-12 p-8 bg-gradient-to-r from-theatre-dark to-[#2A2426] rounded-[3rem] text-white flex flex-col md:flex-row items-center justify-between gap-8 border border-white/10 shadow-2xl relative overflow-hidden group"
-          >
-            <div className="absolute top-0 right-0 w-64 h-64 bg-rose-bloom/10 blur-[100px] rounded-full -mr-20 -mt-20 group-hover:bg-rose-bloom/20 transition-all duration-700" />
-            <div className="flex items-center gap-6 relative z-10">
-              <div className="w-16 h-16 bg-rose-bloom/20 rounded-2xl flex items-center justify-center border border-rose-bloom/30">
-                <ShieldCheck className="w-8 h-8 text-rose-bloom" />
-              </div>
-              <div>
-                <h3 className="text-xl font-black mb-1 italic">Stage Not Activated</h3>
-                <p className="text-xs text-white/60 font-medium">Please activate your platform subscription to manage routines and take bookings.</p>
-              </div>
-            </div>
-            <a 
-              href="/teacher/subscription"
-              className="px-8 py-4 bg-rose-bloom text-white rounded-2xl font-black uppercase tracking-widest text-[10px] flex items-center gap-2 hover:scale-105 active:scale-95 transition-all shadow-xl shadow-rose-bloom/20 relative z-10"
-            >
-              Activate Now <ArrowRight className="w-4 h-4" />
-            </a>
-          </motion.div>
-        )}
+        {/* Removed Subscription Banner to allow free access */}
 
-        <div className={`grid grid-cols-1 xl:grid-cols-4 gap-12 items-start transition-all duration-700 ${!profile?.is_subscribed ? 'blur-sm pointer-events-none opacity-40 grayscale' : ''}`}>
+        <div className="grid grid-cols-1 xl:grid-cols-4 gap-12 items-start transition-all duration-700">
           <section className="xl:col-span-3 bg-bloom-white/80 p-10 rounded-[3.5rem] border border-apricot/60 shadow-2xl shadow-rose-bloom/5">
             <div className="flex justify-between items-center mb-10">
                <h3 className="text-2xl font-black text-rose-bloom tracking-tight">Zumba Timings</h3>
@@ -527,7 +504,7 @@ export default function TeacherDashboard() {
             </div>
 
             <a 
-              href={profile?.is_subscribed ? "/teacher/reports" : "/teacher/subscription"} 
+              href="/teacher/reports" 
               className="block glass p-8 rounded-[2.5rem] hover:scale-[1.02] transition-all group relative overflow-hidden"
             >
               {!profile?.is_subscribed && (
