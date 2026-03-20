@@ -80,9 +80,6 @@ const Home = () => {
                 <a href={heroBtn.href} className="btn-premium bg-zumba-lime text-black flex items-center gap-5 hover:bg-zumba-lime/80 shadow-2xl shadow-zumba-lime/20 py-10 px-16 text-3xl font-black">
                   {heroBtn.text} <ArrowRight className="w-10 h-10" />
                 </a>
-                <a href="/contact" className="text-lg font-black uppercase tracking-[0.5em] text-white/20 hover:text-zumba-pink transition-colors">
-                  Contact Support
-                </a>
               </div>
             </div>
           </motion.div>
