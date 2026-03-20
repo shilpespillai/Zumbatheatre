@@ -108,19 +108,19 @@ const Home = () => {
         </div>
       </section>
 
-      <footer className="py-20 px-6 border-t border-white/5 bg-[#0A0A0A] text-white">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-12">
+      <footer className="py-12 px-6 border-t border-white/5 bg-[#0A0A0A] text-white">
+        <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
           <div className="flex items-center gap-2">
-            <Play className="w-8 h-8 text-zumba-lime fill-current" />
-            <span className="text-xl font-black tracking-tighter">ZUMBA THEATRE</span>
+            <Play className="w-6 h-6 text-zumba-lime fill-current" />
+            <span className="text-lg font-black tracking-tighter">ZUMBA THEATRE</span>
           </div>
-          <div className="flex flex-wrap items-center gap-10">
-            <a href="/how-it-works" className="text-sm font-bold uppercase tracking-widest text-white/40 hover:text-white transition-colors">How it Works</a>
-            <a href="/contact" className="text-sm font-bold uppercase tracking-widest text-white/40 hover:text-white transition-colors">Contact</a>
-            <div className="flex gap-10">
-              <Instagram className="text-white/40 hover:text-zumba-pink cursor-pointer" />
-              <Twitter className="text-white/40 hover:text-zumba-cyan cursor-pointer" />
-              <Facebook className="text-white/40 hover:text-zumba-lime cursor-pointer" />
+          <div className="flex flex-wrap items-center justify-center gap-8">
+            <a href="/how-it-works" className="text-[10px] font-bold uppercase tracking-widest text-white/40 hover:text-white transition-colors">How it Works</a>
+            <a href="/contact" className="text-[10px] font-bold uppercase tracking-widest text-white/40 hover:text-white transition-colors">Contact</a>
+            <div className="flex gap-8">
+              <Instagram className="w-5 h-5 text-white/40 hover:text-zumba-pink cursor-pointer" />
+              <Twitter className="w-5 h-5 text-white/40 hover:text-zumba-cyan cursor-pointer" />
+              <Facebook className="w-5 h-5 text-white/40 hover:text-zumba-lime cursor-pointer" />
             </div>
             {(user || isGuest) && (
               <button 
@@ -132,13 +132,13 @@ const Home = () => {
                     signOut();
                   }
                 }}
-                className="text-xs font-black uppercase tracking-[0.2em] text-zumba-pink hover:text-white transition-colors border border-zumba-pink/20 px-4 py-2 rounded-xl"
+                className="text-[9px] font-black uppercase tracking-[0.2em] text-zumba-pink hover:text-white transition-colors border border-zumba-pink/20 px-4 py-2 rounded-xl"
               >
                 Sign Out
               </button>
             )}
           </div>
-          <p className="text-xs font-bold text-white/20 tracking-[0.2em]">© 2026 ZUMBA THEATRE WORLDWIDE</p>
+          <p className="text-[9px] font-bold text-white/20 tracking-[0.2em] text-center md:text-right">© 2026 ZUMBA THEATRE WORLDWIDE</p>
         </div>
       </footer>
     </div>
