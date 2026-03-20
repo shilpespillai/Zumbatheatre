@@ -541,7 +541,7 @@ export default function TeacherDashboard() {
             </div>
 
             <a 
-              href="/teacher/reports" 
+              href={profile?.is_subscribed ? "/teacher/reports" : "/teacher/subscription"} 
               className="block glass p-8 rounded-[2.5rem] hover:scale-[1.02] transition-all group relative overflow-hidden"
             >
               {!profile?.is_subscribed && (
