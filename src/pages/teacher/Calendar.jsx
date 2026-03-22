@@ -20,6 +20,9 @@ export default function TeacherCalendar() {
   const [routines, setRoutines] = useState([]);
   const [schedules, setSchedules] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+  const [cancellingSession, setCancellingSession] = useState(null);
+  const [cancelReason, setCancelReason] = useState('Personal emergency - class rescheduled.');
   const [loading, setLoading] = useState(false);
 
   // Form State for Scheduling
@@ -101,25 +104,51 @@ export default function TeacherCalendar() {
     }
   };
 
-  const handleCancelSession = async (id) => {
-    const sessionToCancel = schedules.find(s => s.id === id);
-    if (sessionToCancel && new Date(sessionToCancel.start_time) < new Date()) {
+  const handleCancelSession = (session) => {
+    if (new Date(session.start_time) < new Date()) {
       toast.error('Cannot cancel a past session.');
       return;
     }
+    setCancellingSession(session);
+    setIsCancelModalOpen(true);
+  };
 
-    if (!confirm('Are you sure you want to cancel this session? This action cannot be undone.')) return;
+  const confirmCancellation = async () => {
+    if (!cancellingSession) return;
+    setLoading(true);
 
     try {
-      const { error } = await supabase
+      // 1. Update Schedule Status
+      const { error: updateError } = await supabase
         .from('schedules')
         .update({ status: 'CANCELLED' })
-        .eq('id', id);
-      if (error) throw error;
-      toast.success('Session cancelled');
+        .eq('id', cancellingSession.id);
+      
+      if (updateError) throw updateError;
+
+      // 2. Trigger Notification Edge Function (Optional: if the teacher wants notifications)
+      // We will implement this Edge Function next.
+      const { error: notifyError } = await supabase.functions.invoke('notify-cancellation', {
+        body: { 
+          scheduleId: cancellingSession.id, 
+          reason: cancelReason 
+        }
+      });
+
+      if (notifyError) {
+        console.warn('Notification failed but status updated:', notifyError);
+        toast.warning('Session cancelled, but students might not have received notifications.');
+      } else {
+        toast.success('Session cancelled and students notified.');
+      }
+
+      setIsCancelModalOpen(false);
+      setCancellingSession(null);
       fetchSchedules();
     } catch (error) {
-      toast.error('Failed to cancel session');
+      toast.error('Failed to cancel session: ' + error.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -304,7 +333,7 @@ export default function TeacherCalendar() {
                             <div className="flex gap-2">
                               {slot.status !== 'CANCELLED' && !isPast && (
                                 <button 
-                                  onClick={() => handleCancelSession(slot.id)}
+                                  onClick={() => handleCancelSession(slot)}
                                   className="px-6 py-2 text-rose-bloom hover:bg-rose-bloom hover:text-white rounded-xl transition-all font-black uppercase tracking-widest text-[9px] border border-rose-bloom/20"
                                 >
                                   Cancel Session
@@ -324,6 +353,62 @@ export default function TeacherCalendar() {
                       <p className="text-sm font-bold text-zumba-dark/30">No sessions scheduled for this day.</p>
                     </div>
                   )}
+               </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal for Cancellation Reason */}
+      <AnimatePresence>
+        {isCancelModalOpen && cancellingSession && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 sm:p-10">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsCancelModalOpen(false)} className="absolute inset-0 bg-theatre-dark/40 backdrop-blur-sm" />
+            <motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} className="bg-white w-full max-w-lg p-10 rounded-[3rem] relative z-20 overflow-hidden shadow-2xl border-2 border-red-100">
+               <div className="flex justify-between items-center mb-8">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 bg-red-50 rounded-2xl">
+                      <X className="w-6 h-6 text-red-500" />
+                    </div>
+                    <div>
+                        <h2 className="text-2xl font-black text-theatre-dark">Cancel Session?</h2>
+                        <p className="text-[10px] font-bold text-red-500 uppercase tracking-widest mt-1">This will notify all students</p>
+                    </div>
+                  </div>
+                  <button onClick={() => setIsCancelModalOpen(false)} className="p-3 hover:bg-zinc-100 rounded-xl transition-colors text-zinc-300"><X/></button>
+               </div>
+
+               <div className="space-y-6">
+                  <div className="p-5 bg-zinc-50 rounded-2xl border border-zinc-100 italic text-sm text-zinc-500">
+                    "{cancellingSession.routines?.name}" at {format(parseISO(cancellingSession.start_time), 'hh:mm a')}
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-theatre-dark/30 ml-2">Reason for Cancellation</label>
+                    <textarea 
+                      rows={3}
+                      value={cancelReason}
+                      onChange={(e) => setCancelReason(e.target.value)}
+                      className="w-full bg-bloom-white border border-apricot/20 rounded-2xl py-4 px-6 focus:outline-none focus:border-red-400 transition-all font-bold text-theatre-dark resize-none"
+                      placeholder="Students will receive this message via email/SMS..."
+                    />
+                  </div>
+
+                  <div className="flex gap-4">
+                    <button 
+                       onClick={() => setIsCancelModalOpen(false)}
+                       className="flex-1 py-4 font-black uppercase tracking-widest text-[10px] text-theatre-dark/40 hover:text-theatre-dark transition-colors"
+                    >
+                      Wait, Keep it
+                    </button>
+                    <button 
+                      disabled={loading || !cancelReason}
+                      onClick={confirmCancellation}
+                      className="flex-[2] bg-red-500 text-white font-black py-4 rounded-2xl hover:bg-red-600 transition-all shadow-lg shadow-red-500/20 disabled:opacity-30"
+                    >
+                      {loading ? 'Processing...' : 'Confirm & Notify'}
+                    </button>
+                  </div>
                </div>
             </motion.div>
           </div>

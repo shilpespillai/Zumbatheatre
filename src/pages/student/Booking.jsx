@@ -37,6 +37,7 @@ export default function StudentBooking() {
   const [studentCredits, setStudentCredits] = useState(0);
   const [allStudentBookings, setAllStudentBookings] = useState([]);
   const [selectedMethod, setSelectedMethod] = useState(null);
+  const [loyaltyEligible, setLoyaltyEligible] = useState(false);
 
   useEffect(() => {
     fetchTeacher();
@@ -76,7 +77,18 @@ export default function StudentBooking() {
         .eq('student_id', profile.id)
         .not('payment_status', 'in', '("CANCELLED","VOID")');
       
-      if (!error) setAllStudentBookings(data || []);
+      if (!error) {
+        setAllStudentBookings(data || []);
+        
+        // Calculate Loyalty Eligibility
+        const teacherLoyalty = teacher?.loyalty_settings || { required_sessions: 10, enabled: true };
+        if (teacherLoyalty.enabled !== false) {
+          const teacherBookings = (data || []).filter(b => b.teacher_id === teacherId && b.payment_status === 'PAID');
+          const required = teacherLoyalty.required_sessions || 10;
+          const progress = teacherBookings.length % (required + 1);
+          setLoyaltyEligible(progress === required);
+        }
+      }
     } catch (err) {
       console.error('[Booking] Fetch all bookings error:', err);
     }
@@ -254,6 +266,35 @@ export default function StudentBooking() {
         });
 
         toast.success('Booked instantly using your credits!');
+        navigate('/student/dashboard');
+        return;
+      }
+
+      if (paymentType === 'loyalty') {
+        // Create booking in Supabase for $0
+        const { data: bookingData, error: bookingError } = await supabase
+          .from('bookings')
+          .insert({
+            student_id: profile.id,
+            schedule_id: selectedSession.id,
+            amount: 0,
+            payment_method: 'LOYALTY_REWARD',
+            payment_status: 'PAID'
+          })
+          .select()
+          .single();
+        
+        if (bookingError) throw bookingError;
+
+        await supabase.from('payments').insert({
+          booking_id: bookingData.id,
+          student_id: profile.id,
+          teacher_id: teacherId,
+          amount: 0,
+          status: 'SUCCEEDED'
+        });
+
+        toast.success('Congratulations! Your 11th session is FREE.');
         navigate('/student/dashboard');
         return;
       }
@@ -510,13 +551,23 @@ export default function StudentBooking() {
                         const isExpired = selectedSession && new Date(selectedSession.start_time) < new Date();
                         return (
                           <>
-                            {studentCredits >= selectedSession.price && (
+                            {studentCredits >= selectedSession.price && !loyaltyEligible && (
                               <button 
                                 onClick={() => handleBooking('credits')}
                                 disabled={booking || isExpired}
                                 className="w-full py-5 bg-rose-bloom text-white border border-rose-bloom/30 text-rose-bloom rounded-[2.5rem] flex items-center justify-center gap-3 hover:bg-rose-bloom/80 transition-all font-black uppercase tracking-widest text-xs mb-2 shadow-lg shadow-rose-bloom/20 disabled:opacity-30 disabled:cursor-not-allowed"
                               >
                                 <Sparkles className="w-5 h-5 text-white" /> Use ${selectedSession.price} Credits
+                              </button>
+                            )}
+
+                            {loyaltyEligible && (
+                              <button 
+                                onClick={() => handleBooking('loyalty')}
+                                disabled={booking || isExpired}
+                                className="w-full py-6 bg-gradient-to-r from-apricot to-rose-bloom text-white rounded-[2.5rem] flex items-center justify-center gap-3 hover:opacity-90 transition-all font-black uppercase tracking-widest text-xs mb-6 shadow-xl shadow-apricot/30 disabled:opacity-30 animate-bounce"
+                              >
+                                <Ticket className="w-6 h-6" /> Claim Free Loyalty Session!
                               </button>
                             )}
 
@@ -527,8 +578,8 @@ export default function StudentBooking() {
 
                             <button 
                               onClick={handleBooking}
-                              disabled={booking || isExpired}
-                              className="w-full btn-premium bg-rose-bloom text-white py-6 rounded-[2.5rem] shadow-xl shadow-rose-bloom/30 flex items-center justify-center gap-3 active:scale-95 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                              disabled={booking || isExpired || loyaltyEligible}
+                              className={`w-full ${loyaltyEligible ? 'opacity-20 pointer-events-none' : 'btn-premium bg-rose-bloom'} text-white py-6 rounded-[2.5rem] shadow-xl shadow-rose-bloom/30 flex items-center justify-center gap-3 active:scale-95 transition-all disabled:opacity-30 disabled:cursor-not-allowed`}
                             >
                               {booking ? (
                                 <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />

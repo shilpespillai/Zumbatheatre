@@ -109,7 +109,7 @@ export default function StudentDashboard() {
         toast.error('Could not find that stage.');
         return;
       }
-      teacher = data;
+      const teacher = data;
 
       if (teacher) {
         if (profile?.id) {
@@ -272,7 +272,7 @@ export default function StudentDashboard() {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('full_name, avatar_url')
+        .select('full_name, avatar_url, loyalty_settings')
         .eq('id', teacherId)
         .single();
       
@@ -407,10 +407,22 @@ export default function StudentDashboard() {
       return d.getFullYear() === now.getFullYear() && Math.floor(d.getMonth() / 3) === Math.floor(now.getMonth() / 3);
     }).reduce((sum, b) => sum + (Number(b.amount) || 0), 0);
 
+    // Loyalty Progress (Specific to active teacher)
+    const activeTeacherBookings = paidBookings.filter(b => b.teacher_id === profile?.linked_teacher_id);
+    const loyaltySettings = teacherProfile?.loyalty_settings || { required_sessions: 10, enabled: true };
+    const loyaltyCount = activeTeacherBookings.length % (loyaltySettings.required_sessions + 1);
+    const sessionsRemaining = loyaltySettings.required_sessions - loyaltyCount;
+
     setStudentStats({
       totalSessions, routineVariety: routineVarietyWithPerformance, routineCategoryMix, attendanceTrend, energyBurn: Math.round(totalEnergyBurn),
       consistency: dayStats, totalSpent: Math.round(totalSpent), monthlySpent: Math.round(monthlySpent), quarterlySpent: Math.round(quarterlySpent),
-      ytdSpent: Math.round(ytdSpent), spendingTrend
+      ytdSpent: Math.round(ytdSpent), spendingTrend,
+      loyaltyProgress: {
+        current: loyaltyCount,
+        total: loyaltySettings.required_sessions,
+        remaining: sessionsRemaining,
+        isUnlocked: loyaltyCount === loyaltySettings.required_sessions
+      }
     });
   };
 
@@ -513,63 +525,47 @@ export default function StudentDashboard() {
                  />
               </section>
               <aside className="space-y-8">
-                 <div className="bg-white/60 p-10 rounded-[3rem] border border-apricot/40 shadow-xl">
-                    <h3 className="text-xl font-black text-theatre-dark mb-8">{format(selectedDate, 'MMM d')} Sessions</h3>
-                    <div className="space-y-4">
-                      {allSchedules.filter(s => isSameDay(parseISO(s.start_time), selectedDate)).map((slot, i) => {
-                        const isExpired = new Date(slot.start_time) < new Date();
-                        const isCancelled = slot.status === 'CANCELLED';
-                        const isCompleted = slot.status === 'COMPLETED';
-                        const existingBooking = myBookings.find(b => 
-                          b.schedule_id === slot.id && 
-                          !['CANCELLED', 'VOID'].includes(b.payment_status)
-                        );
-                        const isBooked = !!existingBooking;
-                        const isGreyed = isExpired || isCancelled || isCompleted;
-                        const isPaid = existingBooking?.payment_status === 'PAID';
+                  {/* Loyalty Stamp Card */}
+                  {teacherProfile?.loyalty_settings?.enabled !== false && (
+                    <div className="bg-gradient-to-br from-theatre-dark to-rose-bloom p-8 rounded-[3rem] text-white shadow-xl shadow-rose-bloom/10 relative overflow-hidden group">
+                      <Sparkles className="absolute -right-2 -top-2 w-16 h-16 text-white/10 group-hover:rotate-12 transition-transform" />
+                      <div className="relative z-10">
+                        <div className="text-[9px] font-black uppercase tracking-[0.2em] text-white/60 mb-1">Loyalty Rewards</div>
+                        <h4 className="text-lg font-black mb-6 italic">Stage Pass Progress</h4>
                         
-                        const isPaid = existingBooking?.payment_status === 'PAID';
-                        const hasConflict = slot.hasConflict && isGlobalMode;
-                        
-                        return (
-                          <div key={i} className={`p-6 rounded-3xl border transition-all ${isGreyed ? 'bg-white/50 border-theatre-dark/10 opacity-50 grayscale' : isBooked ? 'bg-apricot/5 border-apricot/30 shadow-sm' : hasConflict ? 'bg-red-50 border-red-200' : 'bg-white border-apricot/20 hover:shadow-md'}`}>
-                            <div className="flex justify-between items-start mb-1">
-                              <div className={`font-black text-xs ${isBooked && !isGreyed ? 'text-theatre-dark' : 'text-rose-bloom'}`}>{format(parseISO(slot.start_time), 'hh:mm a')}</div>
-                              {isGlobalMode && <div className="text-[8px] font-bold text-theatre-dark/40 uppercase">{slot.profiles?.full_name?.split(' ')[0]}</div>}
+                        <div className="grid grid-cols-5 gap-3 mb-6">
+                          {Array.from({ length: studentStats.loyaltyProgress?.total || 10 }).map((_, i) => (
+                            <div key={i} className={`aspect-square rounded-xl flex items-center justify-center border-2 transition-all ${
+                              i < (studentStats.loyaltyProgress?.current || 0)
+                              ? 'bg-white border-white scale-110' 
+                              : 'bg-white/5 border-white/20'
+                            }`}>
+                              {i < (studentStats.loyaltyProgress?.current || 0) && (
+                                <Heart className="w-3 h-3 text-rose-bloom fill-rose-bloom" />
+                              )}
                             </div>
-                            <div className="text-theatre-dark font-black text-lg mb-4 flex items-center gap-2">
-                              {slot.routines?.name}
-                              {hasConflict && <div className="p-1.5 bg-red-500 rounded-full text-white shadow-lg" title="Schedule Overlap!"><Clock className="w-3 h-3" /></div>}
-                            </div>
-                            {isGreyed || isBooked ? (
-                              <div className={`w-full py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest text-center flex items-center justify-center gap-2 ${isBooked && !isGreyed ? 'bg-theatre-dark text-white' : 'bg-theatre-dark/10 text-theatre-dark/40'}`}>
-                                {isBooked ? (
-                                  <>
-                                    {isPaid ? <CheckCircle2 className="w-3 h-3 text-apricot" /> : <Clock className="w-3 h-3 text-apricot" />}
-                                    {isPaid ? 'Booked' : 'Reserved'}
-                                  </>
-                                ) : isCancelled ? (
-                                  'Cancelled'
-                                ) : isCompleted ? (
-                                  'Completed'
-                                ) : (
-                                  'Expired'
-                                )}
-                              </div>
-                            ) : (
-                              <button 
-                                onClick={() => navigate(`/student/book/${slot.teacher_id}?sessionId=${slot.id}`)} 
-                                className="w-full py-4 bg-theatre-dark text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-rose-bloom transition-all shadow-sm"
-                              >
-                                Book Now
-                              </button>
-                            )}
+                          ))}
+                          <div className={`aspect-square rounded-xl flex items-center justify-center border-2 border-dashed ${
+                             studentStats.loyaltyProgress?.isUnlocked ? 'bg-apricot border-white animate-bounce' : 'bg-white/5 border-white/20 opacity-50'
+                          }`}>
+                            <Ticket className={`w-4 h-4 ${studentStats.loyaltyProgress?.isUnlocked ? 'text-white' : 'text-white/20'}`} />
                           </div>
-                        );
-                      })}
+                        </div>
+
+                        <div className="text-center">
+                          {studentStats.loyaltyProgress?.isUnlocked ? (
+                            <div className="text-[10px] font-black uppercase tracking-widest text-apricot">Stage Gift Unlocked!</div>
+                          ) : (
+                            <div className="text-[9px] font-bold text-white/40 uppercase tracking-widest">
+                              {studentStats.loyaltyProgress?.remaining} classes to your free session
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                 </div>
-                 <div className="bg-white/60 p-10 rounded-[3rem] border border-apricot/40 text-center">
+                  )}
+
+                  <div className="bg-white/60 p-10 rounded-[3rem] border border-apricot/40 text-center">
                      <div className="text-[10px] font-black text-rose-bloom uppercase tracking-widest mb-2">Stage Credits</div>
                     <div className="text-4xl font-black text-theatre-dark mb-8">${studentCredits.toFixed(2)}</div>
                     <div className="space-y-4">
