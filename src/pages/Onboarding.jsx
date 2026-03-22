@@ -36,16 +36,24 @@ export default function Onboarding() {
   const handleSubmit = async () => {
     setLoading(true);
     try {
+      console.log('[Onboarding] Starting submission...');
       let linkedTeacherId = null;
       if (role === 'student' && formData.stage_code) {
-        const { data: teacher } = await supabase
+        console.log('[Onboarding] Looking up teacher code:', formData.stage_code);
+        const { data: teacher, error: teacherError } = await supabase
           .from('profiles')
           .select('id')
           .eq('invite_code', formData.stage_code.toUpperCase().trim())
           .single();
-        if (teacher) linkedTeacherId = teacher.id;
+        
+        if (teacherError) console.warn('[Onboarding] Teacher lookup error:', teacherError);
+        if (teacher) {
+          console.log('[Onboarding] Teacher found:', teacher.id);
+          linkedTeacherId = teacher.id;
+        }
       }
 
+      console.log('[Onboarding] Upserting profile for user:', user.id);
       const { error } = await supabase
         .from('profiles')
         .upsert({
@@ -57,7 +65,11 @@ export default function Onboarding() {
           avatar_url: user.user_metadata?.avatar_url || ''
         });
 
-      if (error) throw error;
+      if (error) {
+        console.error('[Onboarding] Upsert error:', error);
+        throw error;
+      }
+      console.log('[Onboarding] Upsert successful.');
       
       // Assuming isDevBypass is defined elsewhere or will be defined by the user
       // For example: const isDevBypass = process.env.NODE_ENV === 'development';
@@ -69,7 +81,10 @@ export default function Onboarding() {
         localStorage.setItem('zumba_mock_profile', JSON.stringify(mockProfile));
       }
 
+      console.log('[Onboarding] Refreshing profile state...');
       await fetchProfile();
+      console.log('[Onboarding] Profile refreshed. Navigating...');
+      
       toast.success(`Welcome to the theatre, ${formData.full_name}!`);
       const targetPath = role?.toUpperCase() === 'TEACHER' ? '/teacher/dashboard' : '/student/dashboard';
       navigate(targetPath);
