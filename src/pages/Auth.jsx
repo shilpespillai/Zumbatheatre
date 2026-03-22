@@ -28,13 +28,33 @@ export default function Auth() {
     stageCode: initialCode,
     website: '' // Honeypot trap
   });
+  const [showTroubleshooter, setShowTroubleshooter] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState('checking'); // checking, ok, blocked
+
+  useEffect(() => {
+    // Check connection health to Supabase
+    const checkConnection = async () => {
+      try {
+        const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 4000));
+        await Promise.race([supabase.from('profiles').select('id').limit(1), timeout]);
+        setConnectionStatus('ok');
+      } catch (err) {
+        console.warn('[Auth] Connection seems blocked or slow.');
+        setConnectionStatus('blocked');
+        setShowTroubleshooter(true);
+      }
+    };
+    checkConnection();
+  }, []);
+
   const [role, setRole] = useState(initialRole); // 'student' or 'teacher'
   const [turnstileToken, setTurnstileToken] = useState(null);
   const turnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY || '1x00000000000000000000AA'; // Standard test key
 
   // Redirect if already logged in (Teachers/Admins)
   useEffect(() => {
-    if (user && !loading) {
+    // ONLY redirect if connection is OK and we have a definitive profile/role state
+    if (user && !loading && connectionStatus === 'ok') {
       if (profile) {
         const uRole = profile.role?.toUpperCase();
         if (uRole === 'ADMIN') navigate('/admin/dashboard');
@@ -45,7 +65,7 @@ export default function Auth() {
         navigate('/onboarding');
       }
     }
-  }, [user, profile, loading, navigate]);
+  }, [user, profile, loading, navigate, connectionStatus]);
 
   const handleGuestEntrance = () => {
     if (!formData.fullName || !formData.stageCode) {
@@ -191,7 +211,32 @@ export default function Auth() {
       <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-20 items-center relative z-10">
         <div className="hidden lg:block space-y-12">
           <div className="space-y-6">
-            <motion.div 
+           {showTroubleshooter && (
+          <motion.div 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-8 p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center justify-between gap-4 w-full"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-rose-100 rounded-full flex items-center justify-center">
+                <ShieldCheck className="w-6 h-6 text-rose-600" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-rose-900">Connection Blocked?</h3>
+                <p className="text-xs text-rose-700">Your browser's "Tracking Protection" might be blocking our database.</p>
+              </div>
+            </div>
+            <button 
+              type="button"
+              onClick={() => alert('To fix this:\n1. Click the Lock/Shield icon in your address bar.\n2. Turn OFF "Tracking Prevention" for this site.\n3. Refresh the page.')}
+              className="px-4 py-2 bg-rose-600 text-white text-xs font-bold rounded-xl hover:bg-rose-700 transition-colors"
+            >
+              How to Fix
+            </button>
+          </motion.div>
+        )}
+
+        <motion.div 
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               className="w-20 h-20 bg-gradient-to-br from-rose-bloom to-rose-petal rounded-[2rem] flex items-center justify-center rotate-12 shadow-2xl shadow-rose-bloom/30"
