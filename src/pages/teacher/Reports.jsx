@@ -31,10 +31,11 @@ export default function TeacherReports() {
     historicalRevenue: [],
     audienceLoyalty: []
   });
+  const [timeRange, setTimeRange] = useState('90days');
 
   useEffect(() => {
     if (user) fetchReportData();
-  }, [user]);
+  }, [user, timeRange]);
 
   const fetchReportData = async () => {
     setLoading(true);
@@ -93,15 +94,30 @@ export default function TeacherReports() {
         payments = paymentsData || [];
       }
 
-      const totalRevenue = payments.reduce((sum, p) => sum + Number(p.amount), 0);
-      const totalPaidBookings = bookings.filter(b => b.payment_status === 'PAID' || b.payment_status === 'PENDING').length;
+      let startDate;
+      const now = new Date();
+      if (timeRange === '30days') startDate = subDays(now, 30);
+      else if (timeRange === '90days') startDate = subDays(now, 90);
+      else if (timeRange === 'year') startDate = subDays(now, 365);
+      else if (timeRange === 'ytd') startDate = new Date(now.getFullYear(), 0, 1);
+      else startDate = new Date(0); // All time
+
+      const filteredPayments = payments.filter(p => new Date(p.created_at) >= startDate);
+      const filteredBookings = bookings.filter(b => {
+        const s = schedules.find(sch => sch.id === b.schedule_id);
+        return s && new Date(s.start_time) >= startDate;
+      });
+
+      const totalRevenue = filteredPayments.reduce((sum, p) => sum + Number(p.amount), 0);
+      const totalPaidBookings = filteredBookings.filter(b => b.payment_status === 'PAID' || b.payment_status === 'PENDING').length;
       
-      const totalCapacity = schedules.reduce((sum, s) => sum + (s.max_seats || 20), 0);
-      const totalSeatsTaken = schedules.reduce((sum, s) => sum + (s.seats_taken || 0), 0);
+      const rangeSchedules = schedules.filter(s => new Date(s.start_time) >= startDate);
+      const totalCapacity = rangeSchedules.reduce((sum, s) => sum + (s.max_seats || 20), 0);
+      const totalSeatsTaken = rangeSchedules.reduce((sum, s) => sum + (s.seats_taken || 0), 0);
       const occupanyRate = totalCapacity > 0 ? Math.round((totalSeatsTaken / totalCapacity) * 100) : 0;
 
       const studentBookingCounts = {};
-      bookings.forEach(b => {
+      filteredBookings.forEach(b => {
         const sId = b.student_id;
         studentBookingCounts[sId] = (studentBookingCounts[sId] || 0) + 1;
       });
@@ -110,20 +126,21 @@ export default function TeacherReports() {
       const retentionRate = uniqueStudentsCount > 0 ? Math.round((repeatStudentsCount / uniqueStudentsCount) * 100) : 0;
       const avgRevenuePerStudent = uniqueStudentsCount > 0 ? Math.round(totalRevenue / uniqueStudentsCount) : 0;
 
-      const totalBookingAttempts = bookings.length;
-      const cancelledBookings = bookings.filter(b => b.payment_status === 'CANCELLED' || b.payment_status === 'VOID').length;
+      const totalBookingAttempts = filteredBookings.length;
+      const cancelledBookings = filteredBookings.filter(b => b.payment_status === 'CANCELLED' || b.payment_status === 'VOID').length;
       const cancellationRate = totalBookingAttempts > 0 ? Math.round((cancelledBookings / totalBookingAttempts) * 100) : 0;
 
       const methodCounts = { STRIPE: 0, MANUAL: 0, CREDITS: 0, PAYPAL: 0 };
-      bookings.forEach(b => {
+      filteredBookings.forEach(b => {
         if (b.payment_method && methodCounts[b.payment_method] !== undefined) {
           methodCounts[b.payment_method]++;
         }
       });
       const paymentMethodDistribution = Object.entries(methodCounts).map(([name, value]) => ({ name, value }));
 
-      const last6Months = Array.from({ length: 6 }, (_, i) => subMonths(new Date(), i)).reverse();
-      const historicalRevenue = last6Months.map(monthDate => {
+      const historyMonths = timeRange === 'year' || timeRange === 'all' || timeRange === 'ytd' ? 12 : 6;
+      const lastXMonths = Array.from({ length: historyMonths }, (_, i) => subMonths(new Date(), i)).reverse();
+      const historicalRevenue = lastXMonths.map(monthDate => {
         const monthRevenue = payments
           .filter(p => isSameMonth(new Date(p.created_at), monthDate))
           .reduce((sum, p) => sum + Number(p.amount), 0);
@@ -138,12 +155,16 @@ export default function TeacherReports() {
         { name: 'New Talent', value: Math.max(0, uniqueStudentsCount - repeatStudentsCount) }
       ];
 
-      const last14Days = eachDayOfInterval({
-        start: subDays(new Date(), 13),
+      // Dynamic Trend Density
+      let trendDays = timeRange === '30days' ? 30 : timeRange === '90days' ? 90 : 180;
+      if (timeRange === 'year' || timeRange === 'all' || timeRange === 'ytd') trendDays = 365;
+
+      const trendInterval = eachDayOfInterval({
+        start: subDays(new Date(), trendDays - 1),
         end: new Date()
       });
 
-      const revenueTrend = last14Days.map(date => {
+      const revenueTrend = (trendDays > 60 ? trendInterval.filter((_, i) => i % 5 === 0) : trendInterval).map(date => {
         const dayRevenue = payments
           .filter(p => isSameDay(new Date(p.created_at), date))
           .reduce((sum, p) => sum + Number(p.amount), 0);
@@ -154,7 +175,7 @@ export default function TeacherReports() {
       });
 
       const routineStats = routines.map(r => {
-        const routineSchedules = schedules.filter(s => s.routine_id === r.id);
+        const routineSchedules = schedules.filter(s => s.routine_id === r.id && new Date(s.start_time) >= startDate);
         const routineSId = routineSchedules.map(s => s.id);
         const routinePayments = payments.filter(p => routineSId.includes(p.bookings.schedule_id));
         return {
@@ -166,9 +187,9 @@ export default function TeacherReports() {
       }).sort((a, b) => b.bookings - a.bookings).slice(0, 5);
       
       const hourCounts = Array(24).fill(0).map((_, i) => ({ hour: i, count: 0 }));
-      schedules.forEach(s => {
+      rangeSchedules.forEach(s => {
         const hour = new Date(s.start_time).getHours();
-        const bookingsCount = bookings.filter(b => b.schedule_id === s.id && b.payment_status === 'PAID').length;
+        const bookingsCount = filteredBookings.filter(b => b.schedule_id === s.id && b.payment_status === 'PAID').length;
         hourCounts[hour].count += bookingsCount;
       });
       const peakHours = hourCounts.filter(h => h.count > 0 || (h.hour >= 9 && h.hour <= 21));
@@ -252,9 +273,17 @@ export default function TeacherReports() {
               <Download className="w-4 h-4 text-rose-bloom" /> Export Data
             </button>
             <div className="bg-gradient-to-r from-rose-bloom to-rose-petal p-0.5 rounded-2xl shadow-lg shadow-rose-bloom/20">
-               <button className="px-6 py-3.5 bg-white rounded-[0.9rem] text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-3">
-                 <Filter className="w-4 h-4 text-rose-bloom" /> Last 14 Days
-               </button>
+               <select 
+                 value={timeRange} 
+                 onChange={(e) => setTimeRange(e.target.value)}
+                 className="px-6 py-3.5 bg-white rounded-[0.9rem] text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-3 outline-none cursor-pointer border-none"
+               >
+                 <option value="30days">Last 30 Days</option>
+                 <option value="90days">Last 3 Months</option>
+                 <option value="year">Last Year</option>
+                 <option value="ytd">Year to Date (YTD)</option>
+                 <option value="all">Running Total</option>
+               </select>
             </div>
           </div>
         </header>

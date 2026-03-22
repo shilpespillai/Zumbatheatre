@@ -51,6 +51,7 @@ export default function StudentDashboard() {
     ytdSpent: 0,
     spendingTrend: []
   });
+  const [timeRange, setTimeRange] = useState('90days');
   const [studentCredits, setStudentCredits] = useState(0);
   const navigate = useNavigate();
 
@@ -141,11 +142,18 @@ export default function StudentDashboard() {
         }
 
         const guestSess = JSON.parse(localStorage.getItem('zumba_guest_session') || 'null');
-        const updatedGuest = guestSess || { id: 'guest-' + Date.now(), role: 'STUDENT', is_guest: true };
+        // Use existing ID or generate a stable one based on the code to prevent Date.now() loops
+        const stableGuestId = guestSess?.id || 'guest-' + btoa(code).slice(0, 12);
+        const updatedGuest = guestSess || { id: stableGuestId, role: 'STUDENT', is_guest: true };
+        
         updatedGuest.linked_teacher_id = teacher.id;
         updatedGuest.stage_code = code.toUpperCase().trim();
         localStorage.setItem('zumba_guest_session', JSON.stringify(updatedGuest));
-        setGuestProfile(updatedGuest);
+        
+        // Only update state if it actually changed to prevent unnecessary re-renders
+        if (JSON.stringify(updatedGuest) !== JSON.stringify(guestProfile)) {
+          setGuestProfile(updatedGuest);
+        }
         
         localStorage.removeItem('pending_teacher_code');
         await fetchProfile();
@@ -190,7 +198,7 @@ export default function StudentDashboard() {
     if (myBookings.length > 0 && allSchedules.length > 0) {
       calculateStudentMetrics(myBookings, allSchedules);
     }
-  }, [myBookings, allSchedules]);
+  }, [myBookings, allSchedules, timeRange]);
 
   useEffect(() => {
     if (profile?.id && profile?.linked_teacher_id) {
@@ -260,7 +268,15 @@ export default function StudentDashboard() {
   };
 
   const calculateStudentMetrics = (bookings, schedules) => {
-    const paidBookings = bookings.filter(b => b.payment_status === 'PAID');
+    let startDate;
+    const now = new Date();
+    if (timeRange === '30days') startDate = subDays(now, 30);
+    else if (timeRange === '90days') startDate = subDays(now, 90);
+    else if (timeRange === 'year') startDate = subDays(now, 365);
+    else if (timeRange === 'ytd') startDate = new Date(now.getFullYear(), 0, 1);
+    else startDate = new Date(0);
+
+    const paidBookings = bookings.filter(b => b.payment_status === 'PAID' && b.schedules?.start_time && new Date(b.schedules.start_time) >= startDate);
     const totalSessions = paidBookings.length;
     
     // Routine Variety
@@ -301,11 +317,12 @@ export default function StudentDashboard() {
       if (b.schedules?.start_time) dayStats[new Date(b.schedules.start_time).getDay()].count += 1;
     });
 
-    // Financial Trend (6 Months)
-    const now = new Date();
-    const last6Months = Array.from({ length: 6 }).map((_, i) => subMonths(now, 5 - i));
-    const spendingTrend = last6Months.map(monthDate => {
-      const monthBookings = paidBookings.filter(b => isSameMonth(new Date(b.schedules.start_time), monthDate));
+    // Financial Trend (Dynamic)
+    const nowRef = new Date();
+    const historyMonths = timeRange === 'year' || timeRange === 'ytd' || timeRange === 'all' ? 12 : 6;
+    const lastXMonths = Array.from({ length: historyMonths }).map((_, i) => subMonths(nowRef, historyMonths - 1 - i));
+    const spendingTrend = lastXMonths.map(monthDate => {
+      const monthBookings = paidBookings.filter(b => b.schedules?.start_time && isSameMonth(new Date(b.schedules.start_time), monthDate));
       return {
         month: format(monthDate, 'MMM'),
         amount: monthBookings.reduce((sum, b) => sum + (Number(b.amount) || 0), 0),
@@ -314,9 +331,10 @@ export default function StudentDashboard() {
     });
 
     const totalSpent = paidBookings.reduce((sum, b) => sum + (Number(b.amount) || 0), 0);
-    const monthlySpent = paidBookings.filter(b => isSameMonth(new Date(b.schedules.start_time), now)).reduce((sum, b) => sum + (Number(b.amount) || 0), 0);
-    const ytdSpent = paidBookings.filter(b => new Date(b.schedules.start_time).getFullYear() === now.getFullYear()).reduce((sum, b) => sum + (Number(b.amount) || 0), 0);
+    const monthlySpent = paidBookings.filter(b => b.schedules?.start_time && isSameMonth(new Date(b.schedules.start_time), now)).reduce((sum, b) => sum + (Number(b.amount) || 0), 0);
+    const ytdSpent = paidBookings.filter(b => b.schedules?.start_time && new Date(b.schedules.start_time).getFullYear() === now.getFullYear()).reduce((sum, b) => sum + (Number(b.amount) || 0), 0);
     const quarterlySpent = paidBookings.filter(b => {
+      if (!b.schedules?.start_time) return false;
       const d = new Date(b.schedules.start_time);
       return d.getFullYear() === now.getFullYear() && Math.floor(d.getMonth() / 3) === Math.floor(now.getMonth() / 3);
     }).reduce((sum, b) => sum + (Number(b.amount) || 0), 0);
@@ -454,11 +472,24 @@ export default function StudentDashboard() {
           <div className="mt-8 space-y-12 animate-in fade-in slide-in-from-bottom-4">
             <div className="bg-white/70 backdrop-blur-3xl p-10 rounded-[4rem] border border-theatre-dark/20 shadow-xl relative overflow-hidden">
                <div className="flex justify-between items-end mb-12 relative z-10">
-                 <div>
+                  <div>
                     <h2 className="text-3xl font-black text-theatre-dark tracking-tight italic">Stage History</h2>
-                    <p className="text-[10px] font-black text-rose-bloom uppercase tracking-[0.2em]">6-Month Performance & Energy Trends</p>
+                    <p className="text-[10px] font-black text-rose-bloom uppercase tracking-[0.2em]">Investment & Energy Trends</p>
                  </div>
-                 <div className="flex gap-4">
+                 <div className="flex gap-4 items-center">
+                   <div className="bg-bloom-white p-1 rounded-2xl border border-apricot/20">
+                     <select 
+                       value={timeRange}
+                       onChange={(e) => setTimeRange(e.target.value)}
+                       className="px-4 py-2 bg-transparent text-[10px] font-black uppercase tracking-widest outline-none cursor-pointer border-none"
+                     >
+                       <option value="30days">Month</option>
+                       <option value="90days">Quarter</option>
+                       <option value="year">Year</option>
+                       <option value="ytd">YTD</option>
+                       <option value="all">Total</option>
+                     </select>
+                   </div>
                    <div className="px-6 py-4 bg-bloom-white rounded-3xl border border-apricot/20 text-center"><div className="text-[9px] font-black text-theatre-dark/30 uppercase mb-1">Total Power</div><div className="text-2xl font-black text-theatre-dark">${studentStats.totalSpent}</div></div>
                  </div>
                </div>
