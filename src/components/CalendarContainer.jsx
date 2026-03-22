@@ -107,7 +107,7 @@ export default function CalendarContainer({ events, onDateClick, onEventClick, o
                     key={idx}
                     className="text-[9px] font-bold bg-lavender/40 text-rose-bloom p-1 rounded-lg truncate border border-rose-petal/10"
                   >
-                    {format(parseISO(event.start_time), 'HH:mm')} {event.name || event.routines?.name}
+                    {event.start_time ? format(parseISO(event.start_time), 'HH:mm') : '00:00'} {event.name || event.routines?.name}
                   </div>
                 ))}
                 {dayEvents.length > 3 && (
@@ -169,7 +169,7 @@ export default function CalendarContainer({ events, onDateClick, onEventClick, o
                     onClick={() => onEventClick(event)}
                     className="p-4 glass rounded-2xl cursor-pointer hover:border-rose-bloom/30 transition-all border border-theatre-dark/15"
                   >
-                    <div className="text-[10px] font-black text-rose-bloom mb-1">{format(parseISO(event.start_time), 'hh:mm a')}</div>
+                    <div className="text-[10px] font-black text-rose-bloom mb-1">{event.start_time ? format(parseISO(event.start_time), 'hh:mm a') : '00:00 AM'}</div>
                     <div className="text-xs font-black text-zumba-dark truncate">{event.name || event.routines?.name}</div>
                     <div className="flex items-center gap-1 mt-2 text-[9px] font-bold text-zumba-dark/30">
                       <MapPin className="w-2.5 h-2.5" /> {event.location || 'Main Studio'}
@@ -210,7 +210,7 @@ export default function CalendarContainer({ events, onDateClick, onEventClick, o
                     <div className="p-6 bg-white rounded-3xl border border-theatre-dark/15 shadow-sm hover:shadow-md transition-all group cursor-pointer" onClick={() => onEventClick(event)}>
                       <div className="flex justify-between items-start mb-4">
                         <div>
-                          <span className="text-xs font-black text-rose-bloom uppercase tracking-widest">{format(parseISO(event.start_time), 'hh:mm a')}</span>
+                          <span className="text-xs font-black text-rose-bloom uppercase tracking-widest">{event.start_time ? format(parseISO(event.start_time), 'hh:mm a') : '00:00 AM'}</span>
                           <h4 className="text-xl font-black text-zumba-dark group-hover:text-rose-bloom transition-colors mt-1">{event.name || event.routines?.name}</h4>
                         </div>
                         <div className="text-lg font-black text-rose-bloom">${event.price}</div>

@@ -16,7 +16,7 @@ CREATE TABLE public.profiles (
     full_name TEXT,
     role TEXT CHECK (role IN ('STUDENT', 'TEACHER', 'ADMIN')),
     avatar_url TEXT,
-    invite_code TEXT UNIQUE,
+    stage_code TEXT UNIQUE,
     linked_teacher_id UUID REFERENCES public.profiles(id),
     is_subscribed BOOLEAN DEFAULT FALSE,
     stripe_customer_id TEXT,
@@ -95,7 +95,7 @@ CREATE TABLE public.system_config (
 );
 
 -- 8. INDEXES for Performance
-CREATE INDEX IF NOT EXISTS idx_profiles_invite_code ON public.profiles(invite_code);
+CREATE INDEX IF NOT EXISTS idx_profiles_stage_code ON public.profiles(stage_code);
 CREATE INDEX IF NOT EXISTS idx_schedules_teacher_id ON public.schedules(teacher_id);
 CREATE INDEX IF NOT EXISTS idx_schedules_start_time ON public.schedules(start_time);
 CREATE INDEX IF NOT EXISTS idx_bookings_student_id ON public.bookings(student_id);

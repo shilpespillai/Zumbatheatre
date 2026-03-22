@@ -93,8 +93,8 @@ export default function TeacherDashboard() {
   const ensureInviteCode = async () => {
     if (profile?.role?.toUpperCase() !== 'TEACHER') return;
     
-    if (profile.invite_code) {
-      setInviteCode(profile.invite_code);
+    if (profile.stage_code) {
+      setInviteCode(profile.stage_code);
       return;
     }
 
@@ -115,7 +115,7 @@ export default function TeacherDashboard() {
           localStorage.setItem('zumba_mock_profiles', JSON.stringify(savedProfiles));
         }
       } else {
-        await supabase.from('profiles').update({ invite_code: newCode }).eq('id', user.id);
+        await supabase.from('profiles').update({ stage_code: newCode }).eq('id', user.id);
       }
       setInviteCode(newCode);
       return newCode;

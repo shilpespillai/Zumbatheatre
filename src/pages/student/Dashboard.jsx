@@ -121,7 +121,7 @@ export default function StudentDashboard() {
           );
         }
       } else {
-        const { data } = await supabase.from('profiles').select('id, full_name').eq('invite_code', code.toUpperCase().trim()).single();
+        const { data } = await supabase.from('profiles').select('id, full_name').eq('stage_code', code.toUpperCase().trim()).single();
         teacher = data;
       }
 

@@ -75,7 +75,7 @@ export default function Onboarding() {
         const { data: teacher, error: teacherError } = await supabase
           .from('profiles')
           .select('id')
-          .eq('invite_code', formData.stage_code.toUpperCase().trim())
+          .eq('stage_code', formData.stage_code.toUpperCase().trim())
           .single();
         
         if (teacherError) console.warn('[Onboarding] Teacher lookup error:', teacherError);
