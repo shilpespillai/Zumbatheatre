@@ -54,7 +54,9 @@ export default function Onboarding() {
       }
 
       console.log('[Onboarding] Upserting profile for user:', user.id);
-      const { error } = await supabase
+      
+      // Implement a 15-second timeout for the database call
+      const dbRequest = supabase
         .from('profiles')
         .upsert({
           id: user.id,
@@ -64,6 +66,12 @@ export default function Onboarding() {
           linked_teacher_id: linkedTeacherId,
           avatar_url: user.user_metadata?.avatar_url || ''
         });
+
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('DATABASE_TIMEOUT: The request to Supabase timed out after 15 seconds. Please check your internet connection and verify your Vercel environment variables.')), 15000)
+      );
+
+      const { error } = await Promise.race([dbRequest, timeoutPromise]);
 
       if (error) {
         console.error('[Onboarding] Upsert error:', error);
