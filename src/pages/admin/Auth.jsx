@@ -9,7 +9,6 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 
 export default function AdminAuth() {
-  const { signInMock, isDevBypass } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -20,13 +19,6 @@ export default function AdminAuth() {
   const handleAuth = async (e) => {
     e.preventDefault();
     setLoading(true);
-
-    if (isDevBypass) {
-      signInMock(formData.email, 'admin', 'Platform Owner');
-      navigate('/admin/dashboard');
-      setLoading(false);
-      return;
-    }
 
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ 

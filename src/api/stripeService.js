@@ -12,13 +12,6 @@ export const getStripe = (customPublicKey) => {
 }
 
 export const createCheckoutSession = async (items, config = {}) => {
-  const isDevBypass = import.meta.env.VITE_DEV_BYPASS === 'true';
-  
-  if (isDevBypass && config.isMock) {
-    console.log('[Stripe] Mock session active for:', items);
-    return { id: 'mock_session_' + Date.now(), url: '#' };
-  }
-
   try {
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
     const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;

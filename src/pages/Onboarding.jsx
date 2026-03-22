@@ -26,7 +26,7 @@ import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function Onboarding() {
-  const { user, profile, fetchProfile, isDevBypass, loading: authLoading } = useAuth();
+  const { user, profile, fetchProfile, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [showTroubleshooter, setShowTroubleshooter] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState('checking'); // checking, ok, blocked
@@ -110,14 +110,6 @@ export default function Onboarding() {
       }
       console.log('[Onboarding] Upsert successful.');
       
-      if (isDevBypass) {
-        const mockProfile = JSON.parse(localStorage.getItem('zumba_mock_profile') || '{}');
-        mockProfile.role = role;
-        mockProfile.full_name = formData.full_name;
-        mockProfile.linked_teacher_id = linkedTeacherId;
-        localStorage.setItem('zumba_mock_profile', JSON.stringify(mockProfile));
-      }
-
       console.log('[Onboarding] Refreshing profile state...');
       await fetchProfile(user.id);
       

@@ -14,7 +14,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import CalendarContainer from '../../components/CalendarContainer';
 
 export default function TeacherCalendar() {
-  const { user, isDevBypass } = useAuth();
+  const { user } = useAuth();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(startOfDay(new Date()));
   const [routines, setRoutines] = useState([]);
@@ -37,23 +37,9 @@ export default function TeacherCalendar() {
       fetchSchedules();
     }
 
-    // Storage listener to sync across tabs in mock mode
-    const handleStorageChange = (e) => {
-      if (e.key === 'zumba_mock_schedules' || e.key === 'zumba_mock_routines') {
-        fetchSchedules();
-        fetchRoutines();
-      }
-    };
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
   }, [user, currentMonth]);
 
   const fetchRoutines = async () => {
-    if (isDevBypass) {
-      const mockRoutines = JSON.parse(localStorage.getItem('zumba_mock_routines') || '[]');
-      setRoutines(mockRoutines);
-      return;
-    }
     const { data } = await supabase
       .from('routines')
       .select('*')
@@ -64,27 +50,6 @@ export default function TeacherCalendar() {
   const fetchSchedules = async () => {
     const firstDay = startOfMonth(currentMonth);
     const lastDay = endOfMonth(currentMonth);
-
-    if (isDevBypass) {
-      const mockSchedules = JSON.parse(localStorage.getItem('zumba_mock_schedules') || '[]');
-      const mockRoutines = JSON.parse(localStorage.getItem('zumba_mock_routines') || '[]');
-      
-      const filtered = mockSchedules
-        .filter(s => {
-          const match = String(s.teacher_id).trim() === String(user.id).trim();
-          const notCancelled = s.status !== 'CANCELLED';
-          const startTime = new Date(s.start_time);
-          const inRange = startTime >= firstDay && startTime <= lastDay;
-          return match && notCancelled && inRange;
-        })
-        .map(s => ({
-          ...s,
-          routines: mockRoutines.find(r => r.id === s.routine_id) || { name: 'Routine' }
-        }));
-      
-      setSchedules(filtered);
-      return;
-    }
 
     const { data, error } = await supabase
       .from('schedules')
@@ -123,13 +88,8 @@ export default function TeacherCalendar() {
         status: 'SCHEDULED'
       };
 
-      if (isDevBypass) {
-        const existing = JSON.parse(localStorage.getItem('zumba_mock_schedules') || '[]');
-        localStorage.setItem('zumba_mock_schedules', JSON.stringify([...existing, { ...newSchedule, id: 'mock-s' + Date.now() }]));
-      } else {
-        const { error } = await supabase.from('schedules').insert([newSchedule]);
-        if (error) throw error;
-      }
+      const { error } = await supabase.from('schedules').insert([newSchedule]);
+      if (error) throw error;
 
       toast.success('Class scheduled successfully!');
       setIsModalOpen(false);
@@ -151,17 +111,11 @@ export default function TeacherCalendar() {
     if (!confirm('Are you sure you want to cancel this session? This action cannot be undone.')) return;
 
     try {
-      if (isDevBypass) {
-        const existing = JSON.parse(localStorage.getItem('zumba_mock_schedules') || '[]');
-        const updated = existing.map(s => s.id === id ? { ...s, status: 'CANCELLED' } : s);
-        localStorage.setItem('zumba_mock_schedules', JSON.stringify(updated));
-      } else {
-        const { error } = await supabase
-          .from('schedules')
-          .update({ status: 'CANCELLED' })
-          .eq('id', id);
-        if (error) throw error;
-      }
+      const { error } = await supabase
+        .from('schedules')
+        .update({ status: 'CANCELLED' })
+        .eq('id', id);
+      if (error) throw error;
       toast.success('Session cancelled');
       fetchSchedules();
     } catch (error) {

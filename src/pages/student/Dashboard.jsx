@@ -22,7 +22,7 @@ const SEED_TEACHERS = [
 ];
 
 export default function StudentDashboard() {
-  const { profile: authProfile, signOut, isDevBypass, fetchProfile } = useAuth();
+  const { profile: authProfile, signOut, fetchProfile } = useAuth();
   const [guestProfile, setGuestProfile] = useState(() => {
     return JSON.parse(localStorage.getItem('zumba_guest_session') || 'null');
   });
@@ -55,21 +55,6 @@ export default function StudentDashboard() {
   const [studentCredits, setStudentCredits] = useState(0);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    if (isDevBypass) {
-      const savedProfiles = JSON.parse(localStorage.getItem('zumba_mock_profiles') || '{}');
-      let updated = false;
-      SEED_TEACHERS.forEach(t => {
-        if (!savedProfiles[t.id]) {
-          savedProfiles[t.id] = t;
-          updated = true;
-        }
-      });
-      if (updated) {
-        localStorage.setItem('zumba_mock_profiles', JSON.stringify(savedProfiles));
-      }
-    }
-  }, [isDevBypass]);
 
   useEffect(() => {
     const pendingCode = localStorage.getItem('pending_teacher_code');
@@ -87,18 +72,13 @@ export default function StudentDashboard() {
     }
 
     const handleStorageChange = (e) => {
-      if (e.key === 'zumba_mock_schedules' || e.key === 'zumba_mock_routines' || e.key === 'zumba_mock_profiles' || e.key === 'zumba_guest_session') {
-        if (e.key === 'zumba_guest_session') {
-           const newGuest = JSON.parse(e.newValue || 'null');
-           setGuestProfile(newGuest);
-           if (newGuest?.linked_teacher_id) {
-             fetchTeacherProfile(newGuest.linked_teacher_id);
-             fetchAllAvailableSchedules(newGuest.linked_teacher_id);
-           }
-        } else {
-           fetchAllAvailableSchedules(profile?.linked_teacher_id);
-           if (profile?.linked_teacher_id) fetchTeacherProfile(profile.linked_teacher_id);
-        }
+      if (e.key === 'zumba_guest_session') {
+         const newGuest = JSON.parse(e.newValue || 'null');
+         setGuestProfile(newGuest);
+         if (newGuest?.linked_teacher_id) {
+           fetchTeacherProfile(newGuest.linked_teacher_id);
+           fetchAllAvailableSchedules(newGuest.linked_teacher_id);
+         }
       }
     };
     window.addEventListener('storage', handleStorageChange);
@@ -111,34 +91,22 @@ export default function StudentDashboard() {
     setLinking(true);
 
     try {
-      let teacher = null;
-      if (isDevBypass) {
-        teacher = SEED_TEACHERS.find(t => t.invite_code === code.toUpperCase().trim());
-        if (!teacher) {
-          const savedProfiles = JSON.parse(localStorage.getItem('zumba_mock_profiles') || '{}');
-          teacher = Object.values(savedProfiles).find(p => 
-            p.invite_code?.toUpperCase() === code.toUpperCase().trim() && p.role?.toUpperCase() === 'TEACHER'
-          );
-        }
-      } else {
-        const { data } = await supabase.from('profiles').select('id, full_name').eq('stage_code', code.toUpperCase().trim()).single();
-        teacher = data;
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, full_name, role')
+        .eq('stage_code', code.toUpperCase().trim())
+        .single();
+      
+      if (error) {
+        console.warn('[Dashboard] Teacher lookup error:', error);
+        toast.error('Could not find that stage.');
+        return;
       }
+      teacher = data;
 
       if (teacher) {
         if (profile?.id) {
-          if (isDevBypass) {
-            const mProf = JSON.parse(localStorage.getItem('zumba_mock_profile') || '{}');
-            mProf.linked_teacher_id = teacher.id;
-            localStorage.setItem('zumba_mock_profile', JSON.stringify(mProf));
-            const savedProfiles = JSON.parse(localStorage.getItem('zumba_mock_profiles') || '{}');
-            if (savedProfiles[profile.id]) {
-              savedProfiles[profile.id].linked_teacher_id = teacher.id;
-              localStorage.setItem('zumba_mock_profiles', JSON.stringify(savedProfiles));
-            }
-          } else {
-            await supabase.from('profiles').update({ linked_teacher_id: teacher.id }).eq('id', profile.id);
-          }
+          await supabase.from('profiles').update({ linked_teacher_id: teacher.id }).eq('id', profile.id);
         }
 
         const guestSess = JSON.parse(localStorage.getItem('zumba_guest_session') || 'null');
@@ -206,11 +174,23 @@ export default function StudentDashboard() {
     }
   }, [profile?.id, profile?.linked_teacher_id]);
 
-  const fetchStudentCredits = () => {
-    if (isDevBypass) {
-      let mockCredits = JSON.parse(localStorage.getItem('zumba_mock_credits') || '[]');
-      const balance = mockCredits.find(c => c.student_id === profile.id && c.teacher_id === profile.linked_teacher_id)?.balance || 0;
-      setStudentCredits(balance);
+  const fetchStudentCredits = async () => {
+    if (!profile?.id || !profile?.linked_teacher_id) return;
+    try {
+      const { data, error } = await supabase
+        .from('credits')
+        .select('balance')
+        .eq('student_id', profile.id)
+        .eq('teacher_id', profile.linked_teacher_id)
+        .single();
+      
+      if (!error && data) {
+        setStudentCredits(parseFloat(data.balance));
+      } else {
+        setStudentCredits(0);
+      }
+    } catch (err) {
+      console.error('[Dashboard] Fetch credits error:', err);
     }
   };
 
@@ -218,53 +198,63 @@ export default function StudentDashboard() {
     const teacherId = explicitTeacherId || profile?.linked_teacher_id;
     if (!teacherId) { setAllSchedules([]); setLoading(false); return; }
     setLoading(true);
-    if (isDevBypass) {
-      const mockSchedules = JSON.parse(localStorage.getItem('zumba_mock_schedules') || '[]');
-      const mockRoutines = JSON.parse(localStorage.getItem('zumba_mock_routines') || '[]');
-      const mockProfiles = JSON.parse(localStorage.getItem('zumba_mock_profiles') || '{}');
-      const teacherSchedules = mockSchedules.filter(s => String(s.teacher_id).trim() === String(teacherId).trim()).map(s => ({
-          ...s,
-          routines: mockRoutines.find(r => r.id === s.routine_id) || { name: 'Routine' },
-          profiles: { full_name: mockProfiles[s.teacher_id]?.full_name || 'Instructor' }
-        }));
-      setAllSchedules(teacherSchedules);
+    try {
+      const { data, error } = await supabase
+        .from('schedules')
+        .select(`
+          *,
+          routines (
+            name,
+            duration_minutes
+          ),
+          profiles (
+            full_name
+          )
+        `)
+        .eq('teacher_id', teacherId)
+        .eq('status', 'SCHEDULED')
+        .order('start_time', { ascending: true });
+      
+      if (error) throw error;
+      setAllSchedules(data || []);
+    } catch (err) {
+      console.error('[Dashboard] Fetch schedules error:', err);
+    } finally {
       setLoading(false);
-      return;
     }
-    const { data } = await supabase.from('schedules').select('*, routines(name, duration_minutes), profiles(full_name)').eq('teacher_id', teacherId).eq('status', 'SCHEDULED');
-    setAllSchedules(data || []);
-    setLoading(false);
   };
 
   const fetchTeacherProfile = async (explicitTeacherId) => {
     const teacherId = explicitTeacherId || profile?.linked_teacher_id;
     if (!teacherId) return;
-    if (isDevBypass) {
-      const mockProfiles = JSON.parse(localStorage.getItem('zumba_mock_profiles') || '{}');
-      const teacher = mockProfiles[teacherId];
-      if (teacher) setTeacherProfile({ full_name: teacher.full_name, avatar_url: teacher.avatar_url });
-      return;
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('full_name, avatar_url')
+        .eq('id', teacherId)
+        .single();
+      
+      if (!error && data) setTeacherProfile(data);
+    } catch (err) {
+      console.error('[Dashboard] Fetch teacher profile error:', err);
     }
-    const { data } = await supabase.from('profiles').select('full_name, avatar_url').eq('id', teacherId).single();
-    if (data) setTeacherProfile(data);
   };
 
   const fetchMyBookings = async () => {
-    if (!profile?.id) return;
-    if (isDevBypass) {
-      const mockBookings = JSON.parse(localStorage.getItem('zumba_mock_bookings') || '[]');
-      const mockSchedules = JSON.parse(localStorage.getItem('zumba_mock_schedules') || '[]');
-      const mockRoutines = JSON.parse(localStorage.getItem('zumba_mock_routines') || '[]');
-      const enrichedBookings = mockBookings.filter(b => b.student_id === profile.id).map(b => {
-          const schedule = mockSchedules.find(s => s.id === b.schedule_id);
-          const routine = schedule ? mockRoutines.find(r => r.id === schedule.routine_id) : null;
-          return { ...b, schedules: { ...schedule, routines: routine || { name: 'Routine' } } };
-        });
-      setMyBookings(enrichedBookings);
-      return;
+    const studentId = profile?.id || guestProfile?.id;
+    if (!studentId) return;
+    try {
+      const { data, error } = await supabase
+        .from('bookings')
+        .select('*, schedules(start_time, routines(name))')
+        .eq('student_id', studentId)
+        .in('payment_status', ['PAID', 'PENDING', 'VOID']);
+      
+      if (error) throw error;
+      setMyBookings(data || []);
+    } catch (err) {
+      console.error('[Dashboard] Fetch bookings error:', err);
     }
-    const { data } = await supabase.from('bookings').select('*, schedules(start_time, routines(name))').eq('student_id', profile.id).in('payment_status', ['PAID', 'PENDING', 'VOID']);
-    setMyBookings(data || []);
   };
 
   const calculateStudentMetrics = (bookings, schedules) => {
@@ -355,14 +345,21 @@ export default function StudentDashboard() {
   const handleDisconnect = async () => {
     setLoading(true);
     try {
-      if (!isDevBypass && profile?.id) await supabase.from('profiles').update({ linked_teacher_id: null }).eq('id', profile.id);
+      const studentId = profile?.id || guestProfile?.id;
+      if (studentId) {
+        await supabase.from('profiles').update({ linked_teacher_id: null }).eq('id', studentId);
+      }
       localStorage.removeItem('zumba_guest_session');
       localStorage.removeItem('pending_teacher_code');
       setGuestProfile(null);
       await fetchProfile();
       toast.success('Stage presence cleared.');
       setTimeout(() => { window.location.href = '/'; }, 500);
-    } catch (err) { console.error(err); } finally { setLoading(false); }
+    } catch (err) {
+      console.error('[Dashboard] Disconnect error:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

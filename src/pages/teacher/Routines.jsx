@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function Routines() {
-  const { user, isDevBypass } = useAuth();
+  const { user } = useAuth();
   const [routines, setRoutines] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -27,12 +27,6 @@ export default function Routines() {
   const fetchRoutines = async () => {
     try {
       if (!user) return;
-      if (isDevBypass) {
-        const mockRoutines = JSON.parse(localStorage.getItem('zumba_mock_routines') || '[]');
-        setRoutines(mockRoutines);
-        setLoading(false);
-        return;
-      }
       const { data, error } = await supabase
         .from('routines')
         .select('*')
@@ -60,31 +54,18 @@ export default function Routines() {
       };
 
       if (editingRoutine) {
-        if (isDevBypass) {
-          const existing = JSON.parse(localStorage.getItem('zumba_mock_routines') || '[]');
-          const updated = existing.map(r => r.id === editingRoutine.id ? { ...r, ...formData } : r);
-          localStorage.setItem('zumba_mock_routines', JSON.stringify(updated));
-          toast.success('Routine updated successfully');
-        } else {
-          const { error } = await supabase
-            .from('routines')
-            .update(payload)
-            .eq('id', editingRoutine.id);
-          if (error) throw error;
-          toast.success('Routine updated successfully');
-        }
+        const { error } = await supabase
+          .from('routines')
+          .update(payload)
+          .eq('id', editingRoutine.id);
+        if (error) throw error;
+        toast.success('Routine updated successfully');
       } else {
-        if (isDevBypass) {
-          const existing = JSON.parse(localStorage.getItem('zumba_mock_routines') || '[]');
-          localStorage.setItem('zumba_mock_routines', JSON.stringify([...existing, { ...payload, id: 'mock-r' + Date.now() }]));
-          toast.success('New routine created');
-        } else {
-          const { error } = await supabase
-            .from('routines')
-            .insert([payload]);
-          if (error) throw error;
-          toast.success('New routine created');
-        }
+        const { error } = await supabase
+          .from('routines')
+          .insert([payload]);
+        if (error) throw error;
+        toast.success('New routine created');
       }
 
       setIsModalOpen(false);
@@ -102,21 +83,13 @@ export default function Routines() {
     if (!confirm('Are you sure you want to delete this routine? This will not affect existing scheduled classes.')) return;
     
     try {
-      if (isDevBypass) {
-        const existing = JSON.parse(localStorage.getItem('zumba_mock_routines') || '[]');
-        const filtered = existing.filter(r => r.id !== id);
-        localStorage.setItem('zumba_mock_routines', JSON.stringify(filtered));
-        toast.success('Routine deleted');
-        fetchRoutines();
-      } else {
-        const { error } = await supabase
-          .from('routines')
-          .delete()
-          .eq('id', id);
-        if (error) throw error;
-        toast.success('Routine deleted');
-        fetchRoutines();
-      }
+      const { error } = await supabase
+        .from('routines')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+      toast.success('Routine deleted');
+      fetchRoutines();
     } catch (error) {
       toast.error('Could not delete routine');
     }

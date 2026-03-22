@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { isSameDay, format, parseISO } from 'date-fns';
 
 export default function TeacherDashboard() {
-  const { profile, signOut, user, isDevBypass } = useAuth();
+  const { profile, signOut, user } = useAuth();
   const [schedules, setSchedules] = useState([]);
   const [routines, setRoutines] = useState([]);
   const [bookings, setBookings] = useState([]);
@@ -55,39 +55,22 @@ export default function TeacherDashboard() {
       setIsAttendanceModalOpen(true);
     };
 
-    // Storage listener to sync across tabs in mock mode
-    const handleStorageChange = (e) => {
-      if (e.key === 'zumba_mock_schedules' || e.key === 'zumba_mock_routines' || e.key === 'zumba_mock_bookings') {
-        fetchAllSchedules();
-        fetchRoutines();
-      }
-    };
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
   }, [user?.id]); // Only depend on user ID to avoid profile-change loops
 
 
 
   const fetchRoutines = async () => {
-    if (isDevBypass) {
-      const mockRoutines = JSON.parse(localStorage.getItem('zumba_mock_routines') || '[]');
-      if (mockRoutines.length === 0) {
-        const defaults = [
-          { id: 'mock-r1', name: 'Zumba Gold', duration_minutes: 60, default_price: 15.00 },
-          { id: 'mock-r2', name: 'Evening Energy', duration_minutes: 45, default_price: 12.00 }
-        ];
-        setRoutines(defaults);
-        localStorage.setItem('zumba_mock_routines', JSON.stringify(defaults));
-      } else {
-        setRoutines(mockRoutines);
-      }
-      return;
+    try {
+      const { data, error } = await supabase
+        .from('routines')
+        .select('*')
+        .eq('teacher_id', user.id);
+      
+      if (error) throw error;
+      setRoutines(data || []);
+    } catch (err) {
+      console.error('[Dashboard] Fetch routines error:', err);
     }
-    const { data } = await supabase
-      .from('routines')
-      .select('*')
-      .eq('teacher_id', user.id);
-    setRoutines(data || []);
   };
 
   const ensureInviteCode = async () => {
@@ -96,19 +79,14 @@ export default function TeacherDashboard() {
     try {
       let currentCode = null;
       
-      if (isDevBypass) {
-        const mockProfile = JSON.parse(localStorage.getItem('zumba_mock_profile') || '{}');
-        currentCode = mockProfile.stage_code;
-      } else {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('stage_code')
-          .eq('id', user.id)
-          .single();
-        
-        if (!error && data?.stage_code) {
-          currentCode = data.stage_code;
-        }
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('stage_code')
+        .eq('id', user.id)
+        .single();
+      
+      if (!error && data?.stage_code) {
+        currentCode = data.stage_code;
       }
 
       if (currentCode) {
@@ -119,18 +97,7 @@ export default function TeacherDashboard() {
       // ONLY generate if absolutely missing from DB
       const newCode = `ZUMBA-${profile?.full_name?.split(' ')[0].toUpperCase() || 'STAGE'}-${Math.floor(1000 + Math.random() * 9000)}`;
       
-      if (isDevBypass) {
-        const mockProfile = JSON.parse(localStorage.getItem('zumba_mock_profile') || '{}');
-        mockProfile.stage_code = newCode;
-        localStorage.setItem('zumba_mock_profile', JSON.stringify(mockProfile));
-        const savedProfiles = JSON.parse(localStorage.getItem('zumba_mock_profiles') || '{}');
-        if (savedProfiles[user.id]) {
-          savedProfiles[user.id].stage_code = newCode;
-          localStorage.setItem('zumba_mock_profiles', JSON.stringify(savedProfiles));
-        }
-      } else {
-        await supabase.from('profiles').update({ stage_code: newCode }).eq('id', user.id);
-      }
+      await supabase.from('profiles').update({ stage_code: newCode }).eq('id', user.id);
       
       setInviteCode(newCode);
       return newCode;
@@ -144,20 +111,8 @@ export default function TeacherDashboard() {
     try {
       const newCode = `ZUMBA-${profile.full_name?.split(' ')[0].toUpperCase() || 'STAGE'}-${Math.floor(1000 + Math.random() * 9000)}`;
       
-      if (isDevBypass) {
-        const mockProfile = JSON.parse(localStorage.getItem('zumba_mock_profile') || '{}');
-        mockProfile.stage_code = newCode;
-        localStorage.setItem('zumba_mock_profile', JSON.stringify(mockProfile));
-        
-        const savedProfiles = JSON.parse(localStorage.getItem('zumba_mock_profiles') || '{}');
-        if (savedProfiles[user.id]) {
-          savedProfiles[user.id].stage_code = newCode;
-          localStorage.setItem('zumba_mock_profiles', JSON.stringify(savedProfiles));
-        }
-      } else {
-        const { error } = await supabase.from('profiles').update({ stage_code: newCode }).eq('id', user.id);
-        if (error) throw error;
-      }
+      const { error } = await supabase.from('profiles').update({ stage_code: newCode }).eq('id', user.id);
+      if (error) throw error;
       
       setInviteCode(newCode);
       toast.success('Stage code refreshed!', { id: toastId });
@@ -171,57 +126,42 @@ export default function TeacherDashboard() {
     toast.success('Code copied to clipboard!');
   };
   const fetchAllSchedules = async () => {
-    let schedulesData = [];
-    if (isDevBypass) {
-        const mockSchedules = JSON.parse(localStorage.getItem('zumba_mock_schedules') || '[]');
-        const mockRoutines = JSON.parse(localStorage.getItem('zumba_mock_routines') || '[]');
-        
-        schedulesData = mockSchedules
-            .filter(s => {
-                const match = String(s.teacher_id).trim() === String(user.id).trim();
-                return match;
-            })
-            .map(s => ({
-                ...s,
-                routines: mockRoutines.find(r => r.id === s.routine_id) || { name: 'Routine' }
-            }));
-    } else {
-        const { data, error } = await supabase
-          .from('schedules')
-          .select('*, routines(name, duration_minutes)')
-          .eq('teacher_id', user.id);
-        
-        if (error) console.error('Fetch error:', error);
-        schedulesData = data || [];
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('schedules')
+        .select('*, routines(name, duration_minutes)')
+        .eq('teacher_id', user.id);
+      
+      if (error) throw error;
+      const schedulesData = data || [];
+      setSchedules(schedulesData);
+      fetchBookings(schedulesData);
+    } catch (err) {
+      console.error('[Dashboard] Fetch schedules error:', err);
+    } finally {
+      setLoading(false);
     }
-
-    setSchedules(schedulesData);
-    fetchBookings(schedulesData);
-    setLoading(false);
   };
 
   const fetchBookings = async (currentSchedules) => {
     const activeSchedules = currentSchedules || schedules;
-    if (isDevBypass) {
-      const mockBookings = JSON.parse(localStorage.getItem('zumba_mock_bookings') || '[]');
-      const mockProfiles = JSON.parse(localStorage.getItem('zumba_mock_profiles') || '{}');
-      
-      const enriched = mockBookings.map(b => ({
-        ...b,
-        student: mockProfiles[b.student_id] || { full_name: 'Unknown Student' }
-      }));
-      setBookings(enriched);
+    if (!activeSchedules || activeSchedules.length === 0) {
+      setBookings([]);
       return;
     }
 
-    if (!activeSchedules || activeSchedules.length === 0) return;
-
-    const { data } = await supabase
-      .from('bookings')
-      .select('*, student:student_id(full_name, avatar_url, email)')
-      .in('schedule_id', activeSchedules.map(s => s.id));
-    
-    setBookings(data || []);
+    try {
+      const { data, error } = await supabase
+        .from('bookings')
+        .select('*, student:student_id(full_name, avatar_url, email)')
+        .in('schedule_id', activeSchedules.map(s => s.id));
+      
+      if (error) throw error;
+      setBookings(data || []);
+    } catch (err) {
+      console.error('[Dashboard] Fetch bookings error:', err);
+    }
   };
 
   const handleQuickRoutineSubmit = async (e) => {
@@ -231,15 +171,9 @@ export default function TeacherDashboard() {
       const payload = { ...newRoutineData, teacher_id: user.id };
       let createdRoutine;
 
-      if (isDevBypass) {
-        const existing = JSON.parse(localStorage.getItem('zumba_mock_routines') || '[]');
-        createdRoutine = { ...payload, id: 'mock-r' + Date.now() };
-        localStorage.setItem('zumba_mock_routines', JSON.stringify([...existing, createdRoutine]));
-      } else {
-        const { data, error } = await supabase.from('routines').insert([payload]).select().single();
-        if (error) throw error;
-        createdRoutine = data;
-      }
+      const { data, error } = await supabase.from('routines').insert([payload]).select().single();
+      if (error) throw error;
+      createdRoutine = data;
 
       toast.success('Routine created!');
       await fetchRoutines();
@@ -260,14 +194,8 @@ export default function TeacherDashboard() {
 
     setModalLoading(true);
     try {
-      if (isDevBypass) {
-        const existing = JSON.parse(localStorage.getItem('zumba_mock_routines') || '[]');
-        const filtered = existing.filter(r => r.id !== formData.routine_id);
-        localStorage.setItem('zumba_mock_routines', JSON.stringify(filtered));
-      } else {
-        const { error } = await supabase.from('routines').delete().eq('id', formData.routine_id);
-        if (error) throw error;
-      }
+      const { error } = await supabase.from('routines').delete().eq('id', formData.routine_id);
+      if (error) throw error;
       toast.success('Routine deleted');
       setFormData({ ...formData, routine_id: '', price: '' });
       await fetchRoutines();
@@ -316,13 +244,8 @@ export default function TeacherDashboard() {
         status: 'SCHEDULED'
       };
 
-      if (isDevBypass) {
-        const existing = JSON.parse(localStorage.getItem('zumba_mock_schedules') || '[]');
-        localStorage.setItem('zumba_mock_schedules', JSON.stringify([...existing, { ...newSchedule, id: 'mock-s' + Date.now() }]));
-      } else {
-        const { error } = await supabase.from('schedules').insert([newSchedule]);
-        if (error) throw error;
-      }
+      const { error } = await supabase.from('schedules').insert([newSchedule]);
+      if (error) throw error;
       toast.success('Class scheduled successfully!');
       setIsModalOpen(false);
       fetchAllSchedules();
@@ -340,19 +263,11 @@ export default function TeacherDashboard() {
 
   const handleMarkAsPaid = async (bookingId) => {
     try {
-      if (isDevBypass) {
-        const mockBookings = JSON.parse(localStorage.getItem('zumba_mock_bookings') || '[]');
-        const updatedBookings = mockBookings.map(b => 
-          b.id === bookingId ? { ...b, payment_status: 'PAID', payment_method: 'MANUAL' } : b
-        );
-        localStorage.setItem('zumba_mock_bookings', JSON.stringify(updatedBookings));
-      } else {
-        const { error } = await supabase
-          .from('bookings')
-          .update({ payment_status: 'PAID', payment_method: 'MANUAL' })
-          .eq('id', bookingId);
-        if (error) throw error;
-      }
+      const { error } = await supabase
+        .from('bookings')
+        .update({ payment_status: 'PAID', payment_method: 'MANUAL' })
+        .eq('id', bookingId);
+      if (error) throw error;
       
       toast.success('Payment confirmed!');
       
@@ -383,56 +298,71 @@ export default function TeacherDashboard() {
     }
 
     try {
-      if (isDevBypass) {
-        // 1. Update Schedule Status
-        const mockSchedules = JSON.parse(localStorage.getItem('zumba_mock_schedules') || '[]');
-        const updatedSchedules = mockSchedules.map(s => s.id === scheduleId ? { ...s, status: 'CANCELLED' } : s);
-        localStorage.setItem('zumba_mock_schedules', JSON.stringify(updatedSchedules));
+      // 1. Update Schedule Status permanently in DB
+      const { error: scheduleError } = await supabase
+        .from('schedules')
+        .update({ status: 'CANCELLED' })
+        .eq('id', scheduleId);
+      
+      if (scheduleError) throw scheduleError;
 
-        // 2. Process Refunds (Identify PAID & NOT YET CANCELLED bookings BEFORE we update them)
-        const mockBookings = JSON.parse(localStorage.getItem('zumba_mock_bookings') || '[]');
-        const paidBookings = mockBookings.filter(b => 
-          b.schedule_id === scheduleId && 
-          b.payment_status === 'PAID' && 
-          b.status !== 'CANCELLED'
-        );
+      // 2. Process Refunds for PAID bookings
+      const { data: paidBookings, error: bookingsError } = await supabase
+        .from('bookings')
+        .select('*')
+        .eq('schedule_id', scheduleId)
+        .eq('payment_status', 'PAID')
+        .neq('status', 'CANCELLED');
 
-        // 3. Sync: Mark ALL bookings for this schedule as CANCELLED
-        const syncedBookings = mockBookings.map(b => 
-          b.schedule_id === scheduleId ? { ...b, status: 'CANCELLED', payment_status: 'CANCELLED' } : b
-        );
-        localStorage.setItem('zumba_mock_bookings', JSON.stringify(syncedBookings));
+      if (bookingsError) throw bookingsError;
 
-        if (paidBookings.length > 0) {
-          const mockCredits = JSON.parse(localStorage.getItem('zumba_mock_credits') || '[]');
-          
-          paidBookings.forEach(booking => {
-            const index = mockCredits.findIndex(c => c.student_id === booking.student_id && c.teacher_id === user.id);
-            if (index !== -1) {
-              mockCredits[index].balance += booking.price;
-            } else {
-              mockCredits.push({
-                id: 'c-' + Date.now() + Math.random(),
+      if (paidBookings && paidBookings.length > 0) {
+        // Sync: Mark ALL bookings for this schedule as CANCELLED in DB
+        await supabase
+          .from('bookings')
+          .update({ status: 'CANCELLED', payment_status: 'REFUNDED' })
+          .eq('schedule_id', scheduleId);
+
+        // Issue credits to students
+        for (const booking of paidBookings) {
+          // Attempt to increment balance, or create if missing
+          const { data: existingCredit } = await supabase
+            .from('credits')
+            .select('balance')
+            .eq('student_id', booking.student_id)
+            .eq('teacher_id', user.id)
+            .single();
+
+          if (existingCredit) {
+            await supabase
+              .from('credits')
+              .update({ balance: Number(existingCredit.balance) + Number(booking.price) })
+              .eq('student_id', booking.student_id)
+              .eq('teacher_id', user.id);
+          } else {
+            await supabase
+              .from('credits')
+              .insert([{
                 student_id: booking.student_id,
                 teacher_id: user.id,
-                balance: booking.price,
-                last_updated: new Date().toISOString()
-              });
-            }
-          });
-          localStorage.setItem('zumba_mock_credits', JSON.stringify(mockCredits));
-          console.log(`[REFUND] Processed ${paidBookings.length} refunds. Already cancelled bookings were skipped.`);
-          toast.success(`Session cancelled. Credits issued to ${paidBookings.length} students.`);
-        } else {
-          toast.success('Session cancelled.');
+                balance: Number(booking.price)
+              }]);
+          }
         }
+        toast.success(`Session cancelled. Credits issued to ${paidBookings.length} students.`);
       } else {
-        const { error } = await supabase.from('schedules').update({ status: 'CANCELLED' }).eq('id', scheduleId);
-        if (error) throw error;
+        // Just cancel any outstanding unpaid bookings
+        await supabase
+          .from('bookings')
+          .update({ status: 'CANCELLED' })
+          .eq('schedule_id', scheduleId);
+        
         toast.success('Session cancelled.');
       }
+      
       fetchAllSchedules();
     } catch (error) {
+      console.error('[Dashboard] Cancellation failed:', error);
       toast.error('Failed to cancel session');
     }
   };

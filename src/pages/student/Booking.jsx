@@ -19,7 +19,7 @@ import { getStripe, createCheckoutSession } from '../../api/stripeService';
 export default function StudentBooking() {
   const { teacherId } = useParams();
   const navigate = useNavigate();
-  const { user, profile: authProfile, isDevBypass } = useAuth();
+  const { user, profile: authProfile } = useAuth();
   const [guestProfile, setGuestProfile] = useState(() => {
     return JSON.parse(localStorage.getItem('zumba_guest_session') || 'null');
   });
@@ -45,32 +45,37 @@ export default function StudentBooking() {
     }
   }, [teacherId, currentMonth, profile?.id]);
 
-  const fetchCredits = () => {
-    if (isDevBypass) {
-      const mockCredits = JSON.parse(localStorage.getItem('zumba_mock_credits') || '[]');
-      if (Array.isArray(mockCredits)) {
-        const credit = mockCredits.find(c => c.student_id === profile.id && c.teacher_id === teacherId);
-        setStudentCredits(credit?.balance || 0);
+  const fetchCredits = async () => {
+    if (!profile?.id || !teacherId) return;
+    try {
+      const { data, error } = await supabase
+        .from('credits')
+        .select('balance')
+        .eq('student_id', profile.id)
+        .eq('teacher_id', teacherId)
+        .single();
+      
+      if (!error && data) {
+        setStudentCredits(parseFloat(data.balance));
       } else {
-        // Fallback or migration if needed (though Dashboard should handle it)
-        setStudentCredits(mockCredits[profile.id]?.[teacherId] || 0);
+        setStudentCredits(0);
       }
+    } catch (err) {
+      console.error('[Booking] Fetch credits error:', err);
     }
   };
 
   const fetchTeacher = async () => {
-    let teacherData = null;
-    if (isDevBypass) {
-      const mockProfiles = JSON.parse(localStorage.getItem('zumba_mock_profiles') || '{}');
-      teacherData = mockProfiles[teacherId] || null;
-    } else {
-      const { data } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', teacherId)
-        .single();
-      teacherData = data;
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', teacherId)
+      .single();
+    if (error) {
+      console.error('[Booking] Fetch teacher error:', error);
+      return;
     }
+    const teacherData = data;
 
     if (teacherData) {
       const settings = teacherData.payment_settings || {};
@@ -100,37 +105,19 @@ export default function StudentBooking() {
     const searchParams = new URLSearchParams(window.location.search);
     const sessionId = searchParams.get('sessionId');
 
-    if (isDevBypass) {
-        const mockSchedules = JSON.parse(localStorage.getItem('zumba_mock_schedules') || '[]');
-        const mockRoutines = JSON.parse(localStorage.getItem('zumba_mock_routines') || '[]');
-        
-        const filtered = mockSchedules
-            .filter(s => s.teacher_id === teacherId && s.status === 'SCHEDULED')
-            .map(s => ({
-                ...s,
-                routines: mockRoutines.find(r => r.id === s.routine_id) || { name: 'Routine' }
-            }));
-        setSchedules(filtered);
-
-        if (sessionId) {
-          const session = filtered.find(s => s.id === sessionId);
-          if (session) {
-            setSelectedSession(session);
-            setSelectedDate(parseISO(session.start_time));
-          }
-        }
-
-        setLoading(false);
-        return;
-    }
-
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('schedules')
       .select('*, routines(name, description, duration_minutes)')
       .eq('teacher_id', teacherId)
       .eq('status', 'SCHEDULED')
       .gte('start_time', firstDay.toISOString())
       .lte('start_time', lastDay.toISOString());
+
+    if (error) {
+      console.error('[Booking] Fetch schedules error:', error);
+      setLoading(false);
+      return;
+    }
 
     const schedulesData = data || [];
     setSchedules(schedulesData);
@@ -168,34 +155,20 @@ export default function StudentBooking() {
     toast.loading('Processing your booking...');
 
     try {
-      // 1. Prevent Duplicate Bookings
-      if (isDevBypass) {
-        const mockBookings = JSON.parse(localStorage.getItem('zumba_mock_bookings') || '[]');
-        const alreadyBooked = mockBookings.some(b => 
-          b.student_id === profile.id && 
-          b.schedule_id === selectedSession.id &&
-          b.payment_status !== 'CANCELLED' &&
-          b.payment_status !== 'VOID'
-        );
-        if (alreadyBooked) {
-          toast.error('You have already reserved a spot for this session.');
-          setBooking(false);
-          return;
-        }
-      } else {
-        const { data: existingBookings, error: checkError } = await supabase
-          .from('bookings')
-          .select('id')
-          .eq('student_id', profile.id)
-          .eq('schedule_id', selectedSession.id)
-          .not('payment_status', 'in', '("CANCELLED","VOID")');
-        
-        if (existingBookings && existingBookings.length > 0) {
-          toast.error('You have already reserved a spot for this session.');
-          setBooking(false);
-          return;
-        }
+      // 1. Prevent Duplicate Bookings - Check Supabase
+      const { data: existingBookings, error: checkError } = await supabase
+        .from('bookings')
+        .select('id')
+        .eq('student_id', profile.id)
+        .eq('schedule_id', selectedSession.id)
+        .not('payment_status', 'in', '("CANCELLED","VOID")');
+      
+      if (existingBookings && existingBookings.length > 0) {
+        toast.error('You have already reserved a spot for this session.');
+        setBooking(false);
+        return;
       }
+
       if (paymentType === 'credits') {
         if (studentCredits < selectedSession.price) {
           toast.error('Insufficient credits for this stage.');
@@ -203,122 +176,57 @@ export default function StudentBooking() {
           return;
         }
 
-          // Update Credits in DB (Migration handle_credit_update handles logic, but here we explicitly deduct)
-          if (!isDevBypass) {
-            const { data: currentCredits, error: fetchErr } = await supabase
-              .from('credits')
-              .select('balance')
-              .eq('student_id', profile.id)
-              .eq('teacher_id', teacherId)
-              .single();
+        // Fetch latest credits to be safe
+        const { data: currentCredits, error: fetchErr } = await supabase
+          .from('credits')
+          .select('balance')
+          .eq('student_id', profile.id)
+          .eq('teacher_id', teacherId)
+          .single();
 
-            if (fetchErr) throw fetchErr;
+        if (fetchErr) throw fetchErr;
 
-            const { error: creditError } = await supabase
-              .from('credits')
-              .update({ balance: (Number(currentCredits.balance) || 0) - selectedSession.price })
-              .eq('student_id', profile.id)
-              .eq('teacher_id', teacherId);
-            
-            if (creditError) throw creditError;
-          }
+        // Deduct Credits
+        const { error: creditError } = await supabase
+          .from('credits')
+          .update({ balance: (Number(currentCredits.balance) || 0) - selectedSession.price })
+          .eq('student_id', profile.id)
+          .eq('teacher_id', teacherId);
+        
+        if (creditError) throw creditError;
 
-          // Create booking in Supabase
-          if (!isDevBypass) {
-            const { data: bookingData, error: bookingError } = await supabase
-              .from('bookings')
-              .insert({
-                student_id: profile.id,
-                schedule_id: selectedSession.id,
-                amount: selectedSession.price,
-                payment_method: 'CREDITS',
-                payment_status: 'PAID'
-              })
-              .select()
-              .single();
-            
-            if (bookingError) {
-              console.error('[Booking] Credit booking error:', bookingError);
-              toast.error('Reservation failed. Please try again.');
-              setBooking(false);
-              return;
-            }
+        // Create booking in Supabase
+        const { data: bookingData, error: bookingError } = await supabase
+          .from('bookings')
+          .insert({
+            student_id: profile.id,
+            schedule_id: selectedSession.id,
+            amount: selectedSession.price,
+            payment_method: 'CREDITS',
+            payment_status: 'PAID'
+          })
+          .select()
+          .single();
+        
+        if (bookingError) throw bookingError;
 
-            // Log payment record to ensure it shows up in reports
-            await supabase.from('payments').insert({
-              booking_id: bookingData.id,
-              student_id: profile.id,
-              teacher_id: teacherId,
-              amount: selectedSession.price,
-              status: 'SUCCEEDED'
-            });
-          }
+        // Log payment record
+        await supabase.from('payments').insert({
+          booking_id: bookingData.id,
+          student_id: profile.id,
+          teacher_id: teacherId,
+          amount: selectedSession.price,
+          status: 'SUCCEEDED'
+        });
 
-          if (isDevBypass) {
-            // Deduct credits (using ARRAY structure)
-            const mockCredits = JSON.parse(localStorage.getItem('zumba_mock_credits') || '[]');
-            const creditIndex = mockCredits.findIndex(c => c.student_id === profile.id && c.teacher_id === teacherId);
-            
-            if (creditIndex !== -1) {
-              mockCredits[creditIndex].balance -= selectedSession.price;
-              mockCredits[creditIndex].last_updated = new Date().toISOString();
-            }
-            localStorage.setItem('zumba_mock_credits', JSON.stringify(mockCredits));
-
-            // Create booking
-            const mockBookings = JSON.parse(localStorage.getItem('zumba_mock_bookings') || '[]');
-            mockBookings.push({
-              id: `mock-book-${Date.now()}`,
-              student_id: profile.id,
-              schedule_id: selectedSession.id,
-              amount: selectedSession.price,
-              payment_method: 'CREDITS',
-              payment_status: 'PAID',
-              created_at: new Date().toISOString()
-            });
-            localStorage.setItem('zumba_mock_bookings', JSON.stringify(mockBookings));
-          }
-
-          await new Promise(resolve => setTimeout(resolve, 800));
-          toast.success('Booked instantly using your credits!');
-          navigate('/student/dashboard');
-          return;
+        toast.success('Booked instantly using your credits!');
+        navigate('/student/dashboard');
+        return;
       }
 
       const paymentMethod = selectedMethod || 'manual';
       const paymentConfig = teacher?.payment_settings?.config || {};
 
-      if (isDevBypass) {
-          // Simulate regular booking persistence
-          const mockBookings = JSON.parse(localStorage.getItem('zumba_mock_bookings') || '[]');
-          const newBooking = {
-              id: `mock-book-${Date.now()}`,
-              student_id: profile.id,
-              schedule_id: selectedSession.id,
-              amount: selectedSession.price,
-              payment_method: paymentMethod,
-              payment_status: paymentMethod === 'manual' ? 'PENDING' : 'PAID',
-              created_at: new Date().toISOString()
-          };
-          
-          if (paymentMethod === 'stripe') {
-            toast.info(`Initializing Stripe with Teacher Key: ${paymentConfig.stripe_public_key?.slice(0, 10)}...`);
-            await createCheckoutSession([{ id: selectedSession.id }], { isMock: true });
-          } else if (paymentMethod === 'paypal') {
-            toast.info(`Redirecting to PayPal: ${paymentConfig.paypal_url}...`);
-            window.open(paymentConfig.paypal_url, '_blank');
-          }
-
-          mockBookings.push(newBooking);
-          localStorage.setItem('zumba_mock_bookings', JSON.stringify(mockBookings));
-          
-          await new Promise(resolve => setTimeout(resolve, 1500));
-          toast.success(paymentMethod === 'manual' ? 'Spot reserved! Please follow instructions.' : 'Mock Payment successful!');
-          navigate('/student/dashboard');
-          return;
-      }
-
-      // Real Implementation Logic
       if (paymentMethod === 'stripe') {
         const stripe = await getStripe(paymentConfig.stripe_public_key);
         const session = await createCheckoutSession([{ 
@@ -342,19 +250,14 @@ export default function StudentBooking() {
             payment_status: 'PENDING'
           });
 
-        if (manualError) {
-          console.error('[Booking] Manual reservation error:', manualError);
-          toast.error('Failed to reserve spot. Please try again.');
-          setBooking(false);
-          return;
-        }
+        if (manualError) throw manualError;
 
         toast.success('Spot reserved! Manual payment instructions shown.');
         navigate('/student/dashboard');
       }
 
     } catch (error) {
-      console.error('Booking error:', error);
+      console.error('[Booking] Error:', error);
       toast.error('Failed to book session. Please try again.');
     } finally {
       setBooking(false);

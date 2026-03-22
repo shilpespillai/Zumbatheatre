@@ -10,7 +10,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 
 export default function MyBookings() {
-  const { profile: authProfile, isDevBypass, user } = useAuth();
+  const { profile: authProfile, user } = useAuth();
   const [guestProfile, setGuestProfile] = useState(() => {
     return JSON.parse(localStorage.getItem('zumba_guest_session') || 'null');
   });
@@ -34,34 +34,6 @@ export default function MyBookings() {
   const fetchBookings = async () => {
     if (!profile?.id) return;
 
-    if (isDevBypass) {
-      const mockBookings = JSON.parse(localStorage.getItem('zumba_mock_bookings') || '[]');
-      const mockSchedules = JSON.parse(localStorage.getItem('zumba_mock_schedules') || '[]');
-      const mockRoutines = JSON.parse(localStorage.getItem('zumba_mock_routines') || '[]');
-      const mockProfiles = JSON.parse(localStorage.getItem('zumba_mock_profiles') || '{}');
-      
-      const enrichedBookings = mockBookings
-        .filter(b => b.student_id === profile.id)
-        .map(b => {
-          const schedule = mockSchedules.find(s => s.id === b.schedule_id);
-          const routine = schedule ? mockRoutines.find(r => r.id === schedule.routine_id) : null;
-          const teacher = schedule ? mockProfiles[schedule.teacher_id] : null;
-          return {
-            ...b,
-            schedules: {
-              ...schedule,
-              routines: routine || { name: 'Routine', duration_minutes: 60 },
-              teacher: teacher || { full_name: 'Instructor' }
-            }
-          };
-        })
-        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-      
-      setBookings(enrichedBookings);
-      setLoading(false);
-      return;
-    }
-
     try {
       const { data, error } = await supabase
         .from('bookings')
@@ -79,7 +51,7 @@ export default function MyBookings() {
       if (error) throw error;
       setBookings(data || []);
     } catch (error) {
-      console.error('Error fetching bookings:', error);
+      console.error('[MyBookings] Fetch error:', error);
     } finally {
       setLoading(false);
     }
@@ -89,56 +61,41 @@ export default function MyBookings() {
     if (!bookingToCancel) return;
     
     try {
-      if (isDevBypass) {
-        // 1. Process Credit Refund (Universal - any payment method gets credit back)
-        let mockCredits = JSON.parse(localStorage.getItem('zumba_mock_credits') || '[]');
-        
-        // Safety: If it's an object, convert to array
-        if (!Array.isArray(mockCredits)) {
-          console.log('[Migration] Converting old object-based credits in MyBookings...');
-          const newArray = [];
-          Object.entries(mockCredits).forEach(([sId, teachers]) => {
-            Object.entries(teachers).forEach(([tId, bal]) => {
-              newArray.push({ id: `mig-${Date.now()}`, student_id: sId, teacher_id: tId, balance: bal, last_updated: new Date().toISOString() });
-            });
-          });
-          mockCredits = newArray;
-        }
+      const teacherId = bookingToCancel.schedules?.teacher_id;
+      const refundAmount = Number(bookingToCancel.amount) || 0;
 
-        const teacherId = bookingToCancel.schedules.teacher_id;
-        const refundAmount = bookingToCancel.price || 0;
+      // 1. Update Booking Status in Supabase
+      const { error: cancelError } = await supabase
+        .from('bookings')
+        .update({ status: 'CANCELLED', payment_status: 'CANCELLED' })
+        .eq('id', bookingToCancel.id);
+      
+      if (cancelError) throw cancelError;
 
-        const creditIndex = mockCredits.findIndex(c => c.student_id === profile.id && c.teacher_id === teacherId);
-        if (creditIndex !== -1) {
-          mockCredits[creditIndex].balance += refundAmount;
+      // 2. Real Balance Refund in Supabase
+      if (teacherId && refundAmount > 0) {
+        const { data: existingCredit } = await supabase
+          .from('credits')
+          .select('balance')
+          .eq('student_id', profile.id)
+          .eq('teacher_id', teacherId)
+          .single();
+
+        if (existingCredit) {
+          await supabase
+            .from('credits')
+            .update({ balance: Number(existingCredit.balance) + refundAmount })
+            .eq('student_id', profile.id)
+            .eq('teacher_id', teacherId);
         } else {
-          mockCredits.push({
-            id: 'c-' + Date.now(),
-            student_id: profile.id,
-            teacher_id: teacherId,
-            balance: refundAmount,
-            last_updated: new Date().toISOString()
-          });
+          await supabase
+            .from('credits')
+            .insert([{
+              student_id: profile.id,
+              teacher_id: teacherId,
+              balance: refundAmount
+            }]);
         }
-        localStorage.setItem('zumba_mock_credits', JSON.stringify(mockCredits));
-
-        // 2. Update Booking Status
-        const mockBookings = JSON.parse(localStorage.getItem('zumba_mock_bookings') || '[]');
-        const updatedBookings = mockBookings.map(b => 
-          b.id === bookingToCancel.id ? { ...b, status: 'CANCELLED', payment_status: 'CANCELLED' } : b
-        );
-        localStorage.setItem('zumba_mock_bookings', JSON.stringify(updatedBookings));
-        
-        console.log(`[REFUND] Student ${profile.id} cancelled. Credit of ${refundAmount} issued.`);
-      } else {
-        // Real Supabase logic would ideally use a database function or transaction
-        const { error } = await supabase
-          .from('bookings')
-          .update({ status: 'CANCELLED', payment_status: 'CANCELLED' })
-          .eq('id', bookingToCancel.id);
-        if (error) throw error;
-        
-        // Note: Real world would need a balance update here too
       }
       
       toast.success('Reservation cancelled. Credits have been refunded to your account.');

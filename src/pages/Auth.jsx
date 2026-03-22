@@ -12,7 +12,7 @@ import { Turnstile } from '@marsidev/react-turnstile';
 import Honeypot from '../components/Honeypot';
 
 export default function Auth() {
-  const { signInMock, clearMockSession, isDevBypass, fetchProfile, user, profile } = useAuth();
+  const { fetchProfile, user, profile } = useAuth();
   const navigate = useNavigate();
   const searchParams = new URLSearchParams(window.location.search);
   const initialRole = searchParams.get('role') || 'student';
@@ -67,18 +67,13 @@ export default function Auth() {
     }
   }, [user, profile, loading, navigate, connectionStatus]);
 
-  const handleGuestEntrance = () => {
+  const handleGuestEntrance = async () => {
     if (!formData.fullName || !formData.stageCode) {
       toast.error('Please provide your name and the stage code.');
       return;
     }
     
     setLoading(true);
-    
-    // Explicitly clear all existing mock sessions via Context to reset React state
-    if (isDevBypass) {
-      clearMockSession();
-    }
     
     // Valid UUID format for guest ID to satisfy Supabase/Postgres constraints
     const uuidV4 = '00000000-0000-4000-8000-' + btoa(formData.fullName.toLowerCase().trim() + formData.stageCode.toUpperCase().trim()).replace(/[^a-f0-9]/g, '').slice(0, 12).padEnd(12, '0');
@@ -89,27 +84,28 @@ export default function Auth() {
       full_name: formData.fullName,
       role: 'STUDENT',
       stage_code: formData.stageCode.toUpperCase().trim(),
-      is_guest: true
     };
     
-    // Check if this guest profile already exists in our mock records
-    const savedProfiles = JSON.parse(localStorage.getItem('zumba_mock_profiles') || '{}');
-    if (savedProfiles[stableId]) {
-      // Use existing profile data if found (to preserve linked_teacher_id etc)
-      Object.assign(guestProfile, savedProfiles[stableId]);
-    } else {
-      savedProfiles[stableId] = guestProfile;
-      localStorage.setItem('zumba_mock_profiles', JSON.stringify(savedProfiles));
-    }
-    
-    localStorage.setItem('zumba_guest_session', JSON.stringify(guestProfile));
-    localStorage.setItem('pending_teacher_code', guestProfile.stage_code);
-    
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      // 1. Permanently record guest in Suppabase (Zero Mock-Data Policy)
+      const { error: upsertError } = await supabase.from('profiles').upsert(guestProfile);
+      if (upsertError) {
+        console.warn('[Auth] Guest upsert to DB failed, falling back to local only:', upsertError);
+        // We still let them in if it's a minor error, but the primary goal is DB storage
+      }
+      
+      // 2. Keep minimal session in local storage for the frontend to know they are a guest
+      localStorage.setItem('zumba_guest_session', JSON.stringify({ ...guestProfile, is_guest: true }));
+      localStorage.setItem('pending_teacher_code', guestProfile.stage_code);
+      
       navigate('/student/dashboard');
-      toast.success(`Welcome back to the stage, ${formData.fullName}!`);
-    }, 800);
+      toast.success(`Welcome to the stage, ${formData.fullName}!`);
+    } catch (err) {
+      console.error('[Auth] Guest entrance failed:', err);
+      toast.error('Could not enter the stage. Please check your connection.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleAuth = async (e) => {
@@ -122,8 +118,8 @@ export default function Auth() {
       return;
     }
 
-    // 2. Turnstile check (if not in dev bypass)
-    if (!isDevBypass && !turnstileToken) {
+    // 2. Turnstile check
+    if (!turnstileToken) {
       toast.error('Please complete the security challenge.');
       return;
     }
@@ -135,22 +131,6 @@ export default function Auth() {
 
     setLoading(true);
 
-    if (isDevBypass) {
-      // In mock mode, we simulate account existence check
-      const savedProfiles = JSON.parse(localStorage.getItem('zumba_mock_profiles') || '{}');
-      const existingProfile = Object.values(savedProfiles).find(p => p.email === formData.email);
-
-      if (isLogin && !existingProfile) {
-        toast.error('Instructor account not found. Please sign up first.');
-        setLoading(false);
-        return;
-      }
-
-      signInMock(formData.email, 'teacher', formData.fullName || formData.email.split('@')[0]);
-      navigate(isLogin ? '/teacher/dashboard' : '/onboarding');
-      setLoading(false);
-      return;
-    }
 
     try {
       if (isLogin) {
@@ -301,10 +281,7 @@ export default function Auth() {
                 </div>
                 <button 
                   onClick={() => {
-                    localStorage.removeItem('zumba_guest_session');
-                    localStorage.removeItem('zumba_mock_user');
-                    localStorage.removeItem('zumba_mock_profile');
-                    if (!isDevBypass) supabase.auth.signOut();
+                    supabase.auth.signOut();
                     window.location.reload();
                   }}
                   className="p-3 bg-white border border-rose-bloom/20 rounded-xl text-rose-bloom hover:bg-rose-bloom hover:text-white transition-all shadow-sm"
@@ -402,21 +379,19 @@ export default function Auth() {
                 onChange={(e) => setFormData({...formData, website: e.target.value})} 
               />
               
-              {!isDevBypass && (
-                <div className="flex justify-center transform scale-90 sm:scale-100">
-                  <Turnstile 
-                    siteKey={turnstileSiteKey} 
-                    onSuccess={(token) => setTurnstileToken(token)}
-                    onError={() => setTurnstileToken(null)}
-                    onExpire={() => setTurnstileToken(null)}
-                  />
-                </div>
-              )}
+              <div className="flex justify-center transform scale-90 sm:scale-100">
+                <Turnstile 
+                  siteKey={turnstileSiteKey} 
+                  onSuccess={(token) => setTurnstileToken(token)}
+                  onError={() => setTurnstileToken(null)}
+                  onExpire={() => setTurnstileToken(null)}
+                />
+              </div>
             </div>
 
             <button 
               type="submit" 
-              disabled={loading || (!isDevBypass && !turnstileToken)}
+              disabled={loading || !turnstileToken}
               className="w-full btn-premium bg-gradient-to-r from-rose-bloom to-rose-petal text-white py-6 rounded-[2rem] flex items-center justify-center gap-3 shadow-2xl shadow-rose-bloom/30 group disabled:opacity-50"
             >
               {loading ? <div className="w-6 h-6 border-4 border-white/20 border-t-white rounded-full animate-spin" /> : (

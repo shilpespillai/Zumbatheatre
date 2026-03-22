@@ -14,7 +14,7 @@ import {
 } from 'recharts';
 
 export default function TeacherReports() {
-  const { user, profile, isDevBypass } = useAuth();
+  const { user, profile } = useAuth();
   const [loading, setLoading] = useState(true);
   const [reportData, setReportData] = useState({
     totalRevenue: 0,
@@ -42,57 +42,45 @@ export default function TeacherReports() {
     try {
       let routines, schedules, payments, bookings;
 
-      if (isDevBypass) {
-        routines = JSON.parse(localStorage.getItem('zumba_mock_routines') || '[]')
-          .filter(r => String(r.teacher_id).trim() === String(user.id).trim());
-        
-        const allSchedules = JSON.parse(localStorage.getItem('zumba_mock_schedules') || '[]');
-        schedules = allSchedules.filter(s => String(s.teacher_id).trim() === String(user.id).trim());
-        
-        const allBookings = JSON.parse(localStorage.getItem('zumba_mock_bookings') || '[]');
-        const scheduleIds = schedules.map(s => s.id);
-        bookings = allBookings.filter(b => scheduleIds.includes(b.schedule_id));
-        
-        bookings = bookings.map((b, i) => ({
-          ...b,
-          payment_method: b.payment_method || (i % 3 === 0 ? 'STRIPE' : i % 3 === 1 ? 'CREDITS' : 'MANUAL'),
-          payment_status: b.payment_status || (i % 10 === 0 ? 'CANCELLED' : 'PAID'),
-          amount: b.amount || 15
-        }));
+      // 1. Fetch Routines
+      const { data: routinesData, error: routinesError } = await supabase
+        .from('routines')
+        .select('id, name')
+        .eq('teacher_id', user.id);
+      if (routinesError) throw routinesError;
+      routines = routinesData || [];
 
-        payments = bookings
-          .filter(b => b.payment_status === 'PAID')
-          .map(b => ({
-            id: 'mock-p' + b.id,
-            amount: b.amount,
-            created_at: b.created_at || new Date().toISOString(),
-            bookings: { schedule_id: b.schedule_id, student_id: b.student_id }
-          }));
-      } else {
-        const { data: routinesData } = await supabase
-          .from('routines')
-          .select('id, name')
-          .eq('teacher_id', user.id);
-        routines = routinesData || [];
+      // 2. Fetch Schedules
+      const { data: schedulesData, error: schedulesError } = await supabase
+        .from('schedules')
+        .select('id, routine_id, start_time, price, seats_taken, max_seats, status')
+        .eq('teacher_id', user.id);
+      if (schedulesError) throw schedulesError;
+      schedules = schedulesData || [];
 
-        const { data: schedulesData } = await supabase
-          .from('schedules')
-          .select('id, routine_id, start_time, price, seats_taken, max_seats, status')
-          .eq('teacher_id', user.id);
-        schedules = schedulesData || [];
-
-        const { data: bookingsData } = await supabase
-          .from('bookings')
-          .select('*, profiles(id, full_name)')
-          .in('schedule_id', schedules.map(s => s.id));
-        bookings = bookingsData || [];
-
-        const { data: paymentsData } = await supabase
-          .from('payments')
-          .select('*, bookings!inner(schedule_id, student_id)')
-          .in('bookings.schedule_id', schedules.map(s => s.id));
-        payments = paymentsData || [];
+      if (schedules.length === 0) {
+        setReportData(prev => ({ ...prev, activeRoutines: routines.length }));
+        setLoading(false);
+        return;
       }
+
+      const scheduleIds = schedules.map(s => s.id);
+
+      // 3. Fetch Bookings for these schedules
+      const { data: bookingsData, error: bookingsError } = await supabase
+        .from('bookings')
+        .select('*, profiles(id, full_name)')
+        .in('schedule_id', scheduleIds);
+      if (bookingsError) throw bookingsError;
+      bookings = bookingsData || [];
+
+      // 4. Fetch Payments for these bookings
+      const { data: paymentsData, error: paymentsError } = await supabase
+        .from('payments')
+        .select('*, bookings!inner(schedule_id, student_id)')
+        .in('bookings.schedule_id', scheduleIds);
+      if (paymentsError) throw paymentsError;
+      payments = paymentsData || [];
 
       let startDate;
       const now = new Date();

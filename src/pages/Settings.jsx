@@ -11,7 +11,7 @@ import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function Settings() {
-  const { user, profile: authProfile, signOut: authSignOut, isDevBypass, fetchProfile } = useAuth();
+  const { user, profile: authProfile, signOut: authSignOut, fetchProfile } = useAuth();
   const [guestProfile, setGuestProfile] = useState(() => {
     return JSON.parse(localStorage.getItem('zumba_guest_session') || 'null');
   });
@@ -82,21 +82,6 @@ export default function Settings() {
         localStorage.setItem('zumba_guest_session', JSON.stringify(updated));
         setGuestProfile(updated);
         toast.success('Guest Profile updated!');
-      } else if (isDevBypass) {
-        const mockProfile = JSON.parse(localStorage.getItem('zumba_mock_profile') || '{}');
-        const updated = { 
-          ...mockProfile, 
-          ...formData, 
-          payment_settings: paymentSettings 
-        };
-        localStorage.setItem('zumba_mock_profile', JSON.stringify(updated));
-        
-        const savedProfiles = JSON.parse(localStorage.getItem('zumba_mock_profiles') || '{}');
-        savedProfiles[user.id] = updated;
-        localStorage.setItem('zumba_mock_profiles', JSON.stringify(savedProfiles));
-        
-        await fetchProfile();
-        toast.success('Mock Profile updated successfully!');
       } else {
         const { error } = await supabase
           .from('profiles')

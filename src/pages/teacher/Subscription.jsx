@@ -11,7 +11,7 @@ import { getStripe, createCheckoutSession } from '../../api/stripeService';
 import { getSystemConfig } from '../../api/systemConfig';
 
 export default function TeacherSubscription() {
-  const { profile, isDevBypass, fetchProfile } = useAuth();
+  const { profile, fetchProfile } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [price, setPrice] = useState(10);
@@ -44,7 +44,7 @@ export default function TeacherSubscription() {
     ]
   }), [price]);
 
-  if (!profile && !isDevBypass) {
+  if (!profile) {
     return (
       <div className="min-h-screen bg-bloom-white flex items-center justify-center">
         <div className="w-10 h-10 border-4 border-rose-bloom/20 border-t-rose-bloom rounded-full animate-spin" />
@@ -57,27 +57,6 @@ export default function TeacherSubscription() {
     toast.loading('Preparing your secure stage activation...');
 
     try {
-      if (isDevBypass) {
-        // Simulate owner payment
-        await createCheckoutSession([{ id: 'platform_sub' }], { isMock: true });
-        
-        const mockProfile = JSON.parse(localStorage.getItem('zumba_mock_profile') || '{}');
-        mockProfile.is_subscribed = true;
-        localStorage.setItem('zumba_mock_profile', JSON.stringify(mockProfile));
-        
-        const savedProfiles = JSON.parse(localStorage.getItem('zumba_mock_profiles') || '{}');
-        if (profile?.id && savedProfiles[profile.id]) {
-          savedProfiles[profile.id].is_subscribed = true;
-          localStorage.setItem('zumba_mock_profiles', JSON.stringify(savedProfiles));
-        }
-
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        toast.success('Stage Activated! Welcome to Pro.');
-        await fetchProfile();
-        navigate('/teacher/dashboard');
-        return;
-      }
-
       // Real Implementation
       const stripe = await getStripe(); // Uses Owner's Public Key from ENV
       const session = await createCheckoutSession([{ 
