@@ -121,6 +121,7 @@ const Home = () => {
               <Instagram className="w-4 h-4 text-white/20 hover:text-white cursor-pointer transition-colors" />
               <Twitter className="w-4 h-4 text-white/20 hover:text-white cursor-pointer transition-colors" />
               <Facebook className="w-4 h-4 text-white/20 hover:text-white cursor-pointer transition-colors" />
+            </div>
           </div>
           <p className="text-[8px] font-bold text-white/10 tracking-[0.2em] text-center md:text-right uppercase">© 2026 ZUMBA THEATRE WORLDWIDE</p>
         </div>
