@@ -34,13 +34,17 @@ export default function Auth() {
 
   // Redirect if already logged in (Teachers/Admins)
   useEffect(() => {
-    if (user && profile) {
-      const uRole = profile.role?.toUpperCase();
-      if (uRole === 'ADMIN') navigate('/admin/dashboard');
-      else if (uRole === 'TEACHER') navigate('/teacher/dashboard');
-      // Students (Guests) are handled separately via localStorage in their dashboard
+    if (user && !loading) {
+      if (profile) {
+        const uRole = profile.role?.toUpperCase();
+        if (uRole === 'ADMIN') navigate('/admin/dashboard');
+        else if (uRole === 'TEACHER') navigate('/teacher/dashboard');
+      } else if (!isDevBypass) {
+        // Authenticated user with no profile record -> move to onboarding
+        navigate('/onboarding');
+      }
     }
-  }, [user, profile, navigate]);
+  }, [user, profile, loading, navigate, isDevBypass]);
 
   const handleGuestEntrance = () => {
     if (!formData.fullName || !formData.stageCode) {
