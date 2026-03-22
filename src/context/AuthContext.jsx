@@ -39,6 +39,12 @@ export const AuthProvider = ({ children }) => {
 
     getInitialSession();
 
+    // FAILSAFE: If loading is still true after 5 seconds, force it to false
+    // This prevents "spinners of death" in case of network hangs
+    const failsafe = setTimeout(() => {
+      setLoading(false);
+    }, 5000);
+
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       const currentUser = session?.user ?? null;
@@ -54,6 +60,7 @@ export const AuthProvider = ({ children }) => {
 
     return () => {
       subscription?.unsubscribe();
+      clearTimeout(failsafe);
     };
   }, []);
 
@@ -88,7 +95,10 @@ export const AuthProvider = ({ children }) => {
     } catch (err) {
       console.error('Profile fetch failed:', err);
     } finally {
-      setLoading(false);
+      if (loading) {
+        console.log('[AuthContext] Loading complete.');
+        setLoading(false);
+      }
     }
   };
 
