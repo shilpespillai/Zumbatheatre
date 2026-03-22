@@ -52,6 +52,7 @@ export default function Onboarding() {
           id: user.id,
           full_name: formData.full_name || user.user_metadata?.full_name || user.email.split('@')[0],
           role: role?.toUpperCase(),
+          bio: formData.bio,
           linked_teacher_id: linkedTeacherId,
           avatar_url: user.user_metadata?.avatar_url || ''
         });
