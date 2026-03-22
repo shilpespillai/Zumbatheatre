@@ -53,12 +53,17 @@ export default function StudentDashboard() {
   });
   const [timeRange, setTimeRange] = useState('90days');
   const [studentCredits, setStudentCredits] = useState(0);
+  const [visitedStages, setVisitedStages] = useState([]);
   const navigate = useNavigate();
 
 
   useEffect(() => {
     const pendingCode = localStorage.getItem('pending_teacher_code');
     const currentCode = profile?.stage_code || guestProfile?.stage_code;
+    
+    if (profile?.visited_stages) {
+      setVisitedStages(profile.visited_stages);
+    }
     
     if (pendingCode) {
       syncTeacherLink(pendingCode);
@@ -131,6 +136,35 @@ export default function StudentDashboard() {
         }
         await fetchTeacherProfile(teacher.id);
         await fetchAllAvailableSchedules(teacher.id);
+
+        // Update Visited Stages History
+        const currentVisited = profile?.visited_stages || [];
+        const isAlreadyVisited = currentVisited.some(s => s.teacher_id === teacher.id);
+        
+        if (!isAlreadyVisited) {
+          const newStageEntry = {
+            teacher_id: teacher.id,
+            full_name: teacher.full_name,
+            stage_code: code.toUpperCase().trim(),
+            last_visited: new Date().toISOString()
+          };
+          const updatedVisited = [newStageEntry, ...currentVisited].slice(0, 10);
+          
+          if (profile?.id) {
+            await supabase.from('profiles').update({ visited_stages: updatedVisited }).eq('id', profile.id);
+          }
+          setVisitedStages(updatedVisited);
+        } else {
+          // Move to front/Update timestamp
+          const updatedVisited = currentVisited.map(s => 
+            s.teacher_id === teacher.id ? { ...s, last_visited: new Date().toISOString(), stage_code: code.toUpperCase().trim() } : s
+          ).sort((a, b) => new Date(b.last_visited) - new Date(a.last_visited));
+          
+          if (profile?.id) {
+            await supabase.from('profiles').update({ visited_stages: updatedVisited }).eq('id', profile.id);
+          }
+          setVisitedStages(updatedVisited);
+        }
       } else {
         localStorage.removeItem('pending_teacher_code');
         const guestSess = JSON.parse(localStorage.getItem('zumba_guest_session') || 'null');
@@ -144,6 +178,9 @@ export default function StudentDashboard() {
     } catch (err) {
       console.error('[Dashboard] Sync error:', err);
     } finally {
+      if (profile?.visited_stages) {
+        setVisitedStages(profile.visited_stages);
+      }
       syncLockRef.current = false;
       setLinking(false);
       setLoading(false);
@@ -237,6 +274,42 @@ export default function StudentDashboard() {
       if (!error && data) setTeacherProfile(data);
     } catch (err) {
       console.error('[Dashboard] Fetch teacher profile error:', err);
+    }
+  };
+
+  const handleSwitchStage = async (teacherLink) => {
+    const studentId = profile?.id || guestProfile?.id;
+    if (!studentId) return;
+    
+    setLoading(true);
+    try {
+      // 1. Update active link in DB
+      await supabase.from('profiles').update({ linked_teacher_id: teacherLink.teacher_id }).eq('id', studentId);
+      
+      // 2. Update local guest session if applicable
+      if (guestProfile) {
+        const updatedGuest = { ...guestProfile, linked_teacher_id: teacherLink.teacher_id };
+        localStorage.setItem('zumba_guest_session', JSON.stringify(updatedGuest));
+        setGuestProfile(updatedGuest);
+      }
+      
+      // 3. Update visited stages order
+      const updatedVisited = visitedStages.map(s => 
+        s.teacher_id === teacherLink.teacher_id ? { ...s, last_visited: new Date().toISOString() } : s
+      ).sort((a, b) => new Date(b.last_visited) - new Date(a.last_visited));
+      
+      await supabase.from('profiles').update({ visited_stages: updatedVisited }).eq('id', studentId);
+      setVisitedStages(updatedVisited);
+
+      // 4. Refresh Dashboard
+      toast.success(`Switched to: ${teacherLink.full_name}'s Stage`);
+      await fetchProfile();
+      await fetchTeacherProfile(teacherLink.teacher_id);
+      await fetchAllAvailableSchedules(teacherLink.teacher_id);
+    } catch (err) {
+      toast.error('Failed to switch stage');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -458,9 +531,31 @@ export default function StudentDashboard() {
                     </div>
                  </div>
                  <div className="bg-white/60 p-10 rounded-[3rem] border border-apricot/40 text-center">
-                    <div className="text-[10px] font-black text-rose-bloom uppercase tracking-widest mb-2">Stage Credits</div>
+                     <div className="text-[10px] font-black text-rose-bloom uppercase tracking-widest mb-2">Stage Credits</div>
                     <div className="text-4xl font-black text-theatre-dark mb-8">${studentCredits.toFixed(2)}</div>
-                    <button onClick={handleDisconnect} className="w-full py-4 bg-red-100/50 border border-red-200 text-red-500 rounded-2xl font-black uppercase text-[10px]">Disconnect Stage</button>
+                    <div className="space-y-4">
+                      {visitedStages.length > 1 && (
+                        <div className="pt-6 border-t border-apricot/20">
+                          <div className="text-[9px] font-black text-theatre-dark/40 uppercase tracking-widest mb-4">Quick Switch Stage</div>
+                          <div className="space-y-2">
+                            {visitedStages.filter(s => s.teacher_id !== profile?.linked_teacher_id).map((link, idx) => (
+                              <button 
+                                key={idx}
+                                onClick={() => handleSwitchStage(link)}
+                                className="w-full p-4 bg-white border border-apricot/20 rounded-2xl flex items-center justify-between hover:border-rose-bloom transition-all group"
+                              >
+                                <div className="text-left">
+                                  <div className="text-[10px] font-black text-theatre-dark group-hover:text-rose-bloom">{link.full_name}</div>
+                                  <div className="text-[8px] font-bold text-theatre-dark/30 uppercase tracking-tighter">{link.stage_code}</div>
+                                </div>
+                                <ArrowRight className="w-3 h-3 text-theatre-dark/20 group-hover:text-rose-bloom" />
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      <button onClick={handleDisconnect} className="w-full py-4 bg-red-100/50 border border-red-200 text-red-500 rounded-2xl font-black uppercase text-[10px] hover:bg-red-100">Disconnect Stage</button>
+                    </div>
                  </div>
               </aside>
             </div>

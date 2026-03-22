@@ -84,6 +84,7 @@ export default function Auth() {
       full_name: formData.fullName,
       role: 'STUDENT',
       stage_code: formData.stageCode.toUpperCase().trim(),
+      visited_stages: []
     };
     
     try {
