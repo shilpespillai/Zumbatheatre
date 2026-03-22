@@ -10,31 +10,34 @@ export const AuthProvider = ({ children }) => {
   const isDevBypass = import.meta.env.VITE_DEV_BYPASS === 'true';
 
   useEffect(() => {
-    // Production Safety Check
+    // 1. Production Safety Check
     if (isDevBypass && import.meta.env.PROD) {
       console.warn('CRITICAL: VITE_DEV_BYPASS is enabled in a production build. This is a security risk.');
     }
 
-    // Check for mock user first if bypass is enabled
-    if (isDevBypass) {
-      const mockUser = localStorage.getItem('zumba_mock_user');
-      const mockProfile = localStorage.getItem('zumba_mock_profile');
-      if (mockUser && mockProfile) {
-        setUser(JSON.parse(mockUser));
-        setProfile(JSON.parse(mockProfile));
-        setLoading(false);
-        return;
-      }
-    }
-    // Get initial session
     const getInitialSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      setUser(session?.user ?? null);
+      
+      // REAL SESSION TAKES PRIORITY
       if (session?.user) {
-        fetchProfile(session.user.id);
-      } else {
-        setLoading(false);
+        setUser(session.user);
+        await fetchProfile(session.user.id);
+        return;
       }
+
+      // 2. Mock session ONLY if no real session exists
+      if (isDevBypass) {
+        const mockUser = localStorage.getItem('zumba_mock_user');
+        const mockProfile = localStorage.getItem('zumba_mock_profile');
+        if (mockUser && mockProfile) {
+          setUser(JSON.parse(mockUser));
+          setProfile(JSON.parse(mockProfile));
+          setLoading(false);
+          return;
+        }
+      }
+
+      setLoading(false);
     };
 
     getInitialSession();
@@ -68,19 +71,24 @@ export const AuthProvider = ({ children }) => {
     const id = userId || user?.id;
     if (!id) return;
     
+    // If we're already loading, don't set refreshing to true
+    // but if we're already initialized, this is a background refresh
+    const isBackground = !loading;
+    
     try {
-      if (isDevBypass) {
+      if (isDevBypass && !userId) { // Only check mock if not explicitly fetching a real user ID
         const mockProfile = localStorage.getItem('zumba_mock_profile');
         if (mockProfile) {
           const parsed = JSON.parse(mockProfile);
           if (parsed.id === id) {
             setProfile(parsed);
-            setLoading(false);
+            if (!isBackground) setLoading(false);
             return;
           }
         }
       }
 
+      console.log(`[AuthContext] Fetching profile for ${id}...`);
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -89,16 +97,18 @@ export const AuthProvider = ({ children }) => {
 
       if (error) {
         console.error('Error fetching profile:', error);
+        // Don't clear profile on background refresh error unless it's a 404
+        if (error.code === 'PGRST116') {
+          setProfile(null);
+        }
       } else {
+        console.log('[AuthContext] Profile fetched successfully.');
         setProfile(data);
       }
     } catch (err) {
       console.error('Profile fetch failed:', err);
     } finally {
-      if (loading) {
-        console.log('[AuthContext] Loading complete.');
-        setLoading(false);
-      }
+      setLoading(false);
     }
   };
 

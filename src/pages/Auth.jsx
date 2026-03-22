@@ -39,8 +39,9 @@ export default function Auth() {
         const uRole = profile.role?.toUpperCase();
         if (uRole === 'ADMIN') navigate('/admin/dashboard');
         else if (uRole === 'TEACHER') navigate('/teacher/dashboard');
-      } else if (!isDevBypass) {
+      } else {
         // Authenticated user with no profile record -> move to onboarding
+        console.log('[Auth] User logged in but no profile found, redirecting to onboarding...');
         navigate('/onboarding');
       }
     }

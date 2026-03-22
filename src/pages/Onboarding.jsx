@@ -79,8 +79,6 @@ export default function Onboarding() {
       }
       console.log('[Onboarding] Upsert successful.');
       
-      // Assuming isDevBypass is defined elsewhere or will be defined by the user
-      // For example: const isDevBypass = process.env.NODE_ENV === 'development';
       if (isDevBypass) {
         const mockProfile = JSON.parse(localStorage.getItem('zumba_mock_profile') || '{}');
         mockProfile.role = role;
@@ -90,8 +88,12 @@ export default function Onboarding() {
       }
 
       console.log('[Onboarding] Refreshing profile state...');
-      await fetchProfile();
-      console.log('[Onboarding] Profile refreshed. Navigating...');
+      // Wait for the profile to be fetched and the role to be available
+      await fetchProfile(user.id);
+      
+      console.log('[Onboarding] Profile refreshed. Verifying role...');
+      // Small delay to ensure state has propagated to ProtectedRoute
+      await new Promise(resolve => setTimeout(resolve, 800));
       
       toast.success(`Welcome to the theatre, ${formData.full_name}!`);
       const targetPath = role?.toUpperCase() === 'TEACHER' ? '/teacher/dashboard' : '/student/dashboard';
