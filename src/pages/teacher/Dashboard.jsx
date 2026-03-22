@@ -91,37 +91,51 @@ export default function TeacherDashboard() {
   };
 
   const ensureInviteCode = async () => {
-    if (profile?.role?.toUpperCase() !== 'TEACHER') return;
-    
-    if (profile.stage_code) {
-      setInviteCode(profile.stage_code);
-      return;
-    }
-
-    // Generate code if missing
-    const newCode = `ZUMBA-${profile.full_name?.split(' ')[0].toUpperCase() || 'STAGE'}-${Math.floor(1000 + Math.random() * 9000)}`;
+    if (!user?.id) return;
     
     try {
+      let currentCode = null;
+      
       if (isDevBypass) {
         const mockProfile = JSON.parse(localStorage.getItem('zumba_mock_profile') || '{}');
-        mockProfile.invite_code = newCode;
-        localStorage.setItem('zumba_mock_profile', JSON.stringify(mockProfile));
+        currentCode = mockProfile.stage_code;
+      } else {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('stage_code')
+          .eq('id', user.id)
+          .single();
         
-        // Also update the persistent profiles list
-        const stableId = mockProfile.id;
+        if (!error && data?.stage_code) {
+          currentCode = data.stage_code;
+        }
+      }
+
+      if (currentCode) {
+        setInviteCode(currentCode);
+        return currentCode;
+      }
+
+      // ONLY generate if absolutely missing from DB
+      const newCode = `ZUMBA-${profile?.full_name?.split(' ')[0].toUpperCase() || 'STAGE'}-${Math.floor(1000 + Math.random() * 9000)}`;
+      
+      if (isDevBypass) {
+        const mockProfile = JSON.parse(localStorage.getItem('zumba_mock_profile') || '{}');
+        mockProfile.stage_code = newCode;
+        localStorage.setItem('zumba_mock_profile', JSON.stringify(mockProfile));
         const savedProfiles = JSON.parse(localStorage.getItem('zumba_mock_profiles') || '{}');
-        if (savedProfiles[stableId]) {
-          savedProfiles[stableId].invite_code = newCode;
+        if (savedProfiles[user.id]) {
+          savedProfiles[user.id].stage_code = newCode;
           localStorage.setItem('zumba_mock_profiles', JSON.stringify(savedProfiles));
         }
       } else {
         await supabase.from('profiles').update({ stage_code: newCode }).eq('id', user.id);
       }
+      
       setInviteCode(newCode);
       return newCode;
     } catch (e) {
-      console.error('Code generation failed', e);
-      throw e;
+      console.error('[Dashboard] Code check failed:', e);
     }
   };
 
@@ -132,16 +146,16 @@ export default function TeacherDashboard() {
       
       if (isDevBypass) {
         const mockProfile = JSON.parse(localStorage.getItem('zumba_mock_profile') || '{}');
-        mockProfile.invite_code = newCode;
+        mockProfile.stage_code = newCode;
         localStorage.setItem('zumba_mock_profile', JSON.stringify(mockProfile));
         
         const savedProfiles = JSON.parse(localStorage.getItem('zumba_mock_profiles') || '{}');
         if (savedProfiles[user.id]) {
-          savedProfiles[user.id].invite_code = newCode;
+          savedProfiles[user.id].stage_code = newCode;
           localStorage.setItem('zumba_mock_profiles', JSON.stringify(savedProfiles));
         }
       } else {
-        const { error } = await supabase.from('profiles').update({ invite_code: newCode }).eq('id', user.id);
+        const { error } = await supabase.from('profiles').update({ stage_code: newCode }).eq('id', user.id);
         if (error) throw error;
       }
       
