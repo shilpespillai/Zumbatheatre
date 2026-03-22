@@ -3,15 +3,33 @@ import { useAuth } from '../context/AuthContext';
 import { supabase } from '../api/supabaseClient';
 import { useNavigate } from 'react-router-dom';
 import { 
-  User, ShieldCheck, Sparkles, ArrowRight, Check, 
-  MapPin, Clock, Heart, Camera
+  User, 
+  MapPin, 
+  Calendar, 
+  ShieldCheck,
+  ChevronRight, 
+  ChevronLeft, 
+  Sparkles, 
+  Star,
+  Zap,
+  CheckCircle2,
+  Clock,
+  Video,
+  Music,
+  Users,
+  Heart,
+  Camera,
+  ArrowRight,
+  Check
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function Onboarding() {
-  const { user, profile, fetchProfile, isDevBypass } = useAuth();
+  const { user, profile, fetchProfile, isDevBypass, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const [showTroubleshooter, setShowTroubleshooter] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState('checking'); // checking, ok, blocked
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [role, setRole] = useState(null);
@@ -24,6 +42,20 @@ export default function Onboarding() {
   });
 
   React.useEffect(() => {
+    // Check connection health
+    const checkConnection = async () => {
+      try {
+        const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 4000));
+        await Promise.race([supabase.from('profiles').select('id').limit(1), timeout]);
+        setConnectionStatus('ok');
+      } catch (err) {
+        console.warn('[Onboarding] Connection seems blocked or slow.');
+        setConnectionStatus('blocked');
+        setShowTroubleshooter(true);
+      }
+    };
+    checkConnection();
+
     const pendingCode = localStorage.getItem('pending_teacher_code');
     if (pendingCode) {
       setRole('student');
@@ -55,7 +87,6 @@ export default function Onboarding() {
 
       console.log('[Onboarding] Upserting profile for user:', user.id);
       
-      // Implement a 15-second timeout for the database call
       const dbRequest = supabase
         .from('profiles')
         .upsert({
@@ -88,11 +119,9 @@ export default function Onboarding() {
       }
 
       console.log('[Onboarding] Refreshing profile state...');
-      // Wait for the profile to be fetched and the role to be available
       await fetchProfile(user.id);
       
       console.log('[Onboarding] Profile refreshed. Verifying role...');
-      // Small delay to ensure state has propagated to ProtectedRoute
       await new Promise(resolve => setTimeout(resolve, 800));
       
       toast.success(`Welcome to the theatre, ${formData.full_name}!`);
@@ -113,6 +142,30 @@ export default function Onboarding() {
       </div>
 
       <div className="w-full max-w-4xl relative z-10">
+        {showTroubleshooter && (
+          <motion.div 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-8 p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center justify-between gap-4"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-rose-100 rounded-full flex items-center justify-center">
+                <ShieldCheck className="w-6 h-6 text-rose-600" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-rose-900">Connection Blocked?</h3>
+                <p className="text-xs text-rose-700">Your browser's "Tracking Protection" might be blocking our database.</p>
+              </div>
+            </div>
+            <button 
+              onClick={() => alert('To fix this:\n1. Click the Lock/Shield icon in your address bar.\n2. Turn OFF "Tracking Prevention" for this site.\n3. Refresh the page.')}
+              className="px-4 py-2 bg-rose-600 text-white text-xs font-bold rounded-xl hover:bg-rose-700 transition-colors"
+            >
+              How to Fix
+            </button>
+          </motion.div>
+        )}
+
         <header className="text-center mb-16">
           <motion.div 
             initial={{ opacity: 0, scale: 0.8 }}

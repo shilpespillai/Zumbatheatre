@@ -121,22 +121,6 @@ const Home = () => {
               <Instagram className="w-4 h-4 text-white/20 hover:text-white cursor-pointer transition-colors" />
               <Twitter className="w-4 h-4 text-white/20 hover:text-white cursor-pointer transition-colors" />
               <Facebook className="w-4 h-4 text-white/20 hover:text-white cursor-pointer transition-colors" />
-            </div>
-            {(user || isGuest) && (
-              <button 
-                onClick={() => {
-                  if (isGuest) {
-                    localStorage.removeItem('zumba_guest_session');
-                    window.location.href = '/';
-                  } else {
-                    signOut();
-                  }
-                }}
-                className="text-[8px] font-black uppercase tracking-[0.2em] text-zumba-pink border border-zumba-pink/10 px-3 py-1.5 rounded-lg hover:bg-zumba-pink hover:text-white transition-all"
-              >
-                Sign Out
-              </button>
-            )}
           </div>
           <p className="text-[8px] font-bold text-white/10 tracking-[0.2em] text-center md:text-right uppercase">© 2026 ZUMBA THEATRE WORLDWIDE</p>
         </div>
