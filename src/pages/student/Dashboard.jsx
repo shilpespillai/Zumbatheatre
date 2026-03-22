@@ -37,6 +37,8 @@ export default function StudentDashboard() {
   const [teacherProfile, setTeacherProfile] = useState(null);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [myBookings, setMyBookings] = useState([]);
+  const [globalSchedules, setGlobalSchedules] = useState([]);
+  const [isGlobalMode, setIsGlobalMode] = useState(false);
   const [activeTab, setActiveTab] = useState('studio'); 
   const [studentStats, setStudentStats] = useState({
     totalSessions: 0,
@@ -203,7 +205,10 @@ export default function StudentDashboard() {
     if (myBookings.length > 0 && allSchedules.length > 0) {
       calculateStudentMetrics(myBookings, allSchedules);
     }
-  }, [myBookings, allSchedules, timeRange]);
+    if (isGlobalMode) {
+      fetchGlobalSchedules();
+    }
+  }, [myBookings, allSchedules, timeRange, isGlobalMode, selectedDate]);
 
   useEffect(() => {
     if (profile?.id && profile?.linked_teacher_id) {
@@ -462,6 +467,16 @@ export default function StudentDashboard() {
             <button onClick={() => setActiveTab('performance')} className={`px-10 py-5 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center gap-3 ${activeTab === 'performance' ? 'bg-rose-bloom text-white' : 'text-theatre-dark/40'}`}>
               <Activity className="w-4 h-4" /> Performance Center
             </button>
+            <button 
+              onClick={() => {
+                setActiveTab('studio');
+                setIsGlobalMode(!isGlobalMode);
+                if (!isGlobalMode) fetchGlobalSchedules();
+              }} 
+              className={`px-10 py-5 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center gap-3 ${isGlobalMode ? 'bg-apricot text-white' : 'text-theatre-dark/40'}`}
+            >
+              <Sparkles className="w-4 h-4" /> {isGlobalMode ? 'Switch to Active Stage' : 'Global Theatre Mode'}
+            </button>
           </div>
         </div>
 
@@ -479,8 +494,23 @@ export default function StudentDashboard() {
           ) : (
             <div className="grid grid-cols-1 xl:grid-cols-4 gap-12">
               <section className="xl:col-span-3 bg-white/60 p-10 rounded-[3.5rem] border border-apricot/60 shadow-xl">
-                 <h3 className="text-2xl font-black text-rose-bloom mb-10 tracking-tight">{teacherProfile?.full_name || 'Instructor'}'s Stage</h3>
-                 <CalendarContainer role="student" events={allSchedules} onDateClick={setSelectedDate} onEventClick={(evt) => setSelectedDate(parseISO(evt.start_time))} />
+                 <div className="flex justify-between items-center mb-10">
+                   <h3 className="text-2xl font-black text-rose-bloom tracking-tight">
+                     {isGlobalMode ? 'Combined Global Stage' : `${teacherProfile?.full_name || 'Instructor'}'s Stage`}
+                   </h3>
+                   {isGlobalMode && (
+                     <div className="flex items-center gap-2 bg-red-500/10 px-4 py-2 rounded-full">
+                       <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                       <span className="text-[9px] font-black text-red-500 uppercase tracking-widest text-wrap">Collision Detection Active</span>
+                     </div>
+                   )}
+                 </div>
+                 <CalendarContainer 
+                  role="student" 
+                  events={isGlobalMode ? globalSchedules : allSchedules} 
+                  onDateClick={setSelectedDate} 
+                  onEventClick={(evt) => setSelectedDate(parseISO(evt.start_time))} 
+                 />
               </section>
               <aside className="space-y-8">
                  <div className="bg-white/60 p-10 rounded-[3rem] border border-apricot/40 shadow-xl">
@@ -498,10 +528,19 @@ export default function StudentDashboard() {
                         const isGreyed = isExpired || isCancelled || isCompleted;
                         const isPaid = existingBooking?.payment_status === 'PAID';
                         
+                        const isPaid = existingBooking?.payment_status === 'PAID';
+                        const hasConflict = slot.hasConflict && isGlobalMode;
+                        
                         return (
-                          <div key={i} className={`p-6 rounded-3xl border transition-all ${isGreyed ? 'bg-white/50 border-theatre-dark/10 opacity-50 grayscale' : isBooked ? 'bg-apricot/5 border-apricot/30 shadow-sm' : 'bg-white border-apricot/20 hover:shadow-md'}`}>
-                            <div className={`font-black text-xs mb-1 ${isBooked && !isGreyed ? 'text-theatre-dark' : 'text-rose-bloom'}`}>{format(parseISO(slot.start_time), 'hh:mm a')}</div>
-                            <div className="text-theatre-dark font-black text-lg mb-4">{slot.routines?.name}</div>
+                          <div key={i} className={`p-6 rounded-3xl border transition-all ${isGreyed ? 'bg-white/50 border-theatre-dark/10 opacity-50 grayscale' : isBooked ? 'bg-apricot/5 border-apricot/30 shadow-sm' : hasConflict ? 'bg-red-50 border-red-200' : 'bg-white border-apricot/20 hover:shadow-md'}`}>
+                            <div className="flex justify-between items-start mb-1">
+                              <div className={`font-black text-xs ${isBooked && !isGreyed ? 'text-theatre-dark' : 'text-rose-bloom'}`}>{format(parseISO(slot.start_time), 'hh:mm a')}</div>
+                              {isGlobalMode && <div className="text-[8px] font-bold text-theatre-dark/40 uppercase">{slot.profiles?.full_name?.split(' ')[0]}</div>}
+                            </div>
+                            <div className="text-theatre-dark font-black text-lg mb-4 flex items-center gap-2">
+                              {slot.routines?.name}
+                              {hasConflict && <div className="p-1.5 bg-red-500 rounded-full text-white shadow-lg" title="Schedule Overlap!"><Clock className="w-3 h-3" /></div>}
+                            </div>
                             {isGreyed || isBooked ? (
                               <div className={`w-full py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest text-center flex items-center justify-center gap-2 ${isBooked && !isGreyed ? 'bg-theatre-dark text-white' : 'bg-theatre-dark/10 text-theatre-dark/40'}`}>
                                 {isBooked ? (
@@ -519,7 +558,7 @@ export default function StudentDashboard() {
                               </div>
                             ) : (
                               <button 
-                                onClick={() => navigate(`/student/book/${profile.linked_teacher_id}?sessionId=${slot.id}`)} 
+                                onClick={() => navigate(`/student/book/${slot.teacher_id}?sessionId=${slot.id}`)} 
                                 className="w-full py-4 bg-theatre-dark text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-rose-bloom transition-all shadow-sm"
                               >
                                 Book Now

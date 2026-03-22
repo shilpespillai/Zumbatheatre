@@ -35,13 +35,15 @@ export default function StudentBooking() {
   const [selectedSession, setSelectedSession] = useState(null);
   const [booking, setBooking] = useState(false);
   const [studentCredits, setStudentCredits] = useState(0);
+  const [allStudentBookings, setAllStudentBookings] = useState([]);
   const [selectedMethod, setSelectedMethod] = useState(null);
 
   useEffect(() => {
     fetchTeacher();
     fetchSchedules();
-    if (profile?.id && teacherId) {
+    if (profile?.id) {
       fetchCredits();
+      fetchAllStudentBookings();
     }
   }, [teacherId, currentMonth, profile?.id]);
 
@@ -63,6 +65,38 @@ export default function StudentBooking() {
     } catch (err) {
       console.error('[Booking] Fetch credits error:', err);
     }
+  };
+
+  const fetchAllStudentBookings = async () => {
+    if (!profile?.id) return;
+    try {
+      const { data, error } = await supabase
+        .from('bookings')
+        .select('*, schedules(start_time, routines(name, duration_minutes))')
+        .eq('student_id', profile.id)
+        .not('payment_status', 'in', '("CANCELLED","VOID")');
+      
+      if (!error) setAllStudentBookings(data || []);
+    } catch (err) {
+      console.error('[Booking] Fetch all bookings error:', err);
+    }
+  };
+
+  const findCollision = (session) => {
+    if (!session || allStudentBookings.length === 0) return null;
+    
+    const sessionStart = new Date(session.start_time).getTime();
+    const sessionEnd = sessionStart + (session.routines?.duration_minutes || 60) * 60 * 1000;
+
+    return allStudentBookings.find(booking => {
+      if (booking.schedule_id === session.id) return false; // Don't conflict with itself if already booked (handled by duplicate check)
+      
+      const bStart = new Date(booking.schedules.start_time).getTime();
+      const bEnd = bStart + (booking.schedules.routines?.duration_minutes || 60) * 60 * 1000;
+      
+      // Overlap check: (startA < endB) && (endA > startB)
+      return sessionStart < bEnd && sessionEnd > bStart;
+    });
   };
 
   const fetchTeacher = async () => {
@@ -344,6 +378,27 @@ export default function StudentBooking() {
                     >
                       <div className="p-6 bg-white/10 rounded-2xl border border-white/10">
                         <div className="text-[10px] font-black text-rose-petal uppercase tracking-[0.2em] mb-4">You're booking</div>
+                        
+                        {(() => {
+                          const conflict = findCollision(selectedSession);
+                          if (conflict) {
+                            return (
+                              <div className="mb-6 p-4 bg-red-500/20 border border-red-500/40 rounded-2xl flex items-start gap-3 animate-pulse">
+                                <div className="p-2 bg-red-500 rounded-lg text-white">
+                                  <Clock className="w-4 h-4" />
+                                </div>
+                                <div>
+                                  <div className="text-[10px] font-black uppercase text-red-200 tracking-widest leading-tight">Schedule Conflict</div>
+                                  <div className="text-[9px] font-bold text-white/80 leading-tight mt-1">
+                                    Overlaps with "{conflict.schedules?.routines?.name}" at {format(parseISO(conflict.schedules?.start_time), 'h:mm a')}.
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          }
+                          return null;
+                        })()}
+
                         <div className="text-2xl font-black mb-1">{selectedSession.routines?.name}</div>
                         <div className="flex items-center gap-3 mt-2">
                            <div className="px-2 py-0.5 rounded-full bg-rose-bloom/20 border border-rose-bloom/30 text-[8px] font-black text-rose-bloom uppercase tracking-widest">
