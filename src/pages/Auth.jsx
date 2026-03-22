@@ -147,7 +147,7 @@ export default function Auth() {
           email: formData.email, 
           password: formData.password,
           options: {
-            data: { full_name: formData.fullName, role: 'teacher' },
+            data: { full_name: formData.fullName, role: 'TEACHER' },
             emailRedirectTo: window.location.origin + '/onboarding'
           }
         });
@@ -158,7 +158,7 @@ export default function Auth() {
           await supabase.from('profiles').upsert({ 
             id: data.user.id, 
             full_name: formData.fullName, 
-            role: 'teacher' 
+            role: 'TEACHER' 
           });
         }
         
