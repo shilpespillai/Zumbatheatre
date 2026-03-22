@@ -32,12 +32,6 @@ const Home = () => {
   const isGuest = !!guestSession;
 
   const getHeroBtn = () => {
-    if (user && profile?.role?.toUpperCase() === 'TEACHER') {
-      return { text: 'Instructor Portal', href: '/teacher/dashboard' };
-    }
-    if (user || isGuest) {
-      return { text: 'My Stage', href: '/student/dashboard' };
-    }
     return { text: 'Theatre Entrance', href: '/auth' };
   };
 

@@ -45,7 +45,7 @@ export default function Auth() {
         navigate('/onboarding');
       }
     }
-  }, [user, profile, loading, navigate, isDevBypass]);
+  }, [user, profile, loading, navigate]);
 
   const handleGuestEntrance = () => {
     if (!formData.fullName || !formData.stageCode) {
@@ -246,6 +246,29 @@ export default function Auth() {
           </div>
 
           <div className="mb-10">
+            {profile || localStorage.getItem('zumba_guest_session') ? (
+              <div className="p-6 bg-rose-bloom/5 border border-rose-bloom/10 rounded-[2rem] mb-6 flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-black text-theatre-dark leading-tight">Welcome back!</h3>
+                  <p className="text-[10px] font-bold text-rose-bloom/60 uppercase tracking-widest mt-1">
+                    {profile?.full_name || JSON.parse(localStorage.getItem('zumba_guest_session')).full_name} is signed in
+                  </p>
+                </div>
+                <button 
+                  onClick={() => {
+                    localStorage.removeItem('zumba_guest_session');
+                    localStorage.removeItem('zumba_mock_user');
+                    localStorage.removeItem('zumba_mock_profile');
+                    if (!isDevBypass) supabase.auth.signOut();
+                    window.location.reload();
+                  }}
+                  className="p-3 bg-white border border-rose-bloom/20 rounded-xl text-rose-bloom hover:bg-rose-bloom hover:text-white transition-all shadow-sm"
+                  title="Sign Out to switch account"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              </div>
+            ) : null}
             <h2 className="text-4xl font-black text-theatre-dark mb-3">
               {role === 'teacher' ? (isLogin ? 'Theatre Entrance.' : 'Theatre Join.') : 'Theatre Entrance.'}
             </h2>
