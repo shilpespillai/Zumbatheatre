@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { supabase } from '../api/supabaseClient';
 import { 
   Mail, Lock, User, ArrowRight, 
-  Chrome, Sparkles, Heart, ShieldCheck 
+  Chrome, Sparkles, Heart, ShieldCheck, LogOut
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
@@ -215,7 +215,7 @@ export default function Auth() {
         <div className="hidden lg:block space-y-12">
           <div className="space-y-6">
            {showTroubleshooter && (
-          <motion.div 
+          <Motion.div 
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             className="mb-8 p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center justify-between gap-4 w-full"
@@ -236,16 +236,16 @@ export default function Auth() {
             >
               How to Fix
             </button>
-          </motion.div>
+          </Motion.div>
         )}
 
-        <motion.div 
+        <Motion.div 
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               className="w-20 h-20 bg-gradient-to-br from-rose-bloom to-rose-petal rounded-[2rem] flex items-center justify-center rotate-12 shadow-2xl shadow-rose-bloom/30"
             >
               <Sparkles className="text-white w-10 h-10" />
-            </motion.div>
+            </Motion.div>
             <h1 className="text-6xl font-black text-theatre-dark leading-[1.1]">The Stage is <br/><span className="text-rose-bloom">Waiting.</span></h1>
             <p className="text-xl text-[#4A3B3E]/60 max-w-md font-medium leading-relaxed">
               Step into the world's most elegant platform for dance creators and enthusiasts.
@@ -264,7 +264,7 @@ export default function Auth() {
           </div>
         </div>
 
-        <motion.div 
+        <Motion.div 
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           className="bg-bloom-white/80 backdrop-blur-3xl p-10 sm:p-16 rounded-[4rem] border border-apricot/20 shadow-2xl shadow-rose-bloom/5"
@@ -444,7 +444,7 @@ export default function Auth() {
               ← Back to Theatre
             </a>
           </div>
-        </motion.div>
+        </Motion.div>
       </div>
     </div>
   );
