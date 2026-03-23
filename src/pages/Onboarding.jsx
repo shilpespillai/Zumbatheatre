@@ -45,11 +45,11 @@ export default function Onboarding() {
     // Check connection health
     const checkConnection = async () => {
       try {
-        const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 4000));
+        const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 10000));
         await Promise.race([supabase.from('profiles').select('id').limit(1), timeout]);
         setConnectionStatus('ok');
       } catch (err) {
-        console.warn('[Onboarding] Connection seems blocked or slow.');
+        console.warn('[Onboarding] Connection seems blocked or slow. User might be in strict incognito mode.');
         setConnectionStatus('blocked');
         setShowTroubleshooter(true);
       }

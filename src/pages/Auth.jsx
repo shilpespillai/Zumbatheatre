@@ -13,7 +13,7 @@ import Honeypot from '../components/Honeypot';
 import { v4 as uuidv4 } from 'uuid';
 
 export default function Auth() {
-  const { user, profile } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const searchParams = new URLSearchParams(window.location.search);
   const initialRole = searchParams.get('role') || 'student';
@@ -36,11 +36,11 @@ export default function Auth() {
     // Check connection health to Supabase
     const checkConnection = async () => {
       try {
-        const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 4000));
+        const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 10000));
         await Promise.race([supabase.from('profiles').select('id').limit(1), timeout]);
         setConnectionStatus('ok');
       } catch {
-        console.warn('[Auth] Connection seems blocked or slow.');
+        console.warn('[Auth] Connection seems blocked or slow. User might be in strict incognito mode.');
         setConnectionStatus('blocked');
         setShowTroubleshooter(true);
       }
@@ -54,8 +54,8 @@ export default function Auth() {
 
   // Redirect if already logged in (Teachers/Admins)
   useEffect(() => {
-    // ONLY redirect if connection is OK and we have a definitive profile/role state
-    if (user && !loading && connectionStatus === 'ok') {
+    // ONLY redirect if we have a definitive profile/role state
+    if (user && !authLoading && !loading) {
       if (profile) {
         const uRole = profile.role?.toUpperCase();
         if (uRole === 'ADMIN') navigate('/admin/dashboard');
@@ -66,7 +66,7 @@ export default function Auth() {
         navigate('/onboarding');
       }
     }
-  }, [user, profile, loading, navigate, connectionStatus]);
+  }, [user, profile, authLoading, loading, navigate]);
 
   const handleGuestEntrance = async () => {
     if (!formData.fullName || !formData.stageCode) {
