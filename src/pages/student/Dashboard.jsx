@@ -542,6 +542,53 @@ export default function StudentDashboard() {
                  />
               </section>
               <aside className="space-y-8">
+                  {/* Sessions for Selected Date */}
+                  <div className="bg-white/60 p-8 rounded-[3rem] border border-apricot/40 shadow-sm relative overflow-hidden group">
+                    <div className="relative z-10">
+                      <div className="text-[10px] font-black uppercase tracking-[0.2em] text-rose-bloom mb-1">Upcoming Stages</div>
+                      <h4 className="text-xl font-black mb-6 italic">{format(selectedDate, 'MMMM d')}</h4>
+                      
+                      <div className="space-y-4">
+                        {(isGlobalMode ? globalSchedules : allSchedules)
+                          .filter(s => isSameDay(parseISO(s.start_time), selectedDate))
+                          .length > 0 ? (
+                          (isGlobalMode ? globalSchedules : allSchedules)
+                            .filter(s => isSameDay(parseISO(s.start_time), selectedDate))
+                            .map((session, idx) => (
+                              <div key={idx} className="bg-white p-6 rounded-3xl border border-apricot/10 hover:border-rose-bloom transition-all group/card shadow-sm">
+                                <div className="flex justify-between items-start mb-4">
+                                  <div className="flex items-center gap-3">
+                                    <div className="p-3 bg-apricot/5 rounded-2xl">
+                                      <Clock className="w-4 h-4 text-rose-bloom" />
+                                    </div>
+                                    <div>
+                                      <div className="text-[10px] font-black text-rose-bloom uppercase tracking-widest">{format(parseISO(session.start_time), 'h:mm a')}</div>
+                                      <div className="text-[8px] font-bold text-studio-dark/30 uppercase tracking-tighter">{session.routines?.duration_minutes || 60} MIN</div>
+                                    </div>
+                                  </div>
+                                  <div className="text-lg font-black text-studio-dark">${session.price}</div>
+                                </div>
+                                
+                                <h5 className="text-sm font-black text-studio-dark mb-6 group-hover/card:text-rose-bloom transition-colors">{session.routines?.name}</h5>
+                                
+                                <button
+                                  onClick={() => navigate(`/student/book/${session.teacher_id}${isGlobalMode ? '' : `?sessionId=${session.id}`}`)}
+                                  className="w-full py-4 bg-studio-dark text-white rounded-2xl font-black uppercase text-[9px] tracking-widest flex items-center justify-center gap-2 hover:bg-rose-bloom transition-all shadow-lg shadow-studio-dark/10"
+                                >
+                                  Book Routine <ArrowRight className="w-4 h-4" />
+                                </button>
+                              </div>
+                            ))
+                        ) : (
+                          <div className="py-12 text-center">
+                            <CalendarIcon className="w-12 h-12 text-studio-dark/10 mx-auto mb-4" />
+                            <p className="text-[9px] font-black text-studio-dark/30 uppercase tracking-widest">No sessions scheduled <br /> for this date.</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
                   {/* Loyalty Stamp Card */}
                   {teacherProfile?.loyalty_settings?.enabled !== false && (
                     <div className="bg-gradient-to-br from-studio-dark to-rose-bloom p-8 rounded-[3rem] text-white shadow-xl shadow-rose-bloom/10 relative overflow-hidden group">

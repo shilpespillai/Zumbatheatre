@@ -1,50 +1,31 @@
--- SERVER-SIDE ROBUST AUTH: Auto-create Profile row when user registers
--- This bypasses browser "Tracking Protection" blocking client-side REST calls.
-
-CREATE OR REPLACE FUNCTION public.handle_new_user() 
+-- MINIMALIST & ROBUST TRIGGER: Syncs profile from metadata without failing on constraints
+CREATE OR REPLACE FUNCTION public.sync_profile_from_metadata() 
 RETURNS TRIGGER AS $$
-DECLARE
-    gen_code TEXT;
-    first_name TEXT;
 BEGIN
-    first_name := COALESCE(SPLIT_PART(NEW.raw_user_meta_data->>'full_name', ' ', 1), 'STAGE');
-    gen_code := 'STUDIO-' || UPPER(first_name) || '-' || (FLOOR(RANDOM() * 9000) + 1000)::TEXT;
-
-    INSERT INTO public.profiles (id, full_name, role, avatar_url, stage_code)
+    INSERT INTO public.profiles (id, full_name, role, stage_code)
     VALUES (
         NEW.id,
-        COALESCE(NEW.raw_user_meta_data->>'full_name', first_name),
+        COALESCE(NEW.raw_user_meta_data->>'full_name', 'Artist'),
         COALESCE(UPPER(NEW.raw_user_meta_data->>'role'), 'STUDENT'),
-        COALESCE(NEW.raw_user_meta_data->>'avatar_url', ''),
-        CASE WHEN UPPER(NEW.raw_user_meta_data->>'role') = 'TEACHER' THEN gen_code ELSE NULL END
+        NEW.raw_user_meta_data->>'stage_code'
     )
-    ON CONFLICT (id) DO NOTHING;
+    ON CONFLICT (id) DO UPDATE SET
+        full_name = EXCLUDED.full_name,
+        role = EXCLUDED.role,
+        stage_code = COALESCE(profiles.stage_code, EXCLUDED.stage_code),
+        updated_at = NOW();
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Trigger to create profile after auth.users row is inserted
+-- Re-create the triggers on auth.users (BOTH insert and update use the same sync logic)
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
-  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
-
--- Trigger to update profile if user metadata changes (e.g. name update)
-CREATE OR REPLACE FUNCTION public.handle_update_user()
-RETURNS TRIGGER AS $$
-BEGIN
-    UPDATE public.profiles
-    SET 
-        full_name = COALESCE(NEW.raw_user_meta_data->>'full_name', profiles.full_name),
-        role = COALESCE(UPPER(NEW.raw_user_meta_data->>'role'), profiles.role),
-        avatar_url = COALESCE(NEW.raw_user_meta_data->>'avatar_url', profiles.avatar_url),
-        updated_at = NOW()
-    WHERE id = NEW.id;
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+  FOR EACH ROW EXECUTE FUNCTION public.sync_profile_from_metadata();
 
 DROP TRIGGER IF EXISTS on_auth_user_updated ON auth.users;
 CREATE TRIGGER on_auth_user_updated
   AFTER UPDATE ON auth.users
-  FOR EACH ROW EXECUTE FUNCTION public.handle_update_user();
+  FOR EACH ROW EXECUTE FUNCTION public.sync_profile_from_metadata();
+
