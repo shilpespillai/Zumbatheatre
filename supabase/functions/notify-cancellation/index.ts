@@ -56,7 +56,7 @@ serve(async (req) => {
                         "Authorization": `Bearer ${RESEND_API_KEY}`
                     },
                     body: JSON.stringify({
-                        from: "Zumbatheatre <notifications@zumbatheatre.com>",
+                        from: "Studiotheatre <notifications@studiotheatre.com>",
                         to: [student.email],
                         subject: `CLASS CANCELLED: ${schedule.routines.name}`,
                         text: msg

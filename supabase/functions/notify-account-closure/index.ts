@@ -55,7 +55,7 @@ serve(async (req) => {
 
     const notifications = uniqueStudents?.map(async (student) => {
         if (!student) return;
-        const msg = `Hi ${student.full_name}, ${teacher.full_name} is closing their stage at Zumbatheatre on ${new Date(closureDate).toLocaleDateString()}. Thank you for dancing with us!`;
+        const msg = `Hi ${student.full_name}, ${teacher.full_name} is closing their stage at Studiotheatre on ${new Date(closureDate).toLocaleDateString()}. Thank you for dancing with us!`;
 
         console.log(`[Account Closure] Notifying ${student.full_name}: ${msg}`);
 
@@ -69,7 +69,7 @@ serve(async (req) => {
                         "Authorization": `Bearer ${RESEND_API_KEY}`
                     },
                     body: JSON.stringify({
-                        from: "Zumbatheatre <notifications@zumbatheatre.com>",
+                        from: "Studiotheatre <notifications@studiotheatre.com>",
                         to: [student.email],
                         subject: `STAGING CLOSURE: ${teacher.full_name}`,
                         text: msg

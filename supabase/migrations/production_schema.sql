@@ -1,4 +1,4 @@
--- PROD READINESS: Database Clean Reset Schema for Zumbatheatre
+-- PROD READINESS: Database Clean Reset Schema for Studiotheatre
 -- WARNING: Running this will DELETE ALL DATA in the listed tables.
 
 -- Drop existing tables if they exist (Order matters for foreign keys)

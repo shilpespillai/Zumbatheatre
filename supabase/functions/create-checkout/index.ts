@@ -95,7 +95,7 @@ serve(async (req: Request) => {
         price_data: {
           currency: 'usd',
           product_data: {
-            name: item.name || 'Zumba Theatre Session',
+            name: item.name || 'Studio Theatre Session',
           },
           unit_amount: Math.round(Number(item.price || 15) * 100), // convert to cents
           ...(isSubscription && { recurring: { interval: 'month' } }) // Inline recurring if no Price ID
