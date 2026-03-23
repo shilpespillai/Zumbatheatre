@@ -5,14 +5,16 @@ import {
   User, Mail, Phone, Lock, Eye, EyeOff, Save, 
   Settings as SettingsIcon, Camera, Bell, Shield, 
   CreditCard, Landmark, ExternalLink, Banknote,
-  CheckCircle2, Sparkles, Package, Heart, Clock, Activity
+  CheckCircle2, Sparkles, Package, Heart, Clock, Activity,
+  ChevronLeft
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 export default function UserSettings() {
   const { profile, fetchProfile, signOut } = useAuth();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('profile');
   const [isGuest, setIsGuest] = useState(false);
@@ -175,9 +177,17 @@ export default function UserSettings() {
   return (
     <div className="min-h-screen bg-bloom-white text-studio-dark p-6 sm:p-10">
       <div className="max-w-6xl mx-auto">
-        <header className="mb-16">
-          <h1 className="text-4xl font-black text-studio-dark tracking-tighter italic">Settings Center</h1>
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-rose-bloom mt-1">Personal & Stage Configuration</p>
+        <header className="mb-16 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
+          <div>
+            <button 
+              onClick={() => navigate(profile?.role === 'TEACHER' ? '/teacher/dashboard' : '/student/dashboard')}
+              className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-rose-bloom mb-4 hover:translate-x-[-4px] transition-transform"
+            >
+              <ChevronLeft className="w-4 h-4" /> Back to Stage
+            </button>
+            <h1 className="text-4xl font-black text-studio-dark tracking-tighter italic">Settings Center</h1>
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-rose-bloom mt-1">Personal & Stage Configuration</p>
+          </div>
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-12">
