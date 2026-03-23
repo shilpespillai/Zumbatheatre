@@ -57,8 +57,6 @@ export default function TeacherDashboard() {
     if (!user?.id) return;
     
     try {
-      let currentCode = null;
-      
       const { data, error } = await supabase
         .from('profiles')
         .select('stage_code')
@@ -66,25 +64,13 @@ export default function TeacherDashboard() {
         .single();
       
       if (!error && data?.stage_code) {
-        currentCode = data.stage_code;
+        setInviteCode(data.stage_code);
+        return data.stage_code;
       }
-
-      if (currentCode) {
-        setInviteCode(currentCode);
-        return currentCode;
-      }
-
-      // ONLY generate if absolutely missing from DB
-      const newCode = `STUDIO-${profile?.full_name?.split(' ')[0].toUpperCase() || 'STAGE'}-${Math.floor(1000 + Math.random() * 9000)}`;
-      
-      await supabase.from('profiles').update({ stage_code: newCode }).eq('id', user.id);
-      
-      setInviteCode(newCode);
-      return newCode;
     } catch (e) {
-      console.error('[Dashboard] Code check failed:', e);
+      console.error('[Dashboard] Code fetch failed:', e);
     }
-  }, [user?.id, profile?.full_name]);
+  }, [user?.id]);
 
   const handleRefreshInviteCode = async () => {
     const toastId = toast.loading('Refreshing stage code...');
@@ -97,7 +83,8 @@ export default function TeacherDashboard() {
       setInviteCode(newCode);
       toast.success('Stage code refreshed!', { id: toastId });
     } catch (error) {
-      toast.error('Failed to refresh code', { id: toastId });
+      console.error('[Dashboard] Code refresh failed:', error);
+      toast.error('Failed to refresh code. Please check your connection.', { id: toastId });
     }
   };
 

@@ -3,13 +3,20 @@
 
 CREATE OR REPLACE FUNCTION public.handle_new_user() 
 RETURNS TRIGGER AS $$
+DECLARE
+    gen_code TEXT;
+    first_name TEXT;
 BEGIN
-    INSERT INTO public.profiles (id, full_name, role, avatar_url)
+    first_name := COALESCE(SPLIT_PART(NEW.raw_user_meta_data->>'full_name', ' ', 1), 'STAGE');
+    gen_code := 'STUDIO-' || UPPER(first_name) || '-' || (FLOOR(RANDOM() * 9000) + 1000)::TEXT;
+
+    INSERT INTO public.profiles (id, full_name, role, avatar_url, stage_code)
     VALUES (
         NEW.id,
-        COALESCE(NEW.raw_user_meta_data->>'full_name', SPLIT_PART(NEW.email, '@', 1)),
+        COALESCE(NEW.raw_user_meta_data->>'full_name', first_name),
         COALESCE(UPPER(NEW.raw_user_meta_data->>'role'), 'STUDENT'),
-        COALESCE(NEW.raw_user_meta_data->>'avatar_url', '')
+        COALESCE(NEW.raw_user_meta_data->>'avatar_url', ''),
+        CASE WHEN UPPER(NEW.raw_user_meta_data->>'role') = 'TEACHER' THEN gen_code ELSE NULL END
     )
     ON CONFLICT (id) DO NOTHING;
     RETURN NEW;
