@@ -67,10 +67,19 @@ export default function TeacherDashboard() {
         setInviteCode(data.stage_code);
         return data.stage_code;
       }
+      
+      // LAZY INITIALIZATION: Only if DB has NULL and no error
+      if (!error && !data?.stage_code && profile?.full_name) {
+        console.log('[Dashboard] Stage code missing, initializing...');
+        const newCode = `STUDIO-${profile.full_name?.split(' ')[0].toUpperCase() || 'STAGE'}-${Math.floor(1000 + Math.random() * 9000)}`;
+        await supabase.from('profiles').update({ stage_code: newCode }).eq('id', user.id);
+        setInviteCode(newCode);
+        return newCode;
+      }
     } catch (e) {
-      console.error('[Dashboard] Code fetch failed:', e);
+      console.error('[Dashboard] Stage code check failed:', e);
     }
-  }, [user?.id]);
+  }, [user?.id, profile?.full_name]);
 
   const handleRefreshInviteCode = async () => {
     const toastId = toast.loading('Refreshing stage code...');
