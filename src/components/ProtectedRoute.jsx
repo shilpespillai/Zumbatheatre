@@ -3,8 +3,10 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 export const ProtectedRoute = ({ children, allowedRoles = [] }) => {
-  const { user, profile, loading } = useAuth();
+  const { user, profile, loading, isTeacher, isStudent, isAdmin } = useAuth();
   const location = useLocation();
+
+  const hasRole = isTeacher || isStudent || isAdmin;
 
   // Allow Guest Students
   const guestSession = JSON.parse(localStorage.getItem('studio_guest_session') || 'null');
@@ -23,8 +25,8 @@ export const ProtectedRoute = ({ children, allowedRoles = [] }) => {
     return <Navigate to="/auth" state={{ from: location }} replace />;
   }
 
-  // 2. Handle Onboarding - if user exists but has no profile role yet
-  if (user && !profile?.role && !loading && location.pathname !== '/onboarding') {
+  // 2. Handle Onboarding - if user exists but has no profile role yet (checked via metadata too)
+  if (user && !hasRole && !loading && location.pathname !== '/onboarding') {
     return <Navigate to="/onboarding" replace />;
   }
 
