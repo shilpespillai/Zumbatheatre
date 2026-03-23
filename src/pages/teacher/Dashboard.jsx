@@ -38,26 +38,6 @@ export default function TeacherDashboard() {
   const [isErrorModalOpen, setIsErrorModalOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
-  useEffect(() => {
-    if (user) {
-        setLoading(true);
-        const loadInit = async () => {
-          await fetchRoutines();
-          await fetchAllSchedules();
-          await ensureInviteCode();
-        };
-        loadInit();
-    }
-    
-    // Expose for testing
-    window.OPEN_ATTENDANCE = (session) => {
-      setSelectedSessionForAttendance(session);
-      setIsAttendanceModalOpen(true);
-    };
-
-  }, [user?.id, fetchRoutines, fetchAllSchedules, ensureInviteCode]);
-
-
 
   const fetchRoutines = useCallback(async () => {
     try {
@@ -366,6 +346,25 @@ export default function TeacherDashboard() {
       toast.error('Failed to cancel session');
     }
   };
+
+  useEffect(() => {
+    if (user) {
+        setLoading(true);
+        const loadInit = async () => {
+          await fetchRoutines();
+          await fetchAllSchedules();
+          await ensureInviteCode();
+        };
+        loadInit();
+    }
+    
+    // Expose for testing
+    window.OPEN_ATTENDANCE = (session) => {
+      setSelectedSessionForAttendance(session);
+      setIsAttendanceModalOpen(true);
+    };
+
+  }, [user?.id, fetchRoutines, fetchAllSchedules, ensureInviteCode]);
 
   return (
     <div className="min-h-screen bg-bloom-white text-theatre-dark p-6 sm:p-10">

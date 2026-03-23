@@ -189,30 +189,6 @@ export default function StudentDashboard() {
     }
   };
 
-  useEffect(() => {
-    if (profile?.id && profile?.linked_teacher_id) {
-      fetchMyBookings();
-    } else {
-      setMyBookings([]);
-      setStudentStats({
-        totalSessions: 0, routineVariety: [], routineCategoryMix: [], attendanceTrend: [], energyBurn: 0, consistency: [],
-        totalSpent: 0, monthlySpent: 0, quarterlySpent: 0, ytdSpent: 0, spendingTrend: []
-      });
-    }
-  }, [profile?.id, profile?.linked_teacher_id, fetchMyBookings]);
-
-  useEffect(() => {
-    if (myBookings.length > 0 && allSchedules.length > 0) {
-      calculateStudentMetrics(myBookings, allSchedules);
-    }
-  }, [myBookings, allSchedules, calculateStudentMetrics]);
-
-  useEffect(() => {
-    if (profile?.id && profile?.linked_teacher_id) {
-      fetchStudentCredits();
-    }
-  }, [profile?.id, profile?.linked_teacher_id, fetchStudentCredits]);
-
   const fetchStudentCredits = useCallback(async () => {
     if (!profile?.id || !profile?.linked_teacher_id) return;
     try {
@@ -468,6 +444,30 @@ export default function StudentDashboard() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (profile?.id && profile?.linked_teacher_id) {
+      fetchMyBookings();
+    } else {
+      setMyBookings([]);
+      setStudentStats({
+        totalSessions: 0, routineVariety: [], routineCategoryMix: [], attendanceTrend: [], energyBurn: 0, consistency: [],
+        totalSpent: 0, monthlySpent: 0, quarterlySpent: 0, ytdSpent: 0, spendingTrend: []
+      });
+    }
+  }, [profile?.id, profile?.linked_teacher_id, fetchMyBookings]);
+
+  useEffect(() => {
+    if (myBookings.length > 0 && allSchedules.length > 0) {
+      calculateStudentMetrics(myBookings, allSchedules);
+    }
+  }, [myBookings, allSchedules, calculateStudentMetrics]);
+
+  useEffect(() => {
+    if (profile?.id && profile?.linked_teacher_id) {
+      fetchStudentCredits();
+    }
+  }, [profile?.id, profile?.linked_teacher_id, fetchStudentCredits]);
 
   return (
     <div className="min-h-screen bg-bloom-white text-theatre-dark p-6 sm:p-10">
