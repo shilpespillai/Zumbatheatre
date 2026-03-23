@@ -75,49 +75,77 @@ export default function Auth() {
     }
     
     setLoading(true);
-    
-    // Valid UUID format for guest ID to satisfy Supabase/Postgres constraints
-    const uuidV4 = '00000000-0000-4000-8000-' + btoa(formData.fullName.toLowerCase().trim() + formData.stageCode.toUpperCase().trim()).replace(/[^a-f0-9]/g, '').slice(0, 12).padEnd(12, '0');
-    const stableId = uuidV4;
-    
-    const guestProfile = {
-      id: stableId,
-      full_name: formData.fullName,
-      role: 'STUDENT',
-      stage_code: formData.stageCode.toUpperCase().trim(),
-      visited_stages: []
-    };
+    const targetCode = formData.stageCode.toUpperCase().trim();
     
     try {
-      // Check if this guest already exists (Account Already Exists Check)
-      const { data: existingProfile, error: fetchError } = await supabase
+      // 1. Resolve Teacher ID from Stage Code first
+      console.log('[Auth] Resolving teacher for code:', targetCode);
+      const { data: teacher, error: teacherError } = await supabase
         .from('profiles')
         .select('id')
-        .eq('id', stableId)
-        .maybeSingle();
+        .eq('stage_code', targetCode)
+        .eq('role', 'TEACHER')
+        .single();
 
-      if (fetchError) console.warn('[Auth] Checking existing guest failed:', fetchError);
-      
-      if (existingProfile) {
-        toast.info(`Welcome back, ${formData.fullName}! Entering the stage...`);
-      } else {
-        // 1. Permanently record guest in Supabase (Zero Mock-Data Policy)
-        const { error: upsertError } = await supabase.from('profiles').upsert(guestProfile);
-        if (upsertError) {
-          console.warn('[Auth] Guest upsert to DB failed, falling back to local only:', upsertError);
-          // We still let them in if it's a minor error, but the primary goal is DB storage
-        }
-        toast.success(`Welcome to the stage, ${formData.fullName}!`);
+      if (teacherError || !teacher) {
+        throw new Error('Invalid stage code. Please check with your instructor.');
       }
+
+      // 2. Deterministic Guest Credentials (Silent Auth)
+      // Use a standard domain like .live to avoid "invalid email" TLD errors
+      const seed = btoa(formData.fullName.toLowerCase().trim() + teacher.id).replace(/[^a-f0-9]/g, '');
+      const guestEmail = `guest_${seed.slice(0, 12)}@studiomember.live`;
+      const guestPassword = `Guest!${seed.slice(0, 8)}`;
       
-      // 2. Keep minimal session in local storage for the frontend to know they are a guest
-      localStorage.setItem('studio_guest_session', JSON.stringify({ ...guestProfile, is_guest: true }));
-      localStorage.setItem('pending_teacher_code', guestProfile.stage_code);
+      console.log('[Auth] Attempting Silent Auth for guest:', guestEmail);
       
+      // 3. Try to sign in or sign up silently
+      let { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email: guestEmail,
+        password: guestPassword
+      });
+
+      if (authError) {
+        // Assume account doesn't exist, try to sign up
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+          email: guestEmail,
+          password: guestPassword,
+          options: {
+            data: { 
+              full_name: formData.fullName, 
+              role: 'STUDENT'
+              // DO NOT pass stage_code here! Teachers own the stage codes.
+            }
+          }
+        });
+        
+        if (signUpError) throw signUpError;
+        authData = signUpData;
+      }
+
+      if (!authData.user) throw new Error('Authentication failed');
+
+      // 4. Ensure Profile exists and is linked
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .upsert({
+          id: authData.user.id,
+          full_name: formData.fullName,
+          role: 'STUDENT',
+          linked_teacher_id: teacher.id
+        });
+
+      if (profileError) console.warn('[Auth] Profile upsert failed:', profileError);
+      
+      // 5. Cleanup and Navigate
+      localStorage.removeItem('studio_guest_session');
+      localStorage.setItem('pending_teacher_code', targetCode);
+      
+      toast.success(`Welcome to the stage, ${formData.fullName}!`);
       navigate('/student/dashboard');
     } catch (err) {
-      console.error('[Auth] Guest entrance failed:', err);
-      toast.error('Could not enter the stage. Please check your connection.');
+      console.error('[Auth] Silent Auth entrance failed:', err);
+      toast.error(err.message || 'Could not enter the stage.');
     } finally {
       setLoading(false);
     }

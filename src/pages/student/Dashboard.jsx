@@ -22,13 +22,7 @@ const SEED_TEACHERS = [
 ];
 
 export default function StudentDashboard() {
-  const { profile: authProfile, signOut, fetchProfile } = useAuth();
-  const [guestProfile, setGuestProfile] = useState(() => {
-    return JSON.parse(localStorage.getItem('studio_guest_session') || 'null');
-  });
-  
-  const profile = authProfile || guestProfile;
-  
+  const { profile, signOut, fetchProfile } = useAuth();
   const [allSchedules, setAllSchedules] = useState([]);
   const [loading, setLoading] = useState(true);
   const [linkingCode, setLinkingCode] = useState('');
@@ -61,7 +55,7 @@ export default function StudentDashboard() {
 
   useEffect(() => {
     const pendingCode = localStorage.getItem('pending_teacher_code');
-    const currentCode = profile?.stage_code || guestProfile?.stage_code;
+    const currentCode = profile?.stage_code;
     
     if (profile?.visited_stages) {
       setVisitedStages(profile.visited_stages);
@@ -77,20 +71,7 @@ export default function StudentDashboard() {
     } else {
       setLoading(false);
     }
-
-    const handleStorageChange = (e) => {
-      if (e.key === 'studio_guest_session') {
-         const newGuest = JSON.parse(e.newValue || 'null');
-         setGuestProfile(newGuest);
-         if (newGuest?.linked_teacher_id) {
-           fetchTeacherProfile(newGuest.linked_teacher_id);
-           fetchAllAvailableSchedules(newGuest.linked_teacher_id);
-         }
-      }
-    };
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, [profile?.linked_teacher_id, profile?.role, guestProfile?.id, guestProfile?.stage_code]);
+  }, [profile?.linked_teacher_id, profile?.role, profile?.id, profile?.stage_code]);
 
   const syncTeacherLink = async (code) => {
     if (!code || linking || syncLockRef.current) return;
@@ -114,20 +95,6 @@ export default function StudentDashboard() {
       if (teacher) {
         if (profile?.id) {
           await supabase.from('profiles').update({ linked_teacher_id: teacher.id }).eq('id', profile.id);
-        }
-
-        const guestSess = JSON.parse(localStorage.getItem('studio_guest_session') || 'null');
-        // Use existing ID or generate a stable one based on the code to prevent Date.now() loops
-        const stableGuestId = guestSess?.id || 'guest-' + btoa(code).slice(0, 12);
-        const updatedGuest = guestSess || { id: stableGuestId, role: 'STUDENT', is_guest: true };
-        
-        updatedGuest.linked_teacher_id = teacher.id;
-        updatedGuest.stage_code = code.toUpperCase().trim();
-        localStorage.setItem('studio_guest_session', JSON.stringify(updatedGuest));
-        
-        // Only update state if it actually changed to prevent unnecessary re-renders
-        if (JSON.stringify(updatedGuest) !== JSON.stringify(guestProfile)) {
-          setGuestProfile(updatedGuest);
         }
         
         localStorage.removeItem('pending_teacher_code');
@@ -169,12 +136,6 @@ export default function StudentDashboard() {
         }
       } else {
         localStorage.removeItem('pending_teacher_code');
-        const guestSess = JSON.parse(localStorage.getItem('studio_guest_session') || 'null');
-        if (guestSess && guestSess.stage_code === code) {
-          delete guestSess.stage_code;
-          localStorage.setItem('studio_guest_session', JSON.stringify(guestSess));
-          setGuestProfile(guestSess);
-        }
         if (code !== '') toast.error('Invalid stage code. Please check with your instructor.');
       }
     } catch (err) {
@@ -277,20 +238,12 @@ export default function StudentDashboard() {
   }, []);
 
   const handleSwitchStage = async (teacherLink) => {
-    const studentId = profile?.id || guestProfile?.id;
-    if (!studentId) return;
+    if (!profile?.id) return;
     
     setLoading(true);
     try {
       // 1. Update active link in DB
-      await supabase.from('profiles').update({ linked_teacher_id: teacherLink.teacher_id }).eq('id', studentId);
-      
-      // 2. Update local guest session if applicable
-      if (guestProfile) {
-        const updatedGuest = { ...guestProfile, linked_teacher_id: teacherLink.teacher_id };
-        localStorage.setItem('studio_guest_session', JSON.stringify(updatedGuest));
-        setGuestProfile(updatedGuest);
-      }
+      await supabase.from('profiles').update({ linked_teacher_id: teacherLink.teacher_id }).eq('id', profile.id);
       
       // 3. Update visited stages order
       const updatedVisited = visitedStages.map(s => 
@@ -312,8 +265,7 @@ export default function StudentDashboard() {
   };
 
   const fetchMyBookings = useCallback(async () => {
-    const studentId = profile?.id || guestProfile?.id;
-    if (!studentId) return;
+    if (!profile?.id) return;
     try {
       const { data, error } = await supabase
         .from('bookings')
@@ -326,7 +278,7 @@ export default function StudentDashboard() {
     } catch (err) {
       console.error('[Dashboard] Fetch bookings error:', err);
     }
-  }, [profile?.id, guestProfile?.id]);
+  }, [profile?.id]);
 
   const calculateStudentMetrics = useCallback((bookings, schedules) => {
     let startDate;
@@ -428,13 +380,11 @@ export default function StudentDashboard() {
   const handleDisconnect = async () => {
     setLoading(true);
     try {
-      const studentId = profile?.id || guestProfile?.id;
-      if (studentId) {
-        await supabase.from('profiles').update({ linked_teacher_id: null }).eq('id', studentId);
+      if (profile?.id) {
+        await supabase.from('profiles').update({ linked_teacher_id: null }).eq('id', profile.id);
       }
       localStorage.removeItem('studio_guest_session');
       localStorage.removeItem('pending_teacher_code');
-      setGuestProfile(null);
       await fetchProfile();
       toast.success('Stage presence cleared.');
       setTimeout(() => { window.location.href = '/'; }, 500);

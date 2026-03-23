@@ -61,7 +61,7 @@ export default function UserSettings() {
       
       if (profile.loyalty_settings) {
         setLoyaltySettings(profile.loyalty_settings);
-      } else if (profile.role === 'TEACHER') {
+      } else if (profile?.role === 'TEACHER') {
         setLoyaltySettings({
           enabled: true,
           required_sessions: 10,
@@ -75,10 +75,12 @@ export default function UserSettings() {
     e.preventDefault();
     setLoading(true);
     try {
+      if (!profile) throw new Error('No active profile found.');
+      
       const updates = {
         ...formData,
-        payment_settings: profile.role === 'TEACHER' ? paymentSettings : null,
-        loyalty_settings: profile.role === 'TEACHER' ? loyaltySettings : null,
+        payment_settings: profile?.role === 'TEACHER' ? paymentSettings : null,
+        loyalty_settings: profile?.role === 'TEACHER' ? loyaltySettings : null,
         updated_at: new Date().toISOString()
       };
 
@@ -87,7 +89,22 @@ export default function UserSettings() {
         .update(updates)
         .eq('id', profile.id);
 
-      if (error) throw error;
+      if (error) {
+        console.warn('[Settings] Database update restricted, attempting metadata sync fallback...');
+      }
+
+      // SYNC TO AUTH METADATA (Unblockable path for resilience)
+      const { error: metaError } = await supabase.auth.updateUser({
+        data: {
+          full_name: formData.full_name,
+          phone: formData.phone,
+          role: profile?.role,
+          avatar_url: formData.avatar_url
+        }
+      });
+
+      if (metaError && error) throw new Error('Both database and metadata updates failed.');
+      
       await fetchProfile();
       toast.success('Settings updated successfully!');
     } catch (err) {

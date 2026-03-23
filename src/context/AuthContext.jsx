@@ -100,10 +100,21 @@ export const AuthProvider = ({ children }) => {
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    setProfile(null);
-    window.location.href = '/';
+    try {
+      await supabase.auth.signOut();
+      setUser(null);
+      setProfile(null);
+      localStorage.removeItem('studio_guest_session');
+      localStorage.removeItem('pending_teacher_code');
+      window.location.href = '/';
+    } catch (err) {
+      console.error('[AuthContext] SignOut failed:', err);
+      // Force local logout even if network fails
+      setUser(null);
+      setProfile(null);
+      localStorage.removeItem('studio_guest_session');
+      window.location.href = '/';
+    }
   };
 
   const value = {

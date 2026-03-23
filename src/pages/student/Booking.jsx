@@ -19,13 +19,7 @@ import { getStripe, createCheckoutSession } from '../../api/stripeService';
 export default function StudentBooking() {
   const { teacherId } = useParams();
   const navigate = useNavigate();
-  const { user, profile: authProfile } = useAuth();
-  const [guestProfile, setGuestProfile] = useState(() => {
-    return JSON.parse(localStorage.getItem('studio_guest_session') || 'null');
-  });
-
-  const profile = authProfile || guestProfile;
-  const isGuest = !!guestProfile && !authProfile;
+  const { user, profile } = useAuth();
 
   const [teacher, setTeacher] = useState(null);
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -186,6 +180,15 @@ export default function StudentBooking() {
     }
     if (!selectedSession) {
       toast.error('Please select a session to book.');
+      if (booking) return;
+    }
+
+    // Silent Auth students now have a real session, so we only block if totally unauthenticated
+    if (!user?.id) {
+      toast.error('Sign-in required', {
+        description: 'Please enter the stage with your name to book sessions.'
+      });
+      navigate('/auth');
       return;
     }
 
@@ -317,7 +320,7 @@ export default function StudentBooking() {
         const { error: manualError } = await supabase
           .from('bookings')
           .insert({
-            student_id: profile.id,
+            student_id: user.id, // Use auth user ID directly for safety
             schedule_id: selectedSession.id,
             amount: selectedSession.price,
             payment_method: 'MANUAL',
