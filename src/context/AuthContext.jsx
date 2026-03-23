@@ -26,10 +26,11 @@ export const AuthProvider = ({ children }) => {
 
     getInitialSession();
 
-    // FAILSAFE: If loading is still true after 5 seconds, force it to false
+    // FAILSAFE: If loading is still true after 15 seconds, force it to false
     const failsafe = setTimeout(() => {
       setLoading(false);
-    }, 5000);
+      console.warn('[AuthContext] 15-second failsafe triggered! Supabase might be cold-booting or offline.');
+    }, 15000);
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
