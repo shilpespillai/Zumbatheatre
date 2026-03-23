@@ -66,11 +66,15 @@ export const AuthProvider = ({ children }) => {
 
       if (error) {
         console.warn('[AuthContext] Error fetching profile:', error);
+        // CRITICAL FALLBACK: Use metadata if database is blocked by Chrome Incognito/Tracking Protection
         if (activeUser?.user_metadata?.role) {
-          console.log('[AuthContext] Falling back to user_metadata role');
-          setProfile({ id, role: activeUser.user_metadata.role, full_name: activeUser.user_metadata.full_name || 'User' });
-        } else if (error.code === 'PGRST116') {
-          setProfile(null);
+          console.log('[AuthContext] Bypassing connection block using user_metadata');
+          setProfile({ 
+            id, 
+            role: activeUser.user_metadata.role, 
+            full_name: activeUser.user_metadata.full_name || 'User',
+            stage_code: activeUser.user_metadata.stage_code || null
+          });
         } else {
           setProfile(null);
         }
@@ -81,8 +85,12 @@ export const AuthProvider = ({ children }) => {
     } catch (err) {
       console.error('[AuthContext] Profile fetch failed (Network/Timeout):', err);
       if (activeUser?.user_metadata?.role) {
-        console.log('[AuthContext] Catch: Falling back to user_metadata role');
-        setProfile({ id, role: activeUser.user_metadata.role, full_name: activeUser.user_metadata.full_name || 'User' });
+        setProfile({ 
+          id, 
+          role: activeUser.user_metadata.role, 
+          full_name: activeUser.user_metadata.full_name || 'User',
+          stage_code: activeUser.user_metadata.stage_code || null
+        });
       } else {
         setProfile(null);
       }
@@ -104,9 +112,9 @@ export const AuthProvider = ({ children }) => {
     loading,
     signOut,
     fetchProfile,
-    isTeacher: profile?.role?.toUpperCase() === 'TEACHER',
-    isStudent: profile?.role?.toUpperCase() === 'STUDENT',
-    isAdmin: profile?.role?.toUpperCase() === 'ADMIN'
+    isTeacher: (profile?.role || user?.user_metadata?.role)?.toUpperCase() === 'TEACHER',
+    isStudent: (profile?.role || user?.user_metadata?.role)?.toUpperCase() === 'STUDENT',
+    isAdmin: (profile?.role || user?.user_metadata?.role)?.toUpperCase() === 'ADMIN'
   };
 
   return (

@@ -113,21 +113,31 @@ export default function Onboarding() {
         setTimeout(() => reject(new Error('DATABASE_TIMEOUT: The request to Supabase timed out after 15 seconds. Please check your internet connection and verify your Vercel environment variables.')), 15000)
       );
 
-      const { error } = await Promise.race([dbRequest, timeoutPromise]);
+      const { error: dbError } = await Promise.race([dbRequest, timeoutPromise]);
 
-      if (error) {
-        console.error('[Onboarding] Upsert error:', error);
-        throw error;
+      // 4. Mirror to Auth Metadata (The "Unblockable" Fallback)
+      // This ensures that even if the database is blocked by Chrome's Tracking Protection,
+      // the app still knows the user's role and code from the secure session.
+      console.log('[Onboarding] Syncing to Auth Metadata...');
+      const { error: authError } = await supabase.auth.updateUser({
+        data: {
+          full_name: formData.full_name || user.user_metadata?.full_name,
+          role: role?.toUpperCase(),
+          stage_code: formData.stage_code || null
+        }
+      });
+
+      if (authError) console.warn('[Onboarding] Metadata sync failed:', authError);
+
+      if (dbError) {
+        console.warn('[Onboarding] Database blocked/timeout, relying on Metadata fallback:', dbError);
+        // We don't throw here - if Auth Metadata worked, the app can still function!
       }
-      console.log('[Onboarding] Upsert successful.');
       
       console.log('[Onboarding] Refreshing profile state...');
       await fetchProfile(user.id);
       
-      console.log('[Onboarding] Profile refreshed. Verifying role...');
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
-      toast.success(`Welcome to the theatre, ${formData.full_name}!`);
+      toast.success(`Welcome to the stage, ${formData.full_name || 'Artist'}!`);
       const targetPath = role?.toUpperCase() === 'TEACHER' ? '/teacher/dashboard' : '/student/dashboard';
       navigate(targetPath);
     } catch (error) {

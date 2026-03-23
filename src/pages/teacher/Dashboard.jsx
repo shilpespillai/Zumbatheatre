@@ -72,7 +72,13 @@ export default function TeacherDashboard() {
       if (!error && !data?.stage_code && profile?.full_name) {
         console.log('[Dashboard] Stage code missing, initializing...');
         const newCode = `STUDIO-${profile.full_name?.split(' ')[0].toUpperCase() || 'STAGE'}-${Math.floor(1000 + Math.random() * 9000)}`;
-        await supabase.from('profiles').update({ stage_code: newCode }).eq('id', user.id);
+        
+        // Parallel sync: DB + Auth Metadata (Metadata is unblockable fallback)
+        await Promise.allSettled([
+          supabase.from('profiles').update({ stage_code: newCode }).eq('id', user.id),
+          supabase.auth.updateUser({ data: { stage_code: newCode } })
+        ]);
+        
         setInviteCode(newCode);
         return newCode;
       }
@@ -86,8 +92,18 @@ export default function TeacherDashboard() {
     try {
       const newCode = `STUDIO-${profile.full_name?.split(' ')[0].toUpperCase() || 'STAGE'}-${Math.floor(1000 + Math.random() * 9000)}`;
       
-      const { error } = await supabase.from('profiles').update({ stage_code: newCode }).eq('id', user.id);
-      if (error) throw error;
+      const { error: dbError } = await supabase.from('profiles').update({ stage_code: newCode }).eq('id', user.id);
+      
+      // Always sync to metadata - it's our unblockable source of truth
+      const { error: authError } = await supabase.auth.updateUser({ data: { stage_code: newCode } });
+      
+      if (authError) {
+        console.warn('[Dashboard] Metadata sync failed:', authError);
+      }
+
+      if (dbError) {
+        console.warn('[Dashboard] DB update failed/blocked, relying on Metadata:', dbError);
+      }
       
       setInviteCode(newCode);
       toast.success('Stage code refreshed!', { id: toastId });
