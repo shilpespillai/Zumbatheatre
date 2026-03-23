@@ -231,13 +231,13 @@ export default function TeacherReports() {
                 <div className="w-16 h-16 bg-rose-bloom/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
                   <TrendingUp className="w-8 h-8 text-rose-bloom" />
                 </div>
-                <h2 className="text-3xl font-black text-theatre-dark mb-3 italic">Growth Energy Locked</h2>
-                <p className="text-xs text-theatre-dark/40 font-bold uppercase tracking-widest leading-loose mb-10">
+                <h2 className="text-3xl font-black text-studio-dark mb-3 italic">Growth Energy Locked</h2>
+                <p className="text-xs text-studio-dark/40 font-bold uppercase tracking-widest leading-loose mb-10">
                   Detailed analytics and revenue reports are reserved for our Premium Stage Instructors.
                 </p>
                 <a 
                   href="/teacher/subscription"
-                  className="w-full btn-premium bg-theatre-dark text-white flex items-center justify-center gap-3 hover:bg-rose-bloom shadow-xl shadow-theatre-dark/20"
+                  className="w-full btn-premium bg-studio-dark text-white flex items-center justify-center gap-3 hover:bg-rose-bloom shadow-xl shadow-studio-dark/20"
                 >
                   Activate Premium <ArrowRight className="w-4 h-4" />
                 </a>
@@ -248,16 +248,16 @@ export default function TeacherReports() {
         
         <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 mb-16">
           <div className="flex items-center gap-6">
-             <a href="/teacher/dashboard" className="p-4 bg-white rounded-2xl border border-theatre-dark/15 hover:bg-rose-petal/5 transition-all shadow-sm">
+             <a href="/teacher/dashboard" className="p-4 bg-white rounded-2xl border border-studio-dark/15 hover:bg-rose-petal/5 transition-all shadow-sm">
                <ChevronLeft className="w-6 h-6 text-rose-bloom" />
              </a>
              <div>
-              <h1 className="text-4xl font-black text-theatre-dark mb-1">Performance Theatre.</h1>
+              <h1 className="text-4xl font-black text-studio-dark mb-1">Performance Studio.</h1>
               <p className="text-rose-bloom/40 font-bold tracking-tight uppercase tracking-[0.2em] text-[10px]">Financials & Engagement Analytics</p>
             </div>
           </div>
           <div className="flex gap-4 w-full sm:w-auto">
-            <button className="flex-1 sm:flex-none px-6 py-4 bg-white rounded-2xl border border-theatre-dark/15 text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-rose-petal/5 transition-all shadow-sm">
+            <button className="flex-1 sm:flex-none px-6 py-4 bg-white rounded-2xl border border-studio-dark/15 text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-rose-petal/5 transition-all shadow-sm">
               <Download className="w-4 h-4 text-rose-bloom" /> Export Data
             </button>
             <div className="bg-gradient-to-r from-rose-bloom to-rose-petal p-0.5 rounded-2xl shadow-lg shadow-rose-bloom/20">
@@ -284,29 +284,29 @@ export default function TeacherReports() {
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-16">
               {[
-                { label: 'Theatre Revenue', value: `$${reportData.totalRevenue}`, icon: DollarSign, color: 'text-rose-bloom' },
+                { label: 'Studio Revenue', value: `$${reportData.totalRevenue}`, icon: DollarSign, color: 'text-rose-bloom' },
                 { label: 'Total Energy', value: reportData.totalBookings, icon: Users, color: 'text-rose-bloom' },
                 { label: 'Stage Occupancy', value: `${reportData.occupanyRate}%`, icon: Activity, color: 'text-rose-bloom' },
                 { label: 'Routines Active', value: reportData.activeRoutines, icon: Sparkles, color: 'text-rose-bloom' },
               ].map((stat, i) => (
-                <Motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.1 }} key={i} className="bg-white/70 backdrop-blur-3xl p-8 rounded-[3rem] border border-theatre-dark/20 shadow-xl relative overflow-hidden group">
+                <Motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.1 }} key={i} className="bg-white/70 backdrop-blur-3xl p-8 rounded-[3rem] border border-studio-dark/20 shadow-xl relative overflow-hidden group">
                   <div className="flex justify-between items-start mb-6">
                     <div className="p-4 bg-rose-petal/10 rounded-2xl"><stat.icon className={`w-6 h-6 ${stat.color}`} /></div>
                     <div className="text-[10px] font-black text-rose-bloom flex items-center gap-1"><ArrowUpRight className="w-3 h-3" /> Live</div>
                   </div>
                   <div>
                     <div className="text-[10px] font-black text-[#4A3B3E]/40 uppercase tracking-widest mb-1">{stat.label}</div>
-                    <div className="text-4xl font-black text-theatre-dark">{stat.value}</div>
+                    <div className="text-4xl font-black text-studio-dark">{stat.value}</div>
                   </div>
                 </Motion.div>
               ))}
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-              <div className="lg:col-span-2 bg-white/70 backdrop-blur-3xl p-10 rounded-[3.5rem] border border-theatre-dark/20 shadow-2xl min-h-[500px] relative overflow-hidden">
+              <div className="lg:col-span-2 bg-white/70 backdrop-blur-3xl p-10 rounded-[3.5rem] border border-studio-dark/20 shadow-2xl min-h-[500px] relative overflow-hidden">
                 <div className="flex justify-between items-center mb-16">
                    <div>
-                      <h3 className="text-2xl font-black text-theatre-dark mb-1">Rhythm Trends</h3>
+                      <h3 className="text-2xl font-black text-studio-dark mb-1">Rhythm Trends</h3>
                       <p className="text-[10px] font-black text-[#4A3B3E]/40 uppercase tracking-widest">Revenue performance across the stage</p>
                    </div>
                 </div>
@@ -328,21 +328,21 @@ export default function TeacherReports() {
                 <div className="mt-12 pt-8 border-t border-apricot/20">
                    <div className="flex gap-12">
                       <div>
-                        <div className="text-[9px] font-black text-theatre-dark/30 uppercase tracking-widest mb-1">Projected Monthly Revenue</div>
+                        <div className="text-[9px] font-black text-studio-dark/30 uppercase tracking-widest mb-1">Projected Monthly Revenue</div>
                         <div className="text-2xl font-black text-rose-bloom">${reportData.projectedRevenue}</div>
                       </div>
                       <div>
-                        <div className="text-[9px] font-black text-theatre-dark/30 uppercase tracking-widest mb-1">Growth Energy</div>
-                        <div className="text-2xl font-black text-theatre-dark">+14.2%</div>
+                        <div className="text-[9px] font-black text-studio-dark/30 uppercase tracking-widest mb-1">Growth Energy</div>
+                        <div className="text-2xl font-black text-studio-dark">+14.2%</div>
                       </div>
                    </div>
                 </div>
               </div>
 
-              <div className="bg-white/70 backdrop-blur-3xl p-10 rounded-[3.5rem] border border-theatre-dark/20 shadow-2xl">
+              <div className="bg-white/70 backdrop-blur-3xl p-10 rounded-[3.5rem] border border-studio-dark/20 shadow-2xl">
                 <div className="flex justify-between items-center mb-10">
                    <div>
-                      <h3 className="text-xl font-black text-theatre-dark mb-1">Peak Energy Hours</h3>
+                      <h3 className="text-xl font-black text-studio-dark mb-1">Peak Energy Hours</h3>
                       <p className="text-[10px] font-black text-[#4A3B3E]/40 uppercase tracking-widest">Dancer engagement by time</p>
                    </div>
                    <Activity className="w-5 h-5 text-rose-bloom opacity-30" />
@@ -362,12 +362,12 @@ export default function TeacherReports() {
               </div>
             </div>
 
-            {/* Historical Growth Theatre */}
+            {/* Historical Growth Studio */}
             <div className="bg-[#4A3B3E] p-12 rounded-[4rem] border border-white/10 shadow-3xl mt-10 relative overflow-hidden">
                <div className="absolute top-0 right-0 w-64 h-64 bg-rose-bloom/10 blur-[100px] rounded-full" />
                <div className="flex justify-between items-center mb-16 relative z-10">
                   <div>
-                    <h3 className="text-3xl font-black text-white italic tracking-tighter mb-2">Growth Theatre</h3>
+                    <h3 className="text-3xl font-black text-white italic tracking-tighter mb-2">Growth Studio</h3>
                     <p className="text-[10px] font-bold text-white/30 uppercase tracking-[0.3em]">6-Month Revenue Performance</p>
                   </div>
                   <div className="p-4 bg-white/5 rounded-2xl border border-white/10"><TrendingUp className="w-6 h-6 text-rose-bloom" /></div>
@@ -390,9 +390,9 @@ export default function TeacherReports() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10 mt-10">
-               <div className="bg-white/70 backdrop-blur-3xl p-10 rounded-[3.5rem] border border-theatre-dark/20 shadow-xl">
+               <div className="bg-white/70 backdrop-blur-3xl p-10 rounded-[3.5rem] border border-studio-dark/20 shadow-xl">
                   <div className="flex justify-between items-center mb-8">
-                    <h3 className="text-xl font-black text-theatre-dark uppercase tracking-tighter italic">Audience Theatre</h3>
+                    <h3 className="text-xl font-black text-studio-dark uppercase tracking-tighter italic">Audience Studio</h3>
                     <Users className="w-5 h-5 text-rose-bloom opacity-20" />
                   </div>
                   <div className="h-56 w-full">
@@ -410,16 +410,16 @@ export default function TeacherReports() {
                   <div className="flex justify-around mt-6">
                     {reportData.audienceLoyalty.map((entry, index) => (
                       <div key={index} className="text-center">
-                        <div className="text-[9px] font-black uppercase text-theatre-dark/30 mb-1">{entry.name}</div>
-                        <div className="text-xl font-black text-theatre-dark">{entry.value}</div>
+                        <div className="text-[9px] font-black uppercase text-studio-dark/30 mb-1">{entry.name}</div>
+                        <div className="text-xl font-black text-studio-dark">{entry.value}</div>
                       </div>
                     ))}
                   </div>
                </div>
 
-               <div className="bg-white/70 backdrop-blur-3xl p-10 rounded-[3.5rem] border border-theatre-dark/20 shadow-xl">
+               <div className="bg-white/70 backdrop-blur-3xl p-10 rounded-[3.5rem] border border-studio-dark/20 shadow-xl">
                   <div className="flex justify-between items-center mb-8">
-                    <h3 className="text-xl font-black text-theatre-dark uppercase tracking-tighter italic">Top Routines</h3>
+                    <h3 className="text-xl font-black text-studio-dark uppercase tracking-tighter italic">Top Routines</h3>
                     <PieChart className="w-5 h-5 text-rose-bloom opacity-20" />
                   </div>
                   <div className="h-56 w-full">
@@ -436,9 +436,9 @@ export default function TeacherReports() {
                   </div>
                </div>
 
-               <div className="bg-white/70 backdrop-blur-3xl p-10 rounded-[3.5rem] border border-theatre-dark/20 shadow-2xl">
+               <div className="bg-white/70 backdrop-blur-3xl p-10 rounded-[3.5rem] border border-studio-dark/20 shadow-2xl">
                 <div className="flex justify-between items-center mb-8">
-                   <h3 className="text-xl font-black text-theatre-dark uppercase tracking-tighter italic">Payment Theatre</h3>
+                   <h3 className="text-xl font-black text-studio-dark uppercase tracking-tighter italic">Payment Studio</h3>
                    <BarChart3 className="w-6 h-6 text-rose-bloom opacity-20" />
                 </div>
                 <div className="h-48 w-full">
@@ -464,10 +464,10 @@ export default function TeacherReports() {
                  { label: 'Lifetime Energy', value: `$${reportData.avgRevenuePerStudent}`, desc: 'Avg revenue per student' },
                  { label: 'Vibe Stability', value: `${reportData.cancellationRate}%`, desc: 'Cancellation velocity' }
                ].map((insight, idx) => (
-                 <div key={idx} className="bg-white/70 backdrop-blur-3xl p-10 rounded-[3.5rem] border border-theatre-dark/20 shadow-xl">
-                   <h4 className="text-sm font-black text-theatre-dark uppercase tracking-tighter mb-1">{insight.label}</h4>
+                 <div key={idx} className="bg-white/70 backdrop-blur-3xl p-10 rounded-[3.5rem] border border-studio-dark/20 shadow-xl">
+                   <h4 className="text-sm font-black text-studio-dark uppercase tracking-tighter mb-1">{insight.label}</h4>
                    <div className="text-4xl font-black text-rose-bloom mb-2">{insight.value}</div>
-                   <p className="text-[10px] font-bold text-theatre-dark/40 uppercase tracking-widest">{insight.desc}</p>
+                   <p className="text-[10px] font-bold text-studio-dark/40 uppercase tracking-widest">{insight.desc}</p>
                  </div>
                ))}
             </div>

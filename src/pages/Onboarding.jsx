@@ -187,7 +187,7 @@ export default function Onboarding() {
           >
             <Sparkles className="text-white w-8 h-8" />
           </Motion.div>
-          <h1 className="text-4xl font-black text-theatre-dark mb-4">Complete Your Profile.</h1>
+          <h1 className="text-4xl font-black text-studio-dark mb-4">Complete Your Profile.</h1>
           <div className="flex justify-center gap-2">
             {[1, 2, 3].map(i => (
               <div key={i} className={`h-1.5 rounded-full transition-all duration-500 ${step >= i ? 'w-8 bg-rose-bloom' : 'w-2 bg-rose-petal/20'}`} />
@@ -205,7 +205,7 @@ export default function Onboarding() {
               className="bg-white/70 backdrop-blur-3xl p-10 sm:p-16 rounded-[4rem] border border-rose-petal/20 shadow-2xl shadow-rose-bloom/5"
             >
               <div className="mb-12">
-                <h2 className="text-3xl font-black text-theatre-dark mb-3">Who are you?</h2>
+                <h2 className="text-3xl font-black text-studio-dark mb-3">Who are you?</h2>
                 <p className="font-bold text-rose-bloom/40 uppercase tracking-widest text-xs">Choose your role in the party</p>
               </div>
 
@@ -219,20 +219,20 @@ export default function Onboarding() {
                   <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-8 transition-colors ${role === 'student' ? 'bg-rose-bloom text-white' : 'bg-rose-petal/10 text-rose-bloom'}`}>
                     <Heart className="w-6 h-6" />
                   </div>
-                  <div className="text-xl font-black text-theatre-dark mb-2">Dancer</div>
+                  <div className="text-xl font-black text-studio-dark mb-2">Dancer</div>
                   <p className="text-xs font-bold text-[#4A3B3E]/40 leading-relaxed uppercase tracking-widest">Browse, book, and energy-up with master instructors.</p>
                 </button>
 
                 <button
                   onClick={() => setRole('teacher')}
                   className={`p-10 rounded-[3rem] border-2 transition-all text-left group ${
-                    role === 'teacher' ? 'bg-theatre-dark text-white border-theatre-dark shadow-xl' : 'bg-white border-rose-petal/10 hover:border-rose-bloom/30'
+                    role === 'teacher' ? 'bg-studio-dark text-white border-studio-dark shadow-xl' : 'bg-white border-rose-petal/10 hover:border-rose-bloom/30'
                   }`}
                 >
                   <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-8 transition-colors ${role === 'teacher' ? 'bg-rose-bloom text-white' : 'bg-rose-petal/10 text-rose-bloom'}`}>
                     <Camera className="w-6 h-6" />
                   </div>
-                  <div className={`text-xl font-black mb-2 ${role === 'teacher' ? 'text-white' : 'text-theatre-dark'}`}>Instructor</div>
+                  <div className={`text-xl font-black mb-2 ${role === 'teacher' ? 'text-white' : 'text-studio-dark'}`}>Instructor</div>
                   <p className={`text-xs font-bold leading-relaxed uppercase tracking-widest ${role === 'teacher' ? 'text-white/40' : 'text-[#4A3B3E]/40'}`}>Create routines, manage schedule, and lead the stage.</p>
                 </button>
               </div>
@@ -256,7 +256,7 @@ export default function Onboarding() {
               className="bg-white/70 backdrop-blur-3xl p-10 sm:p-16 rounded-[4rem] border border-rose-petal/20 shadow-2xl shadow-rose-bloom/5"
             >
               <div className="mb-12">
-                <h2 className="text-3xl font-black text-theatre-dark mb-3">The Basics.</h2>
+                <h2 className="text-3xl font-black text-studio-dark mb-3">The Basics.</h2>
                 <p className="font-bold text-rose-bloom/40 uppercase tracking-widest text-xs">Let the community know your name</p>
               </div>
 
@@ -267,7 +267,7 @@ export default function Onboarding() {
                     type="text" 
                     value={formData.full_name}
                     onChange={(e) => setFormData({...formData, full_name: e.target.value})}
-                    className="w-full bg-bloom-white border border-rose-petal/20 rounded-2xl py-5 px-6 focus:outline-none focus:border-rose-bloom transition-all font-bold text-theatre-dark"
+                    className="w-full bg-bloom-white border border-rose-petal/20 rounded-2xl py-5 px-6 focus:outline-none focus:border-rose-bloom transition-all font-bold text-studio-dark"
                     placeholder="E.g. Maria Ross"
                     required
                   />
@@ -278,7 +278,7 @@ export default function Onboarding() {
                   <textarea 
                     value={formData.bio}
                     onChange={(e) => setFormData({...formData, bio: e.target.value})}
-                    className="w-full bg-bloom-white border border-rose-petal/20 rounded-2xl py-5 px-6 focus:outline-none focus:border-rose-bloom transition-all font-bold text-theatre-dark min-h-[120px]"
+                    className="w-full bg-bloom-white border border-rose-petal/20 rounded-2xl py-5 px-6 focus:outline-none focus:border-rose-bloom transition-all font-bold text-studio-dark min-h-[120px]"
                     placeholder="Tell us about your Studio journey..."
                     required
                   />
@@ -319,30 +319,30 @@ export default function Onboarding() {
               <div className="w-24 h-24 bg-rose-petal/20 rounded-full flex items-center justify-center mx-auto mb-10">
                 <ShieldCheck className="w-12 h-12 text-rose-bloom" />
               </div>
-              <h2 className="text-3xl font-black text-theatre-dark mb-4">You're Ready.</h2>
-              <p className="text-theatre-dark/40 font-medium leading-relaxed max-w-sm mx-auto mb-12">
-                Your profile is synchronized with the theatre. Let's make some moves.
+              <h2 className="text-3xl font-black text-studio-dark mb-4">You're Ready.</h2>
+              <p className="text-studio-dark/40 font-medium leading-relaxed max-w-sm mx-auto mb-12">
+                Your profile is synchronized with the studio. Let's make some moves.
               </p>
 
               <div className="p-8 bg-rose-petal/10 rounded-[2.5rem] border border-rose-petal/20 mb-12 text-left">
                 <div className="flex items-center gap-4 mb-4">
                   <div className="w-1.5 h-1.5 rounded-full bg-rose-bloom" />
-                  <span className="text-xs font-black uppercase tracking-widest text-theatre-dark/60">Account Verified</span>
+                  <span className="text-xs font-black uppercase tracking-widest text-studio-dark/60">Account Verified</span>
                 </div>
                 <div className="flex items-center gap-4">
                   <div className="w-1.5 h-1.5 rounded-full bg-rose-bloom" />
-                  <span className="text-xs font-black uppercase tracking-widest text-theatre-dark/60">Stage Presence Ready</span>
+                  <span className="text-xs font-black uppercase tracking-widest text-studio-dark/60">Stage Presence Ready</span>
                 </div>
               </div>
 
               <button
                 disabled={loading}
                 onClick={handleSubmit}
-                className="w-full btn-premium bg-theatre-dark text-white py-6 rounded-[2rem] flex items-center justify-center gap-3 shadow-2xl transition-all font-black uppercase tracking-widest group"
+                className="w-full btn-premium bg-studio-dark text-white py-6 rounded-[2rem] flex items-center justify-center gap-3 shadow-2xl transition-all font-black uppercase tracking-widest group"
               >
                 {loading ? <div className="w-6 h-6 border-4 border-white/20 border-t-white rounded-full animate-spin" /> : (
                   <>
-                    Enter Theatre <Check className="w-5 h-5 group-hover:scale-125 transition-transform" />
+                    Enter Studio <Check className="w-5 h-5 group-hover:scale-125 transition-transform" />
                   </>
                 )}
               </button>

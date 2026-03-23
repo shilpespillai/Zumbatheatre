@@ -56,6 +56,11 @@ export default function TeacherDashboard() {
   const ensureInviteCode = useCallback(async () => {
     if (!user?.id) return;
     
+    // PRIORITY 1: Secure Auth Metadata (Unblockable path)
+    if (user?.user_metadata?.stage_code) {
+      setInviteCode(user.user_metadata.stage_code);
+    }
+    
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -379,7 +384,7 @@ export default function TeacherDashboard() {
   }, [user?.id, fetchRoutines, fetchAllSchedules, ensureInviteCode]);
 
   return (
-    <div className="min-h-screen bg-bloom-white text-theatre-dark p-6 sm:p-10">
+    <div className="min-h-screen bg-bloom-white text-studio-dark p-6 sm:p-10">
       <div className="max-w-[1600px] mx-auto">
         <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-16 gap-6">
           <div className="flex items-center gap-6">
@@ -391,29 +396,29 @@ export default function TeacherDashboard() {
                )}
             </div>
             <div>
-              <h1 className="text-3xl font-black text-theatre-dark font-display italic">
+              <h1 className="text-3xl font-black text-studio-dark font-display italic">
                 Lovely to see you, <span className="text-gradient-sunset capitalize">{profile?.full_name || 'Instructor'}</span>!
               </h1>
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-theatre-dark/90 mt-1">Teacher Dashboard</p>
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-studio-dark/90 mt-1">Teacher Dashboard</p>
             </div>
           </div>
           <div className="flex gap-4 items-center">
              <div className="flex items-center gap-2 bg-white/50 border border-apricot/40 px-4 py-2 rounded-2xl shadow-sm group hover:border-rose-bloom transition-all">
                 <div className="flex flex-col items-start mr-4">
-                  <span className="text-[8px] font-black uppercase tracking-widest text-theatre-dark/30 leading-none mb-1">Stage Code</span>
+                  <span className="text-[8px] font-black uppercase tracking-widest text-studio-dark/30 leading-none mb-1">Stage Code</span>
                   <span className="text-xs font-black text-rose-bloom font-mono tracking-wider">{inviteCode || '...'}</span>
                 </div>
                 <div className="flex gap-1">
                   <button 
                     onClick={() => copyToClipboard(inviteCode)}
-                    className="p-2 hover:bg-rose-bloom/10 rounded-lg text-theatre-dark/40 hover:text-rose-bloom transition-all"
+                    className="p-2 hover:bg-rose-bloom/10 rounded-lg text-studio-dark/40 hover:text-rose-bloom transition-all"
                     title="Copy Code"
                   >
                     <Copy className="w-4 h-4" />
                   </button>
                   <button 
                     onClick={handleRefreshInviteCode}
-                    className="p-2 hover:bg-rose-bloom/10 rounded-lg text-theatre-dark/40 hover:text-rose-bloom transition-all"
+                    className="p-2 hover:bg-rose-bloom/10 rounded-lg text-studio-dark/40 hover:text-rose-bloom transition-all"
                     title="Refresh Code"
                   >
                     <RefreshCw className="w-4 h-4" />
@@ -424,7 +429,7 @@ export default function TeacherDashboard() {
              <a href="/teacher/settings" className="p-4 bg-bloom-white rounded-2xl border border-apricot/60 hover:bg-apricot/5 transition-all shadow-sm group">
                <SettingsIcon className="w-5 h-5 text-rose-bloom group-hover:rotate-45 transition-transform" />
              </a>
-             <button onClick={signOut} className="p-4 bg-white rounded-2xl border border-theatre-dark/20 hover:bg-rose-petal/5 transition-all shadow-sm">
+             <button onClick={signOut} className="p-4 bg-white rounded-2xl border border-studio-dark/20 hover:bg-rose-petal/5 transition-all shadow-sm">
                <LogOut className="w-5 h-5 text-rose-bloom" />
              </button>
           </div>
@@ -483,7 +488,7 @@ export default function TeacherDashboard() {
                           </div>
                           
                           <div className="text-rose-bloom font-black text-xs mb-1">{format(parseISO(slot.start_time), 'hh:mm a')}</div>
-                          <div className="text-theatre-dark font-bold mb-2">{slot.routines?.name}</div>
+                          <div className="text-studio-dark font-bold mb-2">{slot.routines?.name}</div>
                           
                           <div className="flex items-center gap-2 mb-3">
                             <div className="flex -space-x-2">
@@ -504,7 +509,7 @@ export default function TeacherDashboard() {
 
                           <div className="space-y-1">
                              {sessionBookings.slice(0, 2).map((b, i) => (
-                               <div key={i} className="text-[9px] font-bold text-theatre-dark/40 flex items-center gap-1">
+                               <div key={i} className="text-[9px] font-bold text-studio-dark/40 flex items-center gap-1">
                                   <div className="w-1 h-1 rounded-full bg-rose-bloom" />
                                   {b.student?.full_name} {b.payment_method === 'CREDITS' && <span className="text-rose-bloom font-black ml-1">(Credits)</span>}
                                </div>
@@ -517,7 +522,7 @@ export default function TeacherDashboard() {
                           </div>
 
                           <div className="flex items-center justify-between mt-4 pt-4 border-t border-apricot/20">
-                            <div className="flex items-center gap-2 text-[10px] text-theatre-dark/40">
+                            <div className="flex items-center gap-2 text-[10px] text-studio-dark/40">
                               <MapPin className="w-3 h-3" /> {slot.location}
                             </div>
                             {slot.status === 'CANCELLED' ? (
@@ -545,7 +550,7 @@ export default function TeacherDashboard() {
                       );
                     })
                 ) : (
-                  <div className="py-12 text-center text-theatre-dark/30 font-bold uppercase tracking-widest text-[10px]">
+                  <div className="py-12 text-center text-studio-dark/30 font-bold uppercase tracking-widest text-[10px]">
                     No sessions today
                   </div>
                 )}
@@ -559,15 +564,15 @@ export default function TeacherDashboard() {
             >
               {!profile?.is_subscribed && (
                 <div className="absolute top-6 right-6 flex flex-col items-end gap-2">
-                   <div className="px-3 py-1 bg-theatre-dark/5 border border-theatre-dark/10 rounded-full flex items-center gap-1.5 shadow-sm">
-                      <Lock className="w-3 h-3 text-theatre-dark/40" />
-                      <span className="text-[8px] font-black uppercase tracking-widest text-theatre-dark/40">Premium</span>
+                   <div className="px-3 py-1 bg-studio-dark/5 border border-studio-dark/10 rounded-full flex items-center gap-1.5 shadow-sm">
+                      <Lock className="w-3 h-3 text-studio-dark/40" />
+                      <span className="text-[8px] font-black uppercase tracking-widest text-studio-dark/40">Premium</span>
                    </div>
                 </div>
               )}
-              <TrendingUp className={`w-10 h-10 mb-6 opacity-40 ${profile?.is_subscribed ? 'text-rose-bloom' : 'text-theatre-dark/40'}`} />
-              <div className={`text-[10px] font-black uppercase tracking-widest mb-1 ${profile?.is_subscribed ? 'text-rose-bloom' : 'text-theatre-dark/40'}`}>Growth Energy</div>
-              <div className="text-4xl font-black text-theatre-dark">Analytics</div>
+              <TrendingUp className={`w-10 h-10 mb-6 opacity-40 ${profile?.is_subscribed ? 'text-rose-bloom' : 'text-studio-dark/40'}`} />
+              <div className={`text-[10px] font-black uppercase tracking-widest mb-1 ${profile?.is_subscribed ? 'text-rose-bloom' : 'text-studio-dark/40'}`}>Growth Energy</div>
+              <div className="text-4xl font-black text-studio-dark">Analytics</div>
             </a>
             
           </aside>
@@ -585,15 +590,15 @@ export default function TeacherDashboard() {
                     <div className="p-3 bg-rose-bloom/10 rounded-2xl">
                       <Sparkles className="w-6 h-6 text-rose-bloom" />
                     </div>
-                    <h2 className="text-3xl font-black text-theatre-dark">Add New Slot</h2>
+                    <h2 className="text-3xl font-black text-studio-dark">Add New Slot</h2>
                   </div>
-                  <button onClick={() => setIsModalOpen(false)} className="p-3 hover:bg-apricot/10 rounded-xl transition-colors text-theatre-dark/30"><X/></button>
+                  <button onClick={() => setIsModalOpen(false)} className="p-3 hover:bg-apricot/10 rounded-xl transition-colors text-studio-dark/30"><X/></button>
                </div>
 
                <form onSubmit={handleScheduleSubmit} className="space-y-8">
                   <div className="space-y-4">
                     <div className="flex justify-between items-center ml-2">
-                       <label className="text-xs font-black uppercase tracking-widest text-theatre-dark/40">Select Routine</label>
+                       <label className="text-xs font-black uppercase tracking-widest text-studio-dark/40">Select Routine</label>
                        <button 
                         type="button"
                         onClick={() => setIsAddingRoutine(!isAddingRoutine)}
@@ -613,7 +618,7 @@ export default function TeacherDashboard() {
                           className="bg-apricot/5 p-6 rounded-[2rem] border border-apricot/20 space-y-4"
                         >
                            <div className="space-y-1">
-                             <label className="text-[10px] font-black text-theatre-dark/30 uppercase ml-1">Routine Name</label>
+                             <label className="text-[10px] font-black text-studio-dark/30 uppercase ml-1">Routine Name</label>
                              <input 
                               type="text" 
                               placeholder="e.g. Studio Morning Glow"
@@ -624,7 +629,7 @@ export default function TeacherDashboard() {
                            </div>
                            <div className="grid grid-cols-2 gap-4">
                              <div className="space-y-1">
-                               <label className="text-[10px] font-black text-theatre-dark/30 uppercase ml-1">Duration (Min)</label>
+                               <label className="text-[10px] font-black text-studio-dark/30 uppercase ml-1">Duration (Min)</label>
                                <input 
                                 type="number" 
                                 value={newRoutineData.duration_minutes}
@@ -633,7 +638,7 @@ export default function TeacherDashboard() {
                                />
                              </div>
                              <div className="space-y-1">
-                               <label className="text-[10px] font-black text-theatre-dark/30 uppercase ml-1">Price ($)</label>
+                               <label className="text-[10px] font-black text-studio-dark/30 uppercase ml-1">Price ($)</label>
                                <input 
                                 type="number" 
                                 step="0.01"
@@ -674,7 +679,7 @@ export default function TeacherDashboard() {
                                     price: selected ? selected.default_price : ''
                                   });
                                 }}
-                                className="w-full bg-white/60 border border-apricot/40 rounded-2xl py-5 pl-14 pr-12 focus:outline-none focus:border-rose-bloom transition-all font-bold text-theatre-dark appearance-none cursor-pointer"
+                                className="w-full bg-white/60 border border-apricot/40 rounded-2xl py-5 pl-14 pr-12 focus:outline-none focus:border-rose-bloom transition-all font-bold text-studio-dark appearance-none cursor-pointer"
                               >
                                 <option value="">Choose a Signature Routine...</option>
                                 {routines.map(r => (
@@ -706,35 +711,35 @@ export default function TeacherDashboard() {
 
                   <div className="grid grid-cols-2 gap-8">
                     <div className="space-y-2">
-                      <label className="text-xs font-black uppercase tracking-widest text-theatre-dark/40">Start Time</label>
+                      <label className="text-xs font-black uppercase tracking-widest text-studio-dark/40">Start Time</label>
                       <input 
                         type="time" 
                         required
                         value={formData.start_time}
                         onChange={(e) => setFormData({...formData, start_time: e.target.value})}
-                        className="w-full bg-white/60 border border-apricot/40 rounded-2xl py-5 px-6 focus:outline-none focus:border-rose-bloom transition-all font-bold text-theatre-dark"
+                        className="w-full bg-white/60 border border-apricot/40 rounded-2xl py-5 px-6 focus:outline-none focus:border-rose-bloom transition-all font-bold text-studio-dark"
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-theatre-dark/40 ml-2">Price ($)</label>
+                      <label className="text-[10px] font-black uppercase tracking-widest text-studio-dark/40 ml-2">Price ($)</label>
                       <input 
                         type="number" 
                         step="0.01"
                         placeholder="Default"
                         value={formData.price}
                         onChange={(e) => setFormData({...formData, price: e.target.value})}
-                        className="w-full bg-white/60 border border-apricot/40 rounded-2xl py-5 px-6 focus:outline-none focus:border-rose-bloom transition-all font-bold text-theatre-dark"
+                        className="w-full bg-white/60 border border-apricot/40 rounded-2xl py-5 px-6 focus:outline-none focus:border-rose-bloom transition-all font-bold text-studio-dark"
                       />
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-theatre-dark/40 ml-2">Location</label>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-studio-dark/40 ml-2">Location</label>
                     <input 
                       type="text" 
                       value={formData.location}
                       onChange={(e) => setFormData({...formData, location: e.target.value})}
-                      className="w-full bg-white/60 border border-apricot/20 rounded-2xl py-5 px-6 focus:outline-none focus:border-rose-bloom transition-all font-bold text-theatre-dark"
+                      className="w-full bg-white/60 border border-apricot/20 rounded-2xl py-5 px-6 focus:outline-none focus:border-rose-bloom transition-all font-bold text-studio-dark"
                     />
                   </div>
 
@@ -760,7 +765,7 @@ export default function TeacherDashboard() {
               animate={{ opacity: 1 }} 
               exit={{ opacity: 0 }} 
               onClick={() => setIsCancelModalOpen(false)} 
-              className="absolute inset-0 bg-theatre-dark/60 backdrop-blur-xl" 
+              className="absolute inset-0 bg-studio-dark/60 backdrop-blur-xl" 
             />
             <Motion.div 
               initial={{ opacity: 0, scale: 0.9, y: 20 }} 
@@ -772,8 +777,8 @@ export default function TeacherDashboard() {
                 <AlertTriangle className="w-10 h-10 text-rose-bloom" />
               </div>
               
-              <h2 className="text-3xl font-black text-theatre-dark mb-4 italic">Lowering the Curtain?</h2>
-              <p className="text-theatre-dark/60 font-medium text-sm mb-10 leading-relaxed px-4">
+              <h2 className="text-3xl font-black text-studio-dark mb-4 italic">Lowering the Curtain?</h2>
+              <p className="text-studio-dark/60 font-medium text-sm mb-10 leading-relaxed px-4">
                 Are you sure you want to cancel <span className="text-rose-bloom font-black">"{selectedSessionToCancel?.routines?.name}"</span>? 
                 This will automatically issue credits to all registered students for your stage.
               </p>
@@ -790,7 +795,7 @@ export default function TeacherDashboard() {
                 </button>
                 <button 
                   onClick={() => setIsCancelModalOpen(false)}
-                  className="w-full py-5 bg-theatre-dark/5 text-theatre-dark/40 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-theatre-dark/10 transition-all border border-theatre-dark/5"
+                  className="w-full py-5 bg-studio-dark/5 text-studio-dark/40 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-studio-dark/10 transition-all border border-studio-dark/5"
                 >
                   Keep Scheduled
                 </button>
@@ -809,7 +814,7 @@ export default function TeacherDashboard() {
               animate={{ opacity: 1 }} 
               exit={{ opacity: 0 }} 
               onClick={() => setIsAttendanceModalOpen(false)} 
-              className="absolute inset-0 bg-theatre-dark/40 backdrop-blur-md" 
+              className="absolute inset-0 bg-studio-dark/40 backdrop-blur-md" 
             />
             <Motion.div 
               initial={{ opacity: 0, scale: 0.9, y: 20 }} 
@@ -824,27 +829,27 @@ export default function TeacherDashboard() {
                       <Users className="w-6 h-6 text-rose-bloom" />
                     </div>
                     <div>
-                      <h2 className="text-3xl font-black text-theatre-dark">Registered Students</h2>
-                      <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-theatre-dark/40 mt-1">
+                      <h2 className="text-3xl font-black text-studio-dark">Registered Students</h2>
+                      <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-studio-dark/40 mt-1">
                         {selectedSessionForAttendance.routines?.name} • {selectedSessionForAttendance.start_time ? format(parseISO(selectedSessionForAttendance.start_time), 'MMM d, h:mm a') : '...'}
                       </p>
                     </div>
                   </div>
-                  <button onClick={() => setIsAttendanceModalOpen(false)} className="p-3 hover:bg-apricot/10 rounded-xl transition-colors text-theatre-dark/30"><X/></button>
+                  <button onClick={() => setIsAttendanceModalOpen(false)} className="p-3 hover:bg-apricot/10 rounded-xl transition-colors text-studio-dark/30"><X/></button>
                 </div>
 
                 <div className="grid grid-cols-3 gap-4">
                    <div className="bg-bloom-white p-4 rounded-2xl border border-apricot/30 text-center">
-                      <div className="text-[8px] font-black uppercase text-theatre-dark/30 mb-1">Total Booked</div>
-                      <div className="text-xl font-black text-theatre-dark">{selectedSessionForAttendance.bookings?.length || 0}</div>
+                      <div className="text-[8px] font-black uppercase text-studio-dark/30 mb-1">Total Booked</div>
+                      <div className="text-xl font-black text-studio-dark">{selectedSessionForAttendance.bookings?.length || 0}</div>
                    </div>
                    <div className="bg-bloom-white p-4 rounded-2xl border border-apricot/30 text-center">
-                      <div className="text-[8px] font-black uppercase text-theatre-dark/30 mb-1">Remaining</div>
+                      <div className="text-[8px] font-black uppercase text-studio-dark/30 mb-1">Remaining</div>
                       <div className="text-xl font-black text-rose-bloom">{(selectedSessionForAttendance.max_seats || 0) - (selectedSessionForAttendance.bookings?.length || 0)}</div>
                    </div>
                    <div className="bg-bloom-white p-4 rounded-2xl border border-apricot/30 text-center">
-                      <div className="text-[8px] font-black uppercase text-theatre-dark/30 mb-1">Capacity</div>
-                      <div className="text-xl font-black text-theatre-dark/40">{selectedSessionForAttendance.max_seats}</div>
+                      <div className="text-[8px] font-black uppercase text-studio-dark/30 mb-1">Capacity</div>
+                      <div className="text-xl font-black text-studio-dark/40">{selectedSessionForAttendance.max_seats}</div>
                    </div>
                 </div>
               </div>
@@ -869,8 +874,8 @@ export default function TeacherDashboard() {
                             )}
                           </div>
                           <div>
-                            <div className="font-black text-theatre-dark">{booking.student?.full_name}</div>
-                            <div className="text-[10px] font-bold text-theatre-dark/30 uppercase tracking-widest">{booking.student?.email}</div>
+                            <div className="font-black text-studio-dark">{booking.student?.full_name}</div>
+                            <div className="text-[10px] font-bold text-studio-dark/30 uppercase tracking-widest">{booking.student?.email}</div>
                           </div>
                         </div>
                         <div className="flex items-center gap-3">
@@ -889,7 +894,7 @@ export default function TeacherDashboard() {
                                 <Plus className="w-4 h-4" />
                              </button>
                            )}
-                           <button className="p-2 opacity-0 group-hover:opacity-100 transition-all text-theatre-dark/20 hover:text-theatre-dark">
+                           <button className="p-2 opacity-0 group-hover:opacity-100 transition-all text-studio-dark/20 hover:text-studio-dark">
                               <ArrowRight className="w-4 h-4" />
                            </button>
                         </div>
@@ -899,15 +904,15 @@ export default function TeacherDashboard() {
                 ) : (
                   <div className="py-20 text-center">
                     <div className="w-16 h-16 bg-apricot/5 rounded-full flex items-center justify-center mx-auto mb-6">
-                      <Users className="w-8 h-8 text-theatre-dark/10" />
+                      <Users className="w-8 h-8 text-studio-dark/10" />
                     </div>
-                    <p className="text-sm font-black text-theatre-dark/20 uppercase tracking-[0.2em]">No students registered yet</p>
+                    <p className="text-sm font-black text-studio-dark/20 uppercase tracking-[0.2em]">No students registered yet</p>
                   </div>
                 )}
               </div>
 
               <div className="p-10 border-t border-apricot/20 bg-apricot/5 shrink-0">
-                 <button className="w-full py-5 bg-white border border-apricot/30 rounded-2xl text-[10px] font-black uppercase tracking-widest text-theatre-dark hover:bg-white/80 transition-all flex items-center justify-center gap-2">
+                 <button className="w-full py-5 bg-white border border-apricot/30 rounded-2xl text-[10px] font-black uppercase tracking-widest text-studio-dark hover:bg-white/80 transition-all flex items-center justify-center gap-2">
                     Export Attendance List
                  </button>
               </div>
@@ -919,13 +924,13 @@ export default function TeacherDashboard() {
       <AnimatePresence>
         {isErrorModalOpen && (
           <div className="fixed inset-0 z-[120] flex items-center justify-center p-6">
-            <Motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsErrorModalOpen(false)} className="absolute inset-0 bg-theatre-dark/60 backdrop-blur-xl" />
+            <Motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsErrorModalOpen(false)} className="absolute inset-0 bg-studio-dark/60 backdrop-blur-xl" />
             <Motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} className="bg-bloom-white w-full max-w-md p-10 rounded-[3.5rem] relative z-20 text-center shadow-2xl border border-rose-bloom/20">
               <div className="w-20 h-20 bg-rose-bloom/10 rounded-3xl flex items-center justify-center mx-auto mb-8">
                 <AlertTriangle className="w-10 h-10 text-rose-bloom" />
               </div>
-              <h2 className="text-3xl font-black text-theatre-dark mb-4 italic">Time Warp Detected.</h2>
-              <p className="text-sm text-theatre-dark/40 font-bold uppercase tracking-widest leading-loose mb-10">
+              <h2 className="text-3xl font-black text-studio-dark mb-4 italic">Time Warp Detected.</h2>
+              <p className="text-sm text-studio-dark/40 font-bold uppercase tracking-widest leading-loose mb-10">
                 {errorMessage || "The rhythm of the stage only flows forward. Past sessions cannot be scheduled."}
               </p>
               <button 
@@ -934,7 +939,7 @@ export default function TeacherDashboard() {
                   setFormData(prev => ({ ...prev, start_time: format(now, 'HH:mm') }));
                   setIsErrorModalOpen(false);
                 }}
-                className="w-full py-5 bg-theatre-dark text-white rounded-[2rem] text-[10px] font-black uppercase tracking-[0.2em] hover:bg-rose-bloom transition-all shadow-xl shadow-theatre-dark/20"
+                className="w-full py-5 bg-studio-dark text-white rounded-[2rem] text-[10px] font-black uppercase tracking-[0.2em] hover:bg-rose-bloom transition-all shadow-xl shadow-studio-dark/20"
               >
                 Sync with Present
               </button>

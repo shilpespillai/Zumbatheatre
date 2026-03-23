@@ -60,18 +60,18 @@ export default function TeacherPaymentSettings() {
   };
 
   return (
-    <div className="min-h-screen bg-bloom-white text-theatre-dark p-6 sm:p-10">
+    <div className="min-h-screen bg-bloom-white text-studio-dark p-6 sm:p-10">
       <div className="max-w-2xl mx-auto">
         <button 
           onClick={() => navigate(-1)}
-          className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-theatre-dark/40 hover:text-rose-bloom transition-colors mb-12"
+          className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-studio-dark/40 hover:text-rose-bloom transition-colors mb-12"
         >
           <ArrowLeft className="w-4 h-4" /> Back
         </button>
 
         <div className="mb-12">
           <h1 className="text-4xl font-black mb-4 tracking-tight italic">Direct Payment Settings</h1>
-          <p className="text-theatre-dark/40 font-bold uppercase tracking-[0.2em] text-xs">Configure your own Stripe account to receive student payments directly</p>
+          <p className="text-studio-dark/40 font-bold uppercase tracking-[0.2em] text-xs">Configure your own Stripe account to receive student payments directly</p>
         </div>
 
         <div className="bg-white p-10 rounded-[2.5rem] border border-apricot/20 shadow-xl relative overflow-hidden">
@@ -81,7 +81,7 @@ export default function TeacherPaymentSettings() {
 
           <form onSubmit={handleSave} className="space-y-8 relative z-10">
             <div className="space-y-4">
-              <label className="block text-[10px] font-black uppercase tracking-widest text-theatre-dark/50 px-2">
+              <label className="block text-[10px] font-black uppercase tracking-widest text-studio-dark/50 px-2">
                 Stripe Secret Key (sk_...)
               </label>
               <div className="relative">
@@ -96,7 +96,7 @@ export default function TeacherPaymentSettings() {
                 <button
                   type="button"
                   onClick={() => setShowKey(!showKey)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-theatre-dark/30 hover:text-rose-bloom transition-colors"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-studio-dark/30 hover:text-rose-bloom transition-colors"
                 >
                    {showKey ? <X className="w-4 h-4" /> : <CreditCard className="w-4 h-4" />}
                 </button>
@@ -117,7 +117,7 @@ export default function TeacherPaymentSettings() {
               type="submit"
               disabled={loading}
               className={`w-full py-5 rounded-2xl font-black uppercase tracking-widest text-xs flex items-center justify-center gap-3 shadow-xl transition-all ${
-                loading ? 'bg-theatre-dark/50' : 'bg-theatre-dark text-white hover:bg-rose-bloom shadow-theatre-dark/20'
+                loading ? 'bg-studio-dark/50' : 'bg-studio-dark text-white hover:bg-rose-bloom shadow-studio-dark/20'
               }`}
             >
               {loading ? <div className="w-5 h-5 border-4 border-white/20 border-t-white rounded-full animate-spin" /> : <Save className="w-5 h-5" />}
@@ -125,14 +125,14 @@ export default function TeacherPaymentSettings() {
             </button>
           </form>
 
-          <p className="mt-8 text-center text-[10px] font-bold text-theatre-dark/30 uppercase tracking-widest flex items-center justify-center gap-2">
+          <p className="mt-8 text-center text-[10px] font-bold text-studio-dark/30 uppercase tracking-widest flex items-center justify-center gap-2">
             <AlertCircle className="w-3 h-3" /> Only you can update your key
           </p>
         </div>
 
         <div className="mt-12 p-8 bg-rose-bloom/5 rounded-[2rem] border border-rose-bloom/10">
           <h2 className="text-sm font-black uppercase tracking-widest mb-4">How it works</h2>
-          <ol className="space-y-4 text-xs font-bold text-theatre-dark/60">
+          <ol className="space-y-4 text-xs font-bold text-studio-dark/60">
             <li className="flex gap-4">
               <span className="w-6 h-6 rounded-full bg-rose-bloom/10 text-rose-bloom flex items-center justify-center shrink-0">1</span>
               <span>Go to your Stripe Dashboard and find your <b>Secret Key</b> (starts with <code>sk_</code>).</span>

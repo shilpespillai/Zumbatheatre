@@ -25,7 +25,7 @@ export default function Contact() {
           className="inline-flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-studio-lime hover:text-white transition-colors mb-16 bg-white/5 border border-white/10 px-6 py-3 rounded-2xl backdrop-blur-xl"
         >
           <ArrowLeft className="w-4 h-4" />
-          Back to Theatre
+          Back to Studio
         </Motion.a>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-24 items-center">

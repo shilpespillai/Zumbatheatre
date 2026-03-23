@@ -470,30 +470,30 @@ export default function StudentDashboard() {
   }, [profile?.id, profile?.linked_teacher_id, fetchStudentCredits]);
 
   return (
-    <div className="min-h-screen bg-bloom-white text-theatre-dark p-6 sm:p-10">
+    <div className="min-h-screen bg-bloom-white text-studio-dark p-6 sm:p-10">
       <div className="max-w-[1600px] mx-auto">
         <header className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-16 gap-8">
           <div>
-            <h1 className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-theatre-dark via-[#FFB38A] to-rose-bloom tracking-tight font-display italic">
+            <h1 className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-studio-dark via-[#FFB38A] to-rose-bloom tracking-tight font-display italic">
               Welcome, <span className="capitalize">{profile?.full_name?.split(' ')[0] || 'Dancer'}!</span>
             </h1>
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-theatre-dark/80 mt-1">Student Performance Center</p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-studio-dark/80 mt-1">Student Performance Center</p>
           </div>
           <div className="flex gap-4">
              <button onClick={() => navigate('/student/bookings')} className="px-8 py-5 bg-white border border-apricot/40 text-rose-bloom rounded-[2rem] font-black uppercase tracking-widest text-xs shadow-sm flex items-center gap-3">
                 <Ticket className="w-5 h-5" /> My Bookings
              </button>
              <a href="/student/settings" className="p-5 bg-white rounded-2xl border border-apricot/40 hover:bg-apricot/5 shadow-sm"><SettingsIcon className="w-6 h-6 text-rose-bloom" /></a>
-             <button onClick={signOut} className="p-5 bg-white rounded-2xl border border-theatre-dark/20 hover:bg-rose-petal/5 transition-all shadow-sm"><LogOut className="w-6 h-6 text-rose-bloom" /></button>
+             <button onClick={signOut} className="p-5 bg-white rounded-2xl border border-studio-dark/20 hover:bg-rose-petal/5 transition-all shadow-sm"><LogOut className="w-6 h-6 text-rose-bloom" /></button>
           </div>
         </header>
 
         <div className="flex justify-center mb-16">
           <div className="bg-white/40 backdrop-blur-3xl p-2 rounded-3xl border border-apricot/20 flex gap-2 items-center shadow-xl">
-            <button onClick={() => setActiveTab('studio')} className={`px-10 py-5 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center gap-3 ${activeTab === 'studio' ? 'bg-theatre-dark text-white' : 'text-theatre-dark/40'}`}>
+            <button onClick={() => setActiveTab('studio')} className={`px-10 py-5 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center gap-3 ${activeTab === 'studio' ? 'bg-studio-dark text-white' : 'text-studio-dark/40'}`}>
               <CalendarIcon className="w-4 h-4" /> Studio Mode
             </button>
-            <button onClick={() => setActiveTab('performance')} className={`px-10 py-5 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center gap-3 ${activeTab === 'performance' ? 'bg-rose-bloom text-white' : 'text-theatre-dark/40'}`}>
+            <button onClick={() => setActiveTab('performance')} className={`px-10 py-5 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center gap-3 ${activeTab === 'performance' ? 'bg-rose-bloom text-white' : 'text-studio-dark/40'}`}>
               <Activity className="w-4 h-4" /> Performance Center
             </button>
             <button 
@@ -502,9 +502,9 @@ export default function StudentDashboard() {
                 setIsGlobalMode(!isGlobalMode);
                 if (!isGlobalMode) fetchGlobalSchedules();
               }} 
-              className={`px-10 py-5 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center gap-3 ${isGlobalMode ? 'bg-apricot text-white' : 'text-theatre-dark/40'}`}
+              className={`px-10 py-5 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center gap-3 ${isGlobalMode ? 'bg-apricot text-white' : 'text-studio-dark/40'}`}
             >
-              <Sparkles className="w-4 h-4" /> {isGlobalMode ? 'Switch to Active Stage' : 'Global Theatre Mode'}
+              <Sparkles className="w-4 h-4" /> {isGlobalMode ? 'Switch to Active Stage' : 'Global Studio Mode'}
             </button>
           </div>
         </div>
@@ -513,11 +513,11 @@ export default function StudentDashboard() {
           !profile?.linked_teacher_id ? (
             <div className="flex flex-col items-center justify-center py-32 bg-white/40 backdrop-blur-xl rounded-[4rem] border-2 border-dashed border-apricot/50">
                <Lock className="w-16 h-16 text-rose-bloom mb-10 opacity-30" />
-               <h2 className="text-4xl font-black text-theatre-dark mb-4 text-center tracking-tighter">Your private stage is waiting.</h2>
-               <p className="text-theatre-dark/40 font-bold uppercase tracking-widest text-[9px] mb-12 max-w-sm text-center">Enter your instructor's code to unlock exclusive choreography.</p>
+               <h2 className="text-4xl font-black text-studio-dark mb-4 text-center tracking-tighter">Your private stage is waiting.</h2>
+               <p className="text-studio-dark/40 font-bold uppercase tracking-widest text-[9px] mb-12 max-w-sm text-center">Enter your instructor's code to unlock exclusive choreography.</p>
                <form onSubmit={handleJoinStage} className="w-full max-w-md flex flex-col gap-4">
                   <input type="text" placeholder="CODE" value={linkingCode} onChange={(e) => setLinkingCode(e.target.value)} className="w-full bg-white border border-apricot/60 rounded-2xl py-6 px-8 text-center text-xl font-black text-rose-bloom uppercase tracking-widest" />
-                  <button className="w-full bg-theatre-dark text-white py-6 rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-3">Unlock Stage <ArrowRight className="w-5 h-5" /></button>
+                  <button className="w-full bg-studio-dark text-white py-6 rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-3">Unlock Stage <ArrowRight className="w-5 h-5" /></button>
                </form>
             </div>
           ) : (
@@ -544,7 +544,7 @@ export default function StudentDashboard() {
               <aside className="space-y-8">
                   {/* Loyalty Stamp Card */}
                   {teacherProfile?.loyalty_settings?.enabled !== false && (
-                    <div className="bg-gradient-to-br from-theatre-dark to-rose-bloom p-8 rounded-[3rem] text-white shadow-xl shadow-rose-bloom/10 relative overflow-hidden group">
+                    <div className="bg-gradient-to-br from-studio-dark to-rose-bloom p-8 rounded-[3rem] text-white shadow-xl shadow-rose-bloom/10 relative overflow-hidden group">
                       <Sparkles className="absolute -right-2 -top-2 w-16 h-16 text-white/10 group-hover:rotate-12 transition-transform" />
                       <div className="relative z-10">
                         <div className="text-[9px] font-black uppercase tracking-[0.2em] text-white/60 mb-1">Loyalty Rewards</div>
@@ -584,11 +584,11 @@ export default function StudentDashboard() {
 
                   <div className="bg-white/60 p-10 rounded-[3rem] border border-apricot/40 text-center">
                      <div className="text-[10px] font-black text-rose-bloom uppercase tracking-widest mb-2">Stage Credits</div>
-                    <div className="text-4xl font-black text-theatre-dark mb-8">${studentCredits.toFixed(2)}</div>
+                    <div className="text-4xl font-black text-studio-dark mb-8">${studentCredits.toFixed(2)}</div>
                     <div className="space-y-4">
                       {visitedStages.length > 1 && (
                         <div className="pt-6 border-t border-apricot/20">
-                          <div className="text-[9px] font-black text-theatre-dark/40 uppercase tracking-widest mb-4">Quick Switch Stage</div>
+                          <div className="text-[9px] font-black text-studio-dark/40 uppercase tracking-widest mb-4">Quick Switch Stage</div>
                           <div className="space-y-2">
                             {visitedStages.filter(s => s.teacher_id !== profile?.linked_teacher_id).map((link, idx) => (
                               <button 
@@ -597,10 +597,10 @@ export default function StudentDashboard() {
                                 className="w-full p-4 bg-white border border-apricot/20 rounded-2xl flex items-center justify-between hover:border-rose-bloom transition-all group"
                               >
                                 <div className="text-left">
-                                  <div className="text-[10px] font-black text-theatre-dark group-hover:text-rose-bloom">{link.full_name}</div>
-                                  <div className="text-[8px] font-bold text-theatre-dark/30 uppercase tracking-tighter">{link.stage_code}</div>
+                                  <div className="text-[10px] font-black text-studio-dark group-hover:text-rose-bloom">{link.full_name}</div>
+                                  <div className="text-[8px] font-bold text-studio-dark/30 uppercase tracking-tighter">{link.stage_code}</div>
                                 </div>
-                                <ArrowRight className="w-3 h-3 text-theatre-dark/20 group-hover:text-rose-bloom" />
+                                <ArrowRight className="w-3 h-3 text-studio-dark/20 group-hover:text-rose-bloom" />
                               </button>
                             ))}
                           </div>
@@ -614,10 +614,10 @@ export default function StudentDashboard() {
           )
         ) : (
           <div className="mt-8 space-y-12 animate-in fade-in slide-in-from-bottom-4">
-            <div className="bg-white/70 backdrop-blur-3xl p-10 rounded-[4rem] border border-theatre-dark/20 shadow-xl relative overflow-hidden">
+            <div className="bg-white/70 backdrop-blur-3xl p-10 rounded-[4rem] border border-studio-dark/20 shadow-xl relative overflow-hidden">
                <div className="flex justify-between items-end mb-12 relative z-10">
                   <div>
-                    <h2 className="text-3xl font-black text-theatre-dark tracking-tight italic">Stage History</h2>
+                    <h2 className="text-3xl font-black text-studio-dark tracking-tight italic">Stage History</h2>
                     <p className="text-[10px] font-black text-rose-bloom uppercase tracking-[0.2em]">Investment & Energy Trends</p>
                  </div>
                  <div className="flex gap-4 items-center">
@@ -634,7 +634,7 @@ export default function StudentDashboard() {
                        <option value="all">Total</option>
                      </select>
                    </div>
-                   <div className="px-6 py-4 bg-bloom-white rounded-3xl border border-apricot/20 text-center"><div className="text-[9px] font-black text-theatre-dark/30 uppercase mb-1">Total Power</div><div className="text-2xl font-black text-theatre-dark">${studentStats.totalSpent}</div></div>
+                   <div className="px-6 py-4 bg-bloom-white rounded-3xl border border-apricot/20 text-center"><div className="text-[9px] font-black text-studio-dark/30 uppercase mb-1">Total Power</div><div className="text-2xl font-black text-studio-dark">${studentStats.totalSpent}</div></div>
                  </div>
                </div>
                <div className="h-72 w-full">
@@ -654,8 +654,8 @@ export default function StudentDashboard() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-               <div className="bg-white/70 backdrop-blur-3xl p-10 rounded-[3rem] border border-theatre-dark/20 shadow-xl">
-                  <div className="flex justify-between items-center mb-10"><h3 className="text-xl font-black text-theatre-dark uppercase tracking-tighter">Routine Mix</h3><PieChart className="w-5 h-5 text-rose-bloom opacity-30" /></div>
+               <div className="bg-white/70 backdrop-blur-3xl p-10 rounded-[3rem] border border-studio-dark/20 shadow-xl">
+                  <div className="flex justify-between items-center mb-10"><h3 className="text-xl font-black text-studio-dark uppercase tracking-tighter">Routine Mix</h3><PieChart className="w-5 h-5 text-rose-bloom opacity-30" /></div>
                   <div className="h-56 w-full">
                     <ResponsiveContainer width="100%" height="100%">
                       <RePieChart>
@@ -670,13 +670,13 @@ export default function StudentDashboard() {
                   </div>
                   <div className="flex justify-around mt-6">
                     {studentStats.routineCategoryMix.map((entry, index) => (
-                      <div key={index} className="text-center"><div className="text-[9px] font-black uppercase text-theatre-dark/30 mb-1">{entry.name}</div><div className="text-lg font-black text-theatre-dark">{entry.value}</div></div>
+                      <div key={index} className="text-center"><div className="text-[9px] font-black uppercase text-studio-dark/30 mb-1">{entry.name}</div><div className="text-lg font-black text-studio-dark">{entry.value}</div></div>
                     ))}
                   </div>
                </div>
 
-               <div className="lg:col-span-2 bg-white/70 backdrop-blur-3xl p-10 rounded-[3.5rem] border border-theatre-dark/20 shadow-xl">
-                  <div className="flex justify-between items-center mb-10"><h3 className="text-xl font-black text-theatre-dark uppercase tracking-tighter italic">Weekly Energy</h3><TrendingUp className="w-5 h-5 text-rose-bloom opacity-30" /></div>
+               <div className="lg:col-span-2 bg-white/70 backdrop-blur-3xl p-10 rounded-[3.5rem] border border-studio-dark/20 shadow-xl">
+                  <div className="flex justify-between items-center mb-10"><h3 className="text-xl font-black text-studio-dark uppercase tracking-tighter italic">Weekly Energy</h3><TrendingUp className="w-5 h-5 text-rose-bloom opacity-30" /></div>
                   <div className="h-56 w-full">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={studentStats.consistency}>
@@ -700,9 +700,9 @@ export default function StudentDashboard() {
                  { label: 'Consistency', val: `${Math.round((studentStats.totalSessions / 10) * 100)}%`, icon: Sparkles, color: 'text-rose-bloom' },
                  { label: 'Stage Rank', val: 'Lead Dancer', icon: TrendingUp, color: 'text-rose-bloom' }
                ].map((item, i) => (
-                 <div key={i} className="bg-white p-10 rounded-[3rem] border border-theatre-dark/15 text-center">
-                    <div className="text-[10px] font-black text-theatre-dark/30 uppercase tracking-widest mb-3">{item.label}</div>
-                    <div className="text-3xl font-black text-theatre-dark">{item.val}</div>
+                 <div key={i} className="bg-white p-10 rounded-[3rem] border border-studio-dark/15 text-center">
+                    <div className="text-[10px] font-black text-studio-dark/30 uppercase tracking-widest mb-3">{item.label}</div>
+                    <div className="text-3xl font-black text-studio-dark">{item.val}</div>
                  </div>
                ))}
             </div>

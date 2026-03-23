@@ -34,7 +34,7 @@ export default function StudentBrowse() {
   );
 
   return (
-    <div className="min-h-screen bg-bloom-white text-theatre-dark p-6 sm:p-10 font-sans relative overflow-hidden">
+    <div className="min-h-screen bg-bloom-white text-studio-dark p-6 sm:p-10 font-sans relative overflow-hidden">
       {/* Background Decor */}
       <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
         <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-rose-bloom blur-[150px] rounded-full" />
@@ -47,7 +47,7 @@ export default function StudentBrowse() {
             <Sparkles className="w-4 h-4 text-rose-bloom" />
             <span className="text-[10px] font-black uppercase tracking-[0.2em] text-rose-bloom">Premium Instructors</span>
           </div>
-          <h1 className="text-5xl font-black text-theatre-dark mb-6 tracking-tight">Find Your Rhythm.</h1>
+          <h1 className="text-5xl font-black text-studio-dark mb-6 tracking-tight">Find Your Rhythm.</h1>
           <p className="text-[#4A3B3E]/40 font-bold max-w-lg mx-auto mb-12 leading-relaxed uppercase tracking-widest text-xs">
             Browse our world-class certified instructors and find the energy that matches your style.
           </p>
@@ -60,10 +60,10 @@ export default function StudentBrowse() {
                 placeholder="Search by name or style..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full bg-white border border-rose-petal/20 rounded-[2rem] py-6 pl-16 pr-6 focus:outline-none focus:border-rose-bloom transition-all font-bold text-theatre-dark shadow-sm"
+                className="w-full bg-white border border-rose-petal/20 rounded-[2rem] py-6 pl-16 pr-6 focus:outline-none focus:border-rose-bloom transition-all font-bold text-studio-dark shadow-sm"
                />
             </div>
-            <button className="px-10 py-6 bg-white rounded-[2rem] border border-rose-petal/20 font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-3 hover:bg-rose-petal/5 transition-colors shadow-sm text-theatre-dark/60">
+            <button className="px-10 py-6 bg-white rounded-[2rem] border border-rose-petal/20 font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-3 hover:bg-rose-petal/5 transition-colors shadow-sm text-studio-dark/60">
               <Filter className="w-4 h-4" /> Filters
             </button>
           </div>
@@ -76,7 +76,7 @@ export default function StudentBrowse() {
         ) : filteredTeachers.length === 0 ? (
           <div className="text-center py-32 bg-white/40 backdrop-blur-xl rounded-[4rem] border-2 border-dashed border-rose-petal/20">
              <User className="w-24 h-24 text-rose-bloom/10 mx-auto mb-8" />
-             <h3 className="text-2xl font-black text-theatre-dark/30 uppercase tracking-widest">Stage is Quiet</h3>
+             <h3 className="text-2xl font-black text-studio-dark/30 uppercase tracking-widest">Stage is Quiet</h3>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
@@ -100,15 +100,15 @@ export default function StudentBrowse() {
                    <div className="absolute bottom-6 left-8 z-20">
                       <div className="flex items-center gap-2 bg-white/80 backdrop-blur-md px-3 py-1 rounded-full border border-rose-petal/10 shadow-sm">
                          <Star className="w-3 h-3 text-rose-bloom fill-current" />
-                         <span className="text-[10px] font-black uppercase tracking-widest text-theatre-dark">4.9 (120 Energy)</span>
+                         <span className="text-[10px] font-black uppercase tracking-widest text-studio-dark">4.9 (120 Energy)</span>
                       </div>
                    </div>
                 </div>
 
                 <div className="p-10 flex-1 flex flex-col">
-                   <h3 className="text-3xl font-black text-theatre-dark mb-2 tracking-tight">{teacher.full_name}</h3>
+                   <h3 className="text-3xl font-black text-studio-dark mb-2 tracking-tight">{teacher.full_name}</h3>
                    <div className="flex items-center gap-2 text-rose-bloom/40 text-[10px] font-black uppercase tracking-widest mb-6">
-                      <MapPin className="w-3.5 h-3.5" /> Core Theatre NYC
+                      <MapPin className="w-3.5 h-3.5" /> Core Studio NYC
                    </div>
                    <p className="text-[#4A3B3E]/60 text-sm leading-relaxed mb-10 line-clamp-3 font-medium">
                       {teacher.bio || "Experience the high-energy theatrical Studio movement with a certified master instructor."}

@@ -6,7 +6,7 @@
   --lavender-soft: #E0DAFF;
   --apricot-glow: #FFB38A;
   --bloom-white: #FDFCFB;
-  --theatre-dark: #2D2424;
+  --studio-dark: #2D2424;
 }
 
 @theme {
@@ -15,8 +15,8 @@
   --color-lavender: var(--lavender-soft);
   --color-apricot: var(--apricot-glow);
   --color-bloom-white: var(--bloom-white);
-  --color-theatre-dark: var(--theatre-dark);
-  --color-theatre-dark: #1A1516;
+  --color-studio-dark: var(--studio-dark);
+  --color-studio-dark: #1A1516;
   --color-studio-dark: #050505;
   --color-studio-pink: #FF2E63;
   --color-studio-lime: #00FF9D;
@@ -25,7 +25,7 @@
 
 @layer base {
   body {
-    @apply bg-bloom-white text-theatre-dark font-sans antialiased selection:bg-rose-bloom selection:text-white;
+    @apply bg-bloom-white text-studio-dark font-sans antialiased selection:bg-rose-bloom selection:text-white;
   }
 }
 
@@ -59,7 +59,7 @@
   }
 }
 
-.theatre-reveal {
+.studio-reveal {
   animation: reveal 1s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 

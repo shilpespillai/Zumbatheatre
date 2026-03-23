@@ -32,7 +32,7 @@ const Home = () => {
   const isGuest = !!guestSession;
 
   const getHeroBtn = () => {
-    return { text: 'Theatre Entrance', href: '/auth' };
+    return { text: 'Studio Entrance', href: '/auth' };
   };
 
   const heroBtn = getHeroBtn();

@@ -156,7 +156,7 @@ export default function TeacherCalendar() {
       <div className="max-w-7xl mx-auto">
         <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-12 gap-6">
           <div className="flex items-center gap-4">
-            <a href="/teacher/dashboard" className="p-3 bg-white rounded-2xl border border-theatre-dark/15 hover:bg-rose-petal/5 transition-all shadow-sm">
+            <a href="/teacher/dashboard" className="p-3 bg-white rounded-2xl border border-studio-dark/15 hover:bg-rose-petal/5 transition-all shadow-sm">
               <ChevronLeft className="w-5 h-5 text-rose-bloom" />
             </a>
             <div>
@@ -170,7 +170,7 @@ export default function TeacherCalendar() {
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               onClick={() => setIsModalOpen(true)}
-              className="btn-premium bg-theatre-dark text-white px-8 py-4 rounded-2xl flex items-center gap-2 hover:bg-rose-bloom transition-all shadow-xl shadow-rose-bloom/10"
+              className="btn-premium bg-studio-dark text-white px-8 py-4 rounded-2xl flex items-center gap-2 hover:bg-rose-bloom transition-all shadow-xl shadow-rose-bloom/10"
             >
               <Plus className="w-5 h-5" /> Quick Schedule
             </Motion.button>
@@ -324,8 +324,8 @@ export default function TeacherCalendar() {
                                 {slot.status}
                               </div>
                             </div>
-                            <div className="text-theatre-dark font-black text-lg mb-2">{slot.routines?.name}</div>
-                            <div className="flex items-center gap-2 text-[10px] text-theatre-dark/40 mb-6">
+                            <div className="text-studio-dark font-black text-lg mb-2">{slot.routines?.name}</div>
+                            <div className="flex items-center gap-2 text-[10px] text-studio-dark/40 mb-6">
                               <MapPin className="w-3 h-3" /> {slot.location}
                             </div>
                             
@@ -362,7 +362,7 @@ export default function TeacherCalendar() {
       <AnimatePresence>
         {isCancelModalOpen && cancellingSession && (
           <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 sm:p-10">
-            <Motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsCancelModalOpen(false)} className="absolute inset-0 bg-theatre-dark/40 backdrop-blur-sm" />
+            <Motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsCancelModalOpen(false)} className="absolute inset-0 bg-studio-dark/40 backdrop-blur-sm" />
             <Motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} className="bg-white w-full max-w-lg p-10 rounded-[3rem] relative z-20 overflow-hidden shadow-2xl border-2 border-red-100">
                <div className="flex justify-between items-center mb-8">
                   <div className="flex items-center gap-4">
@@ -370,7 +370,7 @@ export default function TeacherCalendar() {
                       <X className="w-6 h-6 text-red-500" />
                     </div>
                     <div>
-                        <h2 className="text-2xl font-black text-theatre-dark">Cancel Session?</h2>
+                        <h2 className="text-2xl font-black text-studio-dark">Cancel Session?</h2>
                         <p className="text-[10px] font-bold text-red-500 uppercase tracking-widest mt-1">This will notify all students</p>
                     </div>
                   </div>
@@ -383,12 +383,12 @@ export default function TeacherCalendar() {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-theatre-dark/30 ml-2">Reason for Cancellation</label>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-studio-dark/30 ml-2">Reason for Cancellation</label>
                     <textarea 
                       rows={3}
                       value={cancelReason}
                       onChange={(e) => setCancelReason(e.target.value)}
-                      className="w-full bg-bloom-white border border-apricot/20 rounded-2xl py-4 px-6 focus:outline-none focus:border-red-400 transition-all font-bold text-theatre-dark resize-none"
+                      className="w-full bg-bloom-white border border-apricot/20 rounded-2xl py-4 px-6 focus:outline-none focus:border-red-400 transition-all font-bold text-studio-dark resize-none"
                       placeholder="Students will receive this message via email/SMS..."
                     />
                   </div>
@@ -396,7 +396,7 @@ export default function TeacherCalendar() {
                   <div className="flex gap-4">
                     <button 
                        onClick={() => setIsCancelModalOpen(false)}
-                       className="flex-1 py-4 font-black uppercase tracking-widest text-[10px] text-theatre-dark/40 hover:text-theatre-dark transition-colors"
+                       className="flex-1 py-4 font-black uppercase tracking-widest text-[10px] text-studio-dark/40 hover:text-studio-dark transition-colors"
                     >
                       Wait, Keep it
                     </button>

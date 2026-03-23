@@ -28,7 +28,7 @@ class ErrorBoundary extends React.Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen bg-bloom-white flex items-center justify-center p-6 text-theatre-dark font-sans">
+        <div className="min-h-screen bg-bloom-white flex items-center justify-center p-6 text-studio-dark font-sans">
           <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
             <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-rose-bloom blur-[150px] rounded-full" />
             <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-lavender blur-[150px] rounded-full" />
@@ -47,14 +47,14 @@ class ErrorBoundary extends React.Component {
             <div className="space-y-4">
               <button 
                 onClick={() => window.location.reload()}
-                className="w-full btn-premium bg-theatre-dark text-white py-5 rounded-2xl flex items-center justify-center gap-3 hover:bg-rose-bloom transition-all shadow-xl shadow-theatre-dark/20 font-black uppercase tracking-widest text-[10px]"
+                className="w-full btn-premium bg-studio-dark text-white py-5 rounded-2xl flex items-center justify-center gap-3 hover:bg-rose-bloom transition-all shadow-xl shadow-studio-dark/20 font-black uppercase tracking-widest text-[10px]"
               >
                 <RefreshCw className="w-4 h-4" /> Reset The Stage
               </button>
               
               <button 
                 onClick={this.handleReset}
-                className="w-full py-5 rounded-2xl border border-theatre-dark/15 text-theatre-dark/60 flex items-center justify-center gap-3 hover:bg-white transition-all font-black uppercase tracking-widest text-[10px]"
+                className="w-full py-5 rounded-2xl border border-studio-dark/15 text-studio-dark/60 flex items-center justify-center gap-3 hover:bg-white transition-all font-black uppercase tracking-widest text-[10px]"
               >
                 <Home className="w-4 h-4" /> Return Home
               </button>

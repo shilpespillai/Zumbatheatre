@@ -108,7 +108,7 @@ export default function Routines() {
   };
 
   return (
-    <div className="min-h-screen bg-bloom-white text-theatre-dark p-6 sm:p-10 font-sans">
+    <div className="min-h-screen bg-bloom-white text-studio-dark p-6 sm:p-10 font-sans">
       <div className="max-w-7xl mx-auto">
         <header className="flex justify-between items-center mb-12">
           <div className="flex items-center gap-6">
@@ -116,7 +116,7 @@ export default function Routines() {
                <ChevronLeft className="w-5 h-5 text-rose-bloom" />
              </a>
              <div>
-              <h1 className="text-3xl font-black mb-1 text-theatre-dark font-display italic">Signature Routines</h1>
+              <h1 className="text-3xl font-black mb-1 text-studio-dark font-display italic">Signature Routines</h1>
               <p className="text-rose-bloom/40 font-black tracking-widest uppercase text-[10px]">Define your signature energy</p>
             </div>
           </div>
@@ -140,8 +140,8 @@ export default function Routines() {
         ) : routines.length === 0 ? (
           <div className="glass p-20 rounded-[4rem] text-center border-dashed border-2 border-apricot/40">
              <Package className="w-20 h-20 text-rose-bloom/10 mx-auto mb-6" />
-             <h3 className="text-2xl font-black mb-2 text-theatre-dark">No Routines Yet</h3>
-             <p className="text-theatre-dark/40 max-w-sm mx-auto font-medium">Create your first class template using the button above to start scheduling your sessions.</p>
+             <h3 className="text-2xl font-black mb-2 text-studio-dark">No Routines Yet</h3>
+             <p className="text-studio-dark/40 max-w-sm mx-auto font-medium">Create your first class template using the button above to start scheduling your sessions.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -155,16 +155,16 @@ export default function Routines() {
                   key={routine.id}                   className="glass p-8 rounded-[3rem] relative group border border-apricot/50 hover:border-rose-bloom transition-all duration-500 hover:-translate-y-2 shadow-xl shadow-rose-bloom/5"
                 >
                   <div className="absolute top-6 right-6 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                     <button onClick={() => openEdit(routine)} className="p-3 bg-white/60 rounded-xl hover:bg-white text-theatre-dark/40 hover:text-rose-bloom border border-apricot/30 transition-all"><Edit2 className="w-4 h-4" /></button>
-                     <button onClick={() => deleteRoutine(routine.id)} className="p-3 bg-white/60 rounded-xl hover:bg-red-50 text-theatre-dark/40 hover:text-red-500 border border-apricot/30 transition-all"><Trash2 className="w-4 h-4" /></button>
+                     <button onClick={() => openEdit(routine)} className="p-3 bg-white/60 rounded-xl hover:bg-white text-studio-dark/40 hover:text-rose-bloom border border-apricot/30 transition-all"><Edit2 className="w-4 h-4" /></button>
+                     <button onClick={() => deleteRoutine(routine.id)} className="p-3 bg-white/60 rounded-xl hover:bg-red-50 text-studio-dark/40 hover:text-red-500 border border-apricot/30 transition-all"><Trash2 className="w-4 h-4" /></button>
                   </div>
 
                   <div className="w-16 h-16 bg-gradient-to-br from-rose-bloom/10 to-apricot/10 rounded-[2rem] flex items-center justify-center mb-8 border border-apricot/30 group-hover:rotate-6 transition-transform">
                     <Package className="w-7 h-7 text-rose-bloom" />
                   </div>
 
-                  <h3 className="text-2xl font-black mb-3 text-theatre-dark font-display capitalize">{routine.name}</h3>
-                  <p className="text-theatre-dark/60 text-sm mb-10 line-clamp-2 font-medium leading-relaxed">{routine.description || 'No description provided.'}</p>
+                  <h3 className="text-2xl font-black mb-3 text-studio-dark font-display capitalize">{routine.name}</h3>
+                  <p className="text-studio-dark/60 text-sm mb-10 line-clamp-2 font-medium leading-relaxed">{routine.description || 'No description provided.'}</p>
 
                   <div className="flex items-center gap-6 pt-6 border-t border-white/5">
                     <div className="flex items-center gap-2 text-white/60">

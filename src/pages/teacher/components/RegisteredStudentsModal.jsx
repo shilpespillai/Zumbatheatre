@@ -13,7 +13,7 @@ export default function RegisteredStudentsModal({ session, onClose, onMarkAsPaid
         animate={{ opacity: 1 }} 
         exit={{ opacity: 0 }} 
         onClick={onClose} 
-        className="absolute inset-0 bg-theatre-dark/40 backdrop-blur-md" 
+        className="absolute inset-0 bg-studio-dark/40 backdrop-blur-md" 
       />
       <Motion.div 
         initial={{ opacity: 0, scale: 0.9, y: 20 }} 
@@ -28,27 +28,27 @@ export default function RegisteredStudentsModal({ session, onClose, onMarkAsPaid
                 <Users className="w-6 h-6 text-rose-bloom" />
               </div>
               <div>
-                <h2 className="text-3xl font-black text-theatre-dark">Registered Students</h2>
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-theatre-dark/40 mt-1">
+                <h2 className="text-3xl font-black text-studio-dark">Registered Students</h2>
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-studio-dark/40 mt-1">
                   {session.routines?.name} • {session.start_time ? format(parseISO(session.start_time), 'MMM d, h:mm a') : '...'}
                 </p>
               </div>
             </div>
-            <button onClick={onClose} className="p-3 hover:bg-apricot/10 rounded-xl transition-colors text-theatre-dark/30"><X/></button>
+            <button onClick={onClose} className="p-3 hover:bg-apricot/10 rounded-xl transition-colors text-studio-dark/30"><X/></button>
           </div>
 
           <div className="grid grid-cols-3 gap-4">
              <div className="bg-bloom-white p-4 rounded-2xl border border-apricot/30 text-center">
-                <div className="text-[8px] font-black uppercase text-theatre-dark/30 mb-1">Total Booked</div>
-                <div className="text-xl font-black text-theatre-dark">{session.bookings?.length || 0}</div>
+                <div className="text-[8px] font-black uppercase text-studio-dark/30 mb-1">Total Booked</div>
+                <div className="text-xl font-black text-studio-dark">{session.bookings?.length || 0}</div>
              </div>
              <div className="bg-bloom-white p-4 rounded-2xl border border-apricot/30 text-center">
-                <div className="text-[8px] font-black uppercase text-theatre-dark/30 mb-1">Remaining</div>
+                <div className="text-[8px] font-black uppercase text-studio-dark/30 mb-1">Remaining</div>
                 <div className="text-xl font-black text-rose-bloom">{(session.max_seats || 0) - (session.bookings?.length || 0)}</div>
              </div>
              <div className="bg-bloom-white p-4 rounded-2xl border border-apricot/30 text-center">
-                <div className="text-[8px] font-black uppercase text-theatre-dark/30 mb-1">Capacity</div>
-                <div className="text-xl font-black text-theatre-dark/40">{session.max_seats}</div>
+                <div className="text-[8px] font-black uppercase text-studio-dark/30 mb-1">Capacity</div>
+                <div className="text-xl font-black text-studio-dark/40">{session.max_seats}</div>
              </div>
           </div>
         </div>
@@ -73,8 +73,8 @@ export default function RegisteredStudentsModal({ session, onClose, onMarkAsPaid
                       )}
                     </div>
                     <div>
-                      <div className="font-black text-theatre-dark">{booking.student?.full_name}</div>
-                      <div className="text-[10px] font-bold text-theatre-dark/30 uppercase tracking-widest">{booking.student?.email}</div>
+                      <div className="font-black text-studio-dark">{booking.student?.full_name}</div>
+                      <div className="text-[10px] font-bold text-studio-dark/30 uppercase tracking-widest">{booking.student?.email}</div>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
@@ -93,7 +93,7 @@ export default function RegisteredStudentsModal({ session, onClose, onMarkAsPaid
                           <Plus className="w-4 h-4" />
                        </button>
                      )}
-                     <button className="p-2 opacity-0 group-hover:opacity-100 transition-all text-theatre-dark/20 hover:text-theatre-dark">
+                     <button className="p-2 opacity-0 group-hover:opacity-100 transition-all text-studio-dark/20 hover:text-studio-dark">
                         <ArrowRight className="w-4 h-4" />
                      </button>
                   </div>
@@ -103,15 +103,15 @@ export default function RegisteredStudentsModal({ session, onClose, onMarkAsPaid
           ) : (
             <div className="py-20 text-center">
               <div className="w-16 h-16 bg-apricot/5 rounded-full flex items-center justify-center mx-auto mb-6">
-                <Users className="w-8 h-8 text-theatre-dark/10" />
+                <Users className="w-8 h-8 text-studio-dark/10" />
               </div>
-              <p className="text-sm font-black text-theatre-dark/20 uppercase tracking-[0.2em]">No students registered yet</p>
+              <p className="text-sm font-black text-studio-dark/20 uppercase tracking-[0.2em]">No students registered yet</p>
             </div>
           )}
         </div>
 
         <div className="p-10 border-t border-apricot/20 bg-apricot/5 shrink-0">
-           <button className="w-full py-5 bg-white border border-apricot/30 rounded-2xl text-[10px] font-black uppercase tracking-widest text-theatre-dark hover:bg-white/80 transition-all flex items-center justify-center gap-2">
+           <button className="w-full py-5 bg-white border border-apricot/30 rounded-2xl text-[10px] font-black uppercase tracking-widest text-studio-dark hover:bg-white/80 transition-all flex items-center justify-center gap-2">
               Export Attendance List
            </button>
         </div>

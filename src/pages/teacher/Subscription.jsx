@@ -77,11 +77,11 @@ export default function TeacherSubscription() {
   };
 
   return (
-    <div className="min-h-screen bg-bloom-white text-theatre-dark p-6 sm:p-10">
+    <div className="min-h-screen bg-bloom-white text-studio-dark p-6 sm:p-10">
       <div className="max-w-4xl mx-auto">
         <button 
           onClick={() => navigate(-1)}
-          className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-theatre-dark/40 hover:text-rose-bloom transition-colors mb-12"
+          className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-studio-dark/40 hover:text-rose-bloom transition-colors mb-12"
         >
           <ArrowLeft className="w-4 h-4" /> Back to Workspace
         </button>
@@ -91,7 +91,7 @@ export default function TeacherSubscription() {
             <Sparkles className="w-8 h-8 text-rose-bloom" />
           </div>
           <h1 className="text-5xl font-black mb-4 tracking-tight italic">Activate Your Stage</h1>
-          <p className="text-theatre-dark/40 font-bold uppercase tracking-[0.2em] text-xs">Unlock your full potential as a Dance Studio Instructor</p>
+          <p className="text-studio-dark/40 font-bold uppercase tracking-[0.2em] text-xs">Unlock your full potential as a Dance Studio Instructor</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
@@ -108,7 +108,7 @@ export default function TeacherSubscription() {
                 <div className="p-1 bg-emerald-500/10 rounded-full mt-1">
                   <CheckCircle2 className="w-4 h-4 text-emerald-500" />
                 </div>
-                <span className="font-bold text-theatre-dark/70 text-sm">{feature}</span>
+                <span className="font-bold text-studio-dark/70 text-sm">{feature}</span>
               </Motion.div>
             ))}
             
@@ -117,19 +117,19 @@ export default function TeacherSubscription() {
                 <div className="w-12 h-12 bg-white rounded-2xl border border-apricot/20 flex items-center justify-center shadow-sm">
                   <Zap className="w-5 h-5 text-rose-bloom" />
                 </div>
-                <span className="text-[8px] font-black uppercase text-theatre-dark/30">Fast Payouts</span>
+                <span className="text-[8px] font-black uppercase text-studio-dark/30">Fast Payouts</span>
               </div>
               <div className="flex flex-col items-center gap-2">
                 <div className="w-12 h-12 bg-white rounded-2xl border border-apricot/20 flex items-center justify-center shadow-sm">
                   <Trophy className="w-5 h-5 text-rose-bloom" />
                 </div>
-                <span className="text-[8px] font-black uppercase text-theatre-dark/30">Pro Status</span>
+                <span className="text-[8px] font-black uppercase text-studio-dark/30">Pro Status</span>
               </div>
               <div className="flex flex-col items-center gap-2">
                 <div className="w-12 h-12 bg-white rounded-2xl border border-apricot/20 flex items-center justify-center shadow-sm">
                   <Heart className="w-5 h-5 text-rose-bloom" />
                 </div>
-                <span className="text-[8px] font-black uppercase text-theatre-dark/30">Unlimited Classes</span>
+                <span className="text-[8px] font-black uppercase text-studio-dark/30">Unlimited Classes</span>
               </div>
             </div>
           </div>
@@ -143,8 +143,8 @@ export default function TeacherSubscription() {
               <span className="px-4 py-1.5 bg-rose-bloom/10 text-rose-bloom rounded-full text-[10px] font-black uppercase tracking-widest leading-none">Best Value</span>
               <h3 className="text-3xl font-black mt-4">{plan.name}</h3>
               <div className="flex items-baseline gap-2 mt-2">
-                <span className="text-5xl font-black text-theatre-dark tracking-tighter">$10</span>
-                <span className="text-sm font-bold text-theatre-dark/40">/ month</span>
+                <span className="text-5xl font-black text-studio-dark tracking-tighter">$10</span>
+                <span className="text-sm font-bold text-studio-dark/40">/ month</span>
               </div>
             </div>
 
@@ -155,14 +155,14 @@ export default function TeacherSubscription() {
                 className={`w-full py-6 rounded-2xl font-black uppercase tracking-widest text-xs flex items-center justify-center gap-3 shadow-xl transition-all ${
                   profile?.is_subscribed 
                   ? 'bg-emerald-500 text-white cursor-default' 
-                  : 'bg-theatre-dark text-white hover:bg-rose-bloom shadow-theatre-dark/20'
+                  : 'bg-studio-dark text-white hover:bg-rose-bloom shadow-studio-dark/20'
                 }`}
               >
                 {loading ? <div className="w-5 h-5 border-4 border-white/20 border-t-white rounded-full animate-spin" /> : 
                  profile?.is_subscribed ? <CheckCircle2 className="w-5 h-5" /> : <ShieldCheck className="w-5 h-5" />}
                 {profile?.is_subscribed ? 'Active Subscription' : 'Activate Pro Stage'}
               </button>
-              <p className="text-center text-[10px] font-bold text-theatre-dark/30 uppercase tracking-widest">Secure Stripe Checkout</p>
+              <p className="text-center text-[10px] font-bold text-studio-dark/30 uppercase tracking-widest">Secure Stripe Checkout</p>
             </div>
           </div>
         </div>

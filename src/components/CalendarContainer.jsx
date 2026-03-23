@@ -36,20 +36,20 @@ export default function CalendarContainer({ events, onDateClick, onEventClick, o
              view === 'week' ? `Week of ${format(startOfSelectedWeek(currentDate), 'MMM d')}` :
              format(currentDate, 'EEEE, MMM d')}
           </h2>
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-theatre-dark/80">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-studio-dark/80">
             {role === 'teacher' ? 'Your Schedule' : 'Available Classes'}
           </p>
         </div>
       </div>
 
-      <div className="flex items-center gap-2 bg-white/50 p-1.5 rounded-2xl border border-theatre-dark/20">
+      <div className="flex items-center gap-2 bg-white/50 p-1.5 rounded-2xl border border-studio-dark/20">
         <div className="flex gap-1 mr-4">
           {['month', 'week', 'day'].map((v) => (
             <button
               key={v}
               onClick={() => setView(v)}
               className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                view === v ? 'bg-rose-bloom text-white shadow-lg shadow-rose-bloom/20' : 'text-theatre-dark/60 hover:bg-apricot/10'
+                view === v ? 'bg-rose-bloom text-white shadow-lg shadow-rose-bloom/20' : 'text-studio-dark/60 hover:bg-apricot/10'
               }`}
             >
               {v}
@@ -59,7 +59,7 @@ export default function CalendarContainer({ events, onDateClick, onEventClick, o
         <div className="flex items-center bg-bloom-white rounded-xl shadow-sm border border-apricot/40">
           <button onClick={handlePrev} className="p-2 hover:text-rose-bloom transition-colors"><ChevronLeft className="w-5 h-5" /></button>
           <div className="w-px h-4 bg-apricot/20" />
-          <button onClick={() => setCurrentDate(new Date())} className="px-3 text-[10px] font-black uppercase tracking-widest text-theatre-dark/60 hover:text-rose-bloom transition-colors">Today</button>
+          <button onClick={() => setCurrentDate(new Date())} className="px-3 text-[10px] font-black uppercase tracking-widest text-studio-dark/60 hover:text-rose-bloom transition-colors">Today</button>
           <div className="w-px h-4 bg-apricot/20" />
           <button onClick={handleNext} className="p-2 hover:text-rose-bloom transition-colors"><ChevronRight className="w-5 h-5" /></button>
         </div>
@@ -77,7 +77,7 @@ export default function CalendarContainer({ events, onDateClick, onEventClick, o
     return (
       <div className="grid grid-cols-7 gap-px bg-apricot/20 rounded-[2rem] overflow-hidden border border-apricot/40 shadow-xl shadow-rose-bloom/5">
         {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
-          <div key={d} className="bg-bloom-white/80 p-4 text-center text-[10px] font-black uppercase tracking-widest text-theatre-dark border-b border-apricot/30">{d}</div>
+          <div key={d} className="bg-bloom-white/80 p-4 text-center text-[10px] font-black uppercase tracking-widest text-studio-dark border-b border-apricot/30">{d}</div>
         ))}
         {days.map(day => {
           const isSelected = isSameDay(day, selectedDate);
@@ -98,7 +98,7 @@ export default function CalendarContainer({ events, onDateClick, onEventClick, o
                 isPast ? 'opacity-50 grayscale hover:opacity-100' : ''
               }`}
             >
-              <span className={`text-sm font-black ${isSameDay(day, new Date()) ? 'text-rose-bloom' : 'text-theatre-dark/60'}`}>
+              <span className={`text-sm font-black ${isSameDay(day, new Date()) ? 'text-rose-bloom' : 'text-studio-dark/60'}`}>
                 {format(day, 'd')}
               </span>
               <div className="mt-2 space-y-1">
@@ -154,7 +154,7 @@ export default function CalendarContainer({ events, onDateClick, onEventClick, o
                   'bg-bloom-white border-apricot/30'
                 }`}
               >
-                <div className={`text-[10px] font-black uppercase tracking-widest ${isSameDay(day, new Date()) ? 'text-white/60' : 'text-theatre-dark/80'}`}>
+                <div className={`text-[10px] font-black uppercase tracking-widest ${isSameDay(day, new Date()) ? 'text-white/60' : 'text-studio-dark/80'}`}>
                   {format(day, 'EEE')}
                 </div>
                 <div className="text-xl font-black">{format(day, 'd')}</div>
@@ -167,7 +167,7 @@ export default function CalendarContainer({ events, onDateClick, onEventClick, o
                     animate={{ opacity: 1, y: 0 }}
                     key={idx}
                     onClick={() => onEventClick(event)}
-                    className="p-4 glass rounded-2xl cursor-pointer hover:border-rose-bloom/30 transition-all border border-theatre-dark/15"
+                    className="p-4 glass rounded-2xl cursor-pointer hover:border-rose-bloom/30 transition-all border border-studio-dark/15"
                   >
                     <div className="text-[10px] font-black text-rose-bloom mb-1">{event.start_time ? format(parseISO(event.start_time), 'hh:mm a') : '00:00 AM'}</div>
                     <div className="text-xs font-black text-studio-dark truncate">{event.name || event.routines?.name}</div>
@@ -177,7 +177,7 @@ export default function CalendarContainer({ events, onDateClick, onEventClick, o
                   </motion.div>
                 ))}
                 {dayEvents.length === 0 && (
-                  <div className="h-20 border-2 border-dashed border-theatre-dark/15 rounded-2xl" />
+                  <div className="h-20 border-2 border-dashed border-studio-dark/15 rounded-2xl" />
                 )}
               </div>
             </div>
@@ -193,7 +193,7 @@ export default function CalendarContainer({ events, onDateClick, onEventClick, o
     return (
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-6">
-          <div className="p-8 bg-white/70 rounded-[2.5rem] border border-theatre-dark/20">
+          <div className="p-8 bg-white/70 rounded-[2.5rem] border border-studio-dark/20">
             <h3 className="text-xl font-black text-studio-dark mb-8 flex items-center gap-3">
               <Clock className="w-5 h-5 text-rose-bloom" />
               Timeline
@@ -207,7 +207,7 @@ export default function CalendarContainer({ events, onDateClick, onEventClick, o
                 dayEvents.sort((a, b) => a.start_time.localeCompare(b.start_time)).map((event, idx) => (
                   <div key={idx} className="relative pl-10">
                     <div className="absolute left-0 top-2 w-6 h-6 rounded-full bg-white border-4 border-rose-bloom shadow-md z-10" />
-                    <div className="p-6 bg-white rounded-3xl border border-theatre-dark/15 shadow-sm hover:shadow-md transition-all group cursor-pointer" onClick={() => onEventClick(event)}>
+                    <div className="p-6 bg-white rounded-3xl border border-studio-dark/15 shadow-sm hover:shadow-md transition-all group cursor-pointer" onClick={() => onEventClick(event)}>
                       <div className="flex justify-between items-start mb-4">
                         <div>
                           <span className="text-xs font-black text-rose-bloom uppercase tracking-widest">{event.start_time ? format(parseISO(event.start_time), 'hh:mm a') : '00:00 AM'}</span>

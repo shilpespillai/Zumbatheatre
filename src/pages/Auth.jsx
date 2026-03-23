@@ -246,7 +246,7 @@ export default function Auth() {
             >
               <Sparkles className="text-white w-10 h-10" />
             </Motion.div>
-            <h1 className="text-6xl font-black text-theatre-dark leading-[1.1]">The Stage is <br/><span className="text-rose-bloom">Waiting.</span></h1>
+            <h1 className="text-6xl font-black text-studio-dark leading-[1.1]">The Stage is <br/><span className="text-rose-bloom">Waiting.</span></h1>
             <p className="text-xl text-[#4A3B3E]/60 max-w-md font-medium leading-relaxed">
               Step into the world's most elegant platform for dance creators and enthusiasts.
             </p>
@@ -255,11 +255,11 @@ export default function Auth() {
           <div className="grid grid-cols-2 gap-8">
             <div className="bg-white/40 p-8 rounded-[2.5rem] border border-rose-petal/20">
                <ShieldCheck className="w-8 h-8 text-rose-bloom mb-4" />
-               <div className="font-black text-theatre-dark uppercase tracking-widest text-[10px]">Pure Security</div>
+               <div className="font-black text-studio-dark uppercase tracking-widest text-[10px]">Pure Security</div>
             </div>
             <div className="bg-white/40 p-8 rounded-[2.5rem] border border-rose-petal/20">
                <Heart className="w-8 h-8 text-rose-bloom mb-4" />
-               <div className="font-black text-theatre-dark uppercase tracking-widest text-[10px]">Pure Energy</div>
+               <div className="font-black text-studio-dark uppercase tracking-widest text-[10px]">Pure Energy</div>
             </div>
           </div>
         </div>
@@ -297,7 +297,7 @@ export default function Auth() {
             {profile || localStorage.getItem('studio_guest_session') ? (
               <div className="p-6 bg-rose-bloom/5 border border-rose-bloom/10 rounded-[2rem] mb-6 flex items-center justify-between">
                 <div>
-                  <h3 className="text-lg font-black text-theatre-dark leading-tight">Welcome back!</h3>
+                  <h3 className="text-lg font-black text-studio-dark leading-tight">Welcome back!</h3>
                   <p className="text-[10px] font-bold text-rose-bloom/60 uppercase tracking-widest mt-1">
                     {profile?.full_name || JSON.parse(localStorage.getItem('studio_guest_session')).full_name} is signed in
                   </p>
@@ -314,8 +314,8 @@ export default function Auth() {
                 </button>
               </div>
             ) : null}
-            <h2 className="text-4xl font-black text-theatre-dark mb-3">
-              {role === 'teacher' ? (isLogin ? 'Theatre Entrance.' : 'Theatre Join.') : 'Theatre Entrance.'}
+            <h2 className="text-4xl font-black text-studio-dark mb-3">
+              {role === 'teacher' ? (isLogin ? 'Studio Entrance.' : 'Studio Join.') : 'Studio Entrance.'}
             </h2>
             <p className="font-bold text-rose-bloom/40 uppercase tracking-widest text-xs">
               {role === 'teacher' ? 'Access your stage command center' : 'Step onto your private stage'}
@@ -332,7 +332,7 @@ export default function Auth() {
                     type="text" 
                     value={formData.fullName}
                     onChange={(e) => setFormData({...formData, fullName: e.target.value})}
-                    className="w-full bg-bloom-white/50 border border-apricot/20 rounded-2xl py-5 px-6 pl-14 focus:outline-none focus:border-rose-bloom transition-all font-bold text-theatre-dark"
+                    className="w-full bg-bloom-white/50 border border-apricot/20 rounded-2xl py-5 px-6 pl-14 focus:outline-none focus:border-rose-bloom transition-all font-bold text-studio-dark"
                     placeholder="Your Full Name"
                     required
                   />
@@ -351,7 +351,7 @@ export default function Auth() {
                       type="email" 
                       value={formData.email}
                       onChange={(e) => setFormData({...formData, email: e.target.value})}
-                      className="w-full bg-bloom-white border border-rose-petal/20 rounded-2xl py-5 px-6 pl-14 focus:outline-none focus:border-rose-bloom transition-all font-bold text-theatre-dark"
+                      className="w-full bg-bloom-white border border-rose-petal/20 rounded-2xl py-5 px-6 pl-14 focus:outline-none focus:border-rose-bloom transition-all font-bold text-studio-dark"
                       placeholder="name@example.com"
                       required
                     />
@@ -366,7 +366,7 @@ export default function Auth() {
                       type="password" 
                       value={formData.password}
                       onChange={(e) => setFormData({...formData, password: e.target.value})}
-                      className="w-full bg-bloom-white border border-rose-petal/20 rounded-2xl py-5 px-6 pl-14 focus:outline-none focus:border-rose-bloom transition-all font-bold text-theatre-dark"
+                      className="w-full bg-bloom-white border border-rose-petal/20 rounded-2xl py-5 px-6 pl-14 focus:outline-none focus:border-rose-bloom transition-all font-bold text-studio-dark"
                       placeholder="••••••••"
                       required
                     />
@@ -419,7 +419,7 @@ export default function Auth() {
             >
               {loading ? <div className="w-6 h-6 border-4 border-white/20 border-t-white rounded-full animate-spin" /> : (
                 <>
-                  {role === 'student' ? 'Enter Theatre' : (isLogin ? 'Enter Theatre' : 'Join Theatre')}
+                  {role === 'student' ? 'Enter Studio' : (isLogin ? 'Enter Studio' : 'Join Studio')}
                   <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </>
               )}
@@ -433,7 +433,7 @@ export default function Auth() {
                 onClick={() => setIsLogin(!isLogin)}
                 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#4A3B3E]/40 hover:text-rose-bloom transition-colors"
               >
-                {isLogin ? "Need a Theatre Entrance? Step inside" : "Already leading? Sign back in"}
+                {isLogin ? "Need a Studio Entrance? Step inside" : "Already leading? Sign back in"}
               </button>
             )}
 
@@ -441,7 +441,7 @@ export default function Auth() {
               href="/"
               className="text-[10px] font-black uppercase tracking-[0.2em] text-rose-bloom/40 hover:text-rose-bloom transition-colors pt-4 border-t border-apricot/10 w-32"
             >
-              ← Back to Theatre
+              ← Back to Studio
             </a>
           </div>
         </Motion.div>

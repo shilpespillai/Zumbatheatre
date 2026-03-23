@@ -102,7 +102,7 @@ export default function HowItWorks() {
                 <div className="w-10 h-10 bg-studio-pink rounded-xl flex items-center justify-center rotate-12 group-hover:rotate-0 transition-transform">
                     <Play className="w-6 h-6 text-white fill-current" />
                 </div>
-                <span className="text-xl font-black tracking-tighter">STUDIO<span className="text-studio-lime">THEATRE</span></span>
+                <span className="text-xl font-black tracking-tighter">STUDIO<span className="text-studio-lime">STUDIO</span></span>
             </a>
             <a href="/auth" className="btn-premium bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all">Start Now</a>
         </nav>

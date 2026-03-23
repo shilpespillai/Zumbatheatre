@@ -110,8 +110,8 @@ export default function MyBookings() {
 
   const getStatusColor = (status, startTime) => {
     const isPast = !isAfter(parseISO(startTime), new Date());
-    if (status === 'REFUNDED' || status === 'CANCELLED') return 'text-theatre-dark/40 bg-zinc-100 border-zinc-200';
-    if (isPast) return 'text-theatre-dark/40 bg-zinc-100 border-zinc-200 opacity-60';
+    if (status === 'REFUNDED' || status === 'CANCELLED') return 'text-studio-dark/40 bg-zinc-100 border-zinc-200';
+    if (isPast) return 'text-studio-dark/40 bg-zinc-100 border-zinc-200 opacity-60';
     
     if (status === 'PAID') return 'text-emerald-600 bg-emerald-500/10 border-emerald-500/20';
     if (status === 'PENDING') return 'text-orange-600 bg-orange-500/10 border-orange-500/20';
@@ -129,7 +129,7 @@ export default function MyBookings() {
   const days = Array.from({ length: 7 }, (_, i) => addDays(subDays(new Date(), 3), i));
 
   return (
-    <div className="min-h-screen bg-bloom-white text-theatre-dark p-6 sm:p-10 font-sans relative overflow-hidden">
+    <div className="min-h-screen bg-bloom-white text-studio-dark p-6 sm:p-10 font-sans relative overflow-hidden">
       {/* Background Decor */}
       <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
         <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-rose-bloom blur-[150px] rounded-full" />
@@ -143,7 +143,7 @@ export default function MyBookings() {
               <ChevronLeft className="w-6 h-6 text-rose-bloom" />
             </a>
             <div>
-              <h1 className="text-4xl font-black text-theatre-dark mb-1">My Theatre Sessions.</h1>
+              <h1 className="text-4xl font-black text-studio-dark mb-1">My Studio Sessions.</h1>
               <p className="text-rose-bloom/40 font-bold uppercase tracking-[0.2em] text-[10px]">Manage your energy and upcoming rhythms</p>
             </div>
            </div>
@@ -156,8 +156,8 @@ export default function MyBookings() {
                   onClick={() => setSelectedDate(startOfDay(day))}
                   className={`px-6 py-3 rounded-xl transition-all whitespace-nowrap flex flex-col items-center gap-1 ${
                     isSameDay(day, selectedDate) 
-                    ? 'bg-theatre-dark text-white shadow-lg' 
-                    : 'hover:bg-rose-petal/10 text-theatre-dark/40 font-bold'
+                    ? 'bg-studio-dark text-white shadow-lg' 
+                    : 'hover:bg-rose-petal/10 text-studio-dark/40 font-bold'
                   }`}
                 >
                   <span className="text-[10px] uppercase tracking-tighter">{format(day, 'EEE')}</span>
@@ -174,7 +174,7 @@ export default function MyBookings() {
         ) : filteredBookings.length === 0 ? (
           <div className="bg-white/70 backdrop-blur-xl p-20 rounded-[4rem] text-center border-2 border-dashed border-rose-petal/20 shadow-2xl shadow-rose-bloom/5">
              <Ticket className="w-20 h-20 text-rose-bloom/10 mx-auto mb-8" />
-             <h3 className="text-2xl font-black text-theatre-dark/30 mb-4">The Stage is Empty</h3>
+             <h3 className="text-2xl font-black text-studio-dark/30 mb-4">The Stage is Empty</h3>
              <p className="text-[#4A3B3E]/40 max-w-sm mx-auto mb-10 font-medium leading-relaxed">No sessions found for {format(selectedDate, 'MMM do')}. Check another date or discover new classes!</p>
              <a href="/student/dashboard" className="btn-premium bg-gradient-to-r from-rose-bloom to-rose-petal text-white inline-flex items-center gap-2">Discover Classes <Sparkles className="w-4 h-4" /></a>
           </div>
@@ -207,7 +207,7 @@ export default function MyBookings() {
 
                     <div className="flex-1">
                        <div className="flex flex-wrap items-center gap-4 mb-3">
-                          <h3 className="text-2xl font-black text-theatre-dark tracking-tight">{booking.schedules?.routines?.name}</h3>
+                          <h3 className="text-2xl font-black text-studio-dark tracking-tight">{booking.schedules?.routines?.name}</h3>
                           <div className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border shadow-sm ${getStatusColor(booking.payment_status, booking.schedules?.start_time)}`}>
                             {isSessionCancelled ? 'Session Cancelled' :
                              booking.status === 'CANCELLED' ? 'Cancelled' : 
@@ -222,15 +222,15 @@ export default function MyBookings() {
                        <p className="text-sm font-bold text-[#4A3B3E]/40 mb-6 uppercase tracking-widest">Instructor: {booking.schedules?.teacher?.full_name}</p>
                        
                        <div className="flex flex-wrap gap-8">
-                          <div className="flex items-center gap-2.5 text-xs font-black text-theatre-dark/60">
+                          <div className="flex items-center gap-2.5 text-xs font-black text-studio-dark/60">
                              <Calendar className="w-4 h-4 text-rose-bloom" /> 
                              {format(parseISO(booking.schedules?.start_time), 'EEEE, MMM do')}
                           </div>
-                          <div className="flex items-center gap-2.5 text-xs font-black text-theatre-dark/60">
+                          <div className="flex items-center gap-2.5 text-xs font-black text-studio-dark/60">
                              <Clock className="w-4 h-4 text-rose-bloom" /> 
                              {format(parseISO(booking.schedules?.start_time), 'hh:mm a')}
                           </div>
-                          <div className="flex items-center gap-2.5 text-xs font-black text-theatre-dark/60">
+                          <div className="flex items-center gap-2.5 text-xs font-black text-studio-dark/60">
                              <MapPin className="w-4 h-4 text-rose-bloom" /> 
                              {booking.schedules?.location}
                           </div>
@@ -238,7 +238,7 @@ export default function MyBookings() {
                     </div>
 
                     <div className="w-full md:w-auto flex gap-3">
-                       <button className="flex-1 md:flex-none px-8 py-5 bg-bloom-white rounded-2xl hover:bg-rose-petal/10 transition-colors text-[10px] font-black uppercase tracking-widest text-theatre-dark">Details</button>
+                       <button className="flex-1 md:flex-none px-8 py-5 bg-bloom-white rounded-2xl hover:bg-rose-petal/10 transition-colors text-[10px] font-black uppercase tracking-widest text-studio-dark">Details</button>
                        {canCancel && booking.status !== 'CANCELLED' && (
                          <button 
                           onClick={() => { setBookingToCancel(booking); setIsCancelModalOpen(true); }}
@@ -269,13 +269,13 @@ export default function MyBookings() {
               <AlertCircle className="w-10 h-10" />
            </div>
            <div className="flex-1 text-center md:text-left">
-              <h3 className="text-2xl font-black text-theatre-dark mb-2 tracking-tight">Theatre Policy</h3>
+              <h3 className="text-2xl font-black text-studio-dark mb-2 tracking-tight">Studio Policy</h3>
               <p className="text-sm text-[#4A3B3E]/40 font-bold leading-relaxed max-w-xl uppercase tracking-widest text-[10px]">
                  Cancellations must be made at least 12 hours before the session for a full credit refund. 
-                 Refunds are issued as Theatre Credits.
+                 Refunds are issued as Studio Credits.
               </p>
            </div>
-           <button className="px-10 py-6 bg-studio-dark text-white rounded-[2rem] font-black uppercase tracking-widest text-[10px] hover:translate-x-2 transition-all">Theatre Rules</button>
+           <button className="px-10 py-6 bg-studio-dark text-white rounded-[2rem] font-black uppercase tracking-widest text-[10px] hover:translate-x-2 transition-all">Studio Rules</button>
         </Motion.div>
       </div>
 
@@ -283,13 +283,13 @@ export default function MyBookings() {
       <AnimatePresence>
         {isCancelModalOpen && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 sm:p-10">
-            <Motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsCancelModalOpen(false)} className="absolute inset-0 bg-theatre-dark/40 backdrop-blur-md" />
+            <Motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsCancelModalOpen(false)} className="absolute inset-0 bg-studio-dark/40 backdrop-blur-md" />
             <Motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} className="bg-white w-full max-w-md p-10 rounded-[3rem] relative z-20 overflow-hidden shadow-2xl border border-rose-petal/20">
                <div className="flex flex-col items-center text-center mb-8">
                   <div className="w-16 h-16 bg-rose-bloom/10 rounded-2xl flex items-center justify-center mb-6">
                     <Octagon className="w-8 h-8 text-rose-bloom" />
                   </div>
-                  <h2 className="text-3xl font-black text-theatre-dark mb-4 tracking-tight">Wait! Confirm Cancellation?</h2>
+                  <h2 className="text-3xl font-black text-studio-dark mb-4 tracking-tight">Wait! Confirm Cancellation?</h2>
                   <p className="text-sm text-[#4A3B3E]/60 font-medium leading-relaxed">
                     Are you sure you want to cancel your spot for <span className="text-rose-bloom font-black">{bookingToCancel?.schedules?.routines?.name}</span>?
                   </p>
@@ -307,7 +307,7 @@ export default function MyBookings() {
                   </button>
                   <button 
                     onClick={() => setIsCancelModalOpen(false)}
-                    className="w-full py-5 bg-bloom-white text-theatre-dark rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-rose-petal/10 transition-all border border-rose-petal/10"
+                    className="w-full py-5 bg-bloom-white text-studio-dark rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-rose-petal/10 transition-all border border-rose-petal/10"
                   >
                     No, Keep My Spot
                   </button>
