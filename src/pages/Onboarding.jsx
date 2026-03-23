@@ -65,6 +65,17 @@ export default function Onboarding() {
     }
   }, []);
 
+  // Check if profile already exists and redirect them
+  React.useEffect(() => {
+    if (!authLoading && profile) {
+      const uRole = profile.role?.toUpperCase();
+      if (uRole === 'TEACHER') navigate('/teacher/dashboard');
+      else if (uRole === 'ADMIN') navigate('/admin/dashboard');
+      else navigate('/student/dashboard');
+    }
+  }, [profile, authLoading, navigate]);
+
+
   const handleSubmit = async () => {
     setLoading(true);
     try {
