@@ -45,7 +45,7 @@ const Home = () => {
           <div className="w-12 h-12 bg-zumba-pink rounded-xl flex items-center justify-center rotate-12 shadow-2xl shadow-zumba-pink/20">
             <Play className="w-7 h-7 text-white fill-current" />
           </div>
-          <span className="text-3xl font-black tracking-tighter text-white uppercase italic">ZUMBA<span className="text-zumba-lime text-xl not-italic">THEATRE</span></span>
+          <span className="text-3xl font-black tracking-tighter text-white uppercase italic">DANCE<span className="text-zumba-lime text-xl not-italic">STUDIO</span></span>
         </div>
         {/* Background Orbs */}
         <div className="absolute top-1/4 -left-20 w-96 h-96 bg-zumba-pink/20 rounded-full blur-[120px] animate-pulse" />
@@ -68,7 +68,7 @@ const Home = () => {
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-zumba-pink via-zumba-lime to-zumba-cyan cursor-default hover:opacity-80 transition-opacity">WORKOUT.</span>
               </h1>
               <p className="text-2xl sm:text-4xl text-white/60 font-medium mb-16 leading-tight max-w-4xl">
-                Experience the rhythmic energy of Zumba. The ultimate dance-fitness platform for instructors to lead and students to thrive.
+                Experience the rhythmic energy of the studio. The ultimate dance platform for instructors to lead and students to thrive.
               </p>
               <div className="flex flex-wrap items-center gap-10">
                 <a href={heroBtn.href} className="btn-premium bg-zumba-lime text-black flex items-center gap-5 hover:bg-zumba-lime/80 shadow-2xl shadow-zumba-lime/20 py-10 px-16 text-3xl font-black">
@@ -91,7 +91,7 @@ const Home = () => {
             <div className="h-full w-full overflow-hidden relative group">
               <img 
                 src="/hero-dancer.png" 
-                alt="Zumba Dancer" 
+                alt="Studio Dancer" 
                 className="w-full h-full object-cover object-center grayscale brightness-90 contrast-125 group-hover:scale-105 transition-transform duration-[4000ms] ease-out" 
               />
               <div className="absolute inset-0 bg-zumba-pink/5 mix-blend-overlay group-hover:opacity-0 transition-opacity duration-1500" />
@@ -106,7 +106,7 @@ const Home = () => {
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="flex items-center gap-2 opacity-50">
             <Play className="w-4 h-4 text-zumba-lime fill-current" />
-            <span className="text-sm font-black tracking-tighter uppercase italic">ZUMBA THEATRE</span>
+            <span className="text-sm font-black tracking-tighter uppercase italic">DANCE STUDIO</span>
           </div>
           <div className="flex flex-wrap items-center justify-center gap-6">
             <a href="/how-it-works" className="text-[8px] font-bold uppercase tracking-widest text-white/20 hover:text-white transition-colors">How it Works</a>
@@ -117,7 +117,7 @@ const Home = () => {
               <Facebook className="w-4 h-4 text-white/20 hover:text-white cursor-pointer transition-colors" />
             </div>
           </div>
-          <p className="text-[8px] font-bold text-white/10 tracking-[0.2em] text-center md:text-right uppercase">© 2026 ZUMBA THEATRE WORLDWIDE</p>
+          <p className="text-[8px] font-bold text-white/10 tracking-[0.2em] text-center md:text-right uppercase">© 2026 DANCE STUDIO WORLDWIDE</p>
         </div>
       </footer>
     </div>

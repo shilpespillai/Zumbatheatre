@@ -62,7 +62,7 @@ class ErrorBoundary extends React.Component {
 
             <div className="mt-16 flex items-center justify-center gap-2 opacity-20">
               <Sparkles className="w-4 h-4" />
-              <span className="text-[8px] font-black uppercase tracking-[0.2em]">Zumba Theatre® Protocol</span>
+              <span className="text-[8px] font-black uppercase tracking-[0.2em]">Dance Studio Protocol</span>
             </div>
           </div>
         </div>

@@ -248,7 +248,7 @@ export default function Auth() {
             </motion.div>
             <h1 className="text-6xl font-black text-theatre-dark leading-[1.1]">The Stage is <br/><span className="text-rose-bloom">Waiting.</span></h1>
             <p className="text-xl text-[#4A3B3E]/60 max-w-md font-medium leading-relaxed">
-              Step into the world's most elegant platform for Zumba creators and enthusiasts.
+              Step into the world's most elegant platform for dance creators and enthusiasts.
             </p>
           </div>
           
@@ -386,7 +386,7 @@ export default function Auth() {
                     value={formData.stageCode}
                     onChange={(e) => setFormData({...formData, stageCode: e.target.value})}
                     className="w-full bg-rose-bloom/5 border border-rose-bloom/20 rounded-2xl py-5 px-6 pl-14 focus:outline-none focus:border-rose-bloom transition-all font-mono font-black text-rose-bloom tracking-widest uppercase"
-                    placeholder="ZUMBA-XXXX"
+                    placeholder="STUDIO-XXXX"
                     required
                   />
                   <ShieldCheck className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-rose-bloom/40" />

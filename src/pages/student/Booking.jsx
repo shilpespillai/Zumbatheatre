@@ -304,7 +304,7 @@ export default function StudentBooking() {
       if (paymentMethod === 'stripe') {
         const stripe = await getStripe(paymentConfig.stripe_public_key);
         const session = await createCheckoutSession([{ 
-          name: selectedSession.routine?.name || 'Zumba Session', 
+          name: selectedSession.routine?.name || 'Dance Session', 
           price: selectedSession.price || 15 
         }], { 
           teacherId: selectedSession.teacher_id 
@@ -362,7 +362,7 @@ export default function StudentBooking() {
                       <span className="text-[10px] font-black text-rose-bloom uppercase tracking-widest">Master</span>
                    </div>
                 </div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-rose-bloom/40">Zumba Theatre® Certified</p>
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-rose-bloom/40">Dance Studio Certified</p>
               </div>
             </div>
           </div>

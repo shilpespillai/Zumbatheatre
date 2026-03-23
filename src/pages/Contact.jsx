@@ -103,7 +103,7 @@ export default function Contact() {
       </div>
 
       <footer className="mt-20 py-12 border-t border-white/5 text-center">
-        <p className="text-white/20 font-bold uppercase tracking-[0.3em] text-[10px]">© 2026 ZUMBA THEATRE WORLDWIDE</p>
+        <p className="text-white/20 font-bold uppercase tracking-[0.3em] text-[10px]">© 2026 DANCE STUDIO WORLDWIDE</p>
       </footer>
     </div>
   );

@@ -145,7 +145,7 @@ export default function HowItWorks() {
                 </div>
                 <h2 className="text-5xl font-black leading-tight">Lead Your Community.<br/>Anywhere.</h2>
                 <p className="text-lg text-white/60 leading-relaxed font-medium">
-                  Zumba Theatre provides you with the digital tools to grow your brand, manage your schedule, and track your revenue all in one vibrant command center.
+                  The Dance Studio platform provides you with the digital tools to grow your brand, manage your schedule, and track your revenue all in one vibrant command center.
                 </p>
               </div>
               <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-6 w-full">
@@ -206,7 +206,7 @@ export default function HowItWorks() {
 
         {/* Footer */}
         <footer className="py-12 border-t border-white/5 text-center">
-             <p className="text-white/20 font-bold uppercase tracking-[0.3em] text-[10px]">© 2026 ZUMBA THEATRE WORLDWIDE</p>
+             <p className="text-white/20 font-bold uppercase tracking-[0.3em] text-[10px]">© 2026 DANCE STUDIO WORLDWIDE</p>
         </footer>
       </div>
     </div>

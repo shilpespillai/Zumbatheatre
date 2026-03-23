@@ -91,7 +91,7 @@ export default function TeacherSubscription() {
             <Sparkles className="w-8 h-8 text-rose-bloom" />
           </div>
           <h1 className="text-5xl font-black mb-4 tracking-tight italic">Activate Your Stage</h1>
-          <p className="text-theatre-dark/40 font-bold uppercase tracking-[0.2em] text-xs">Unlock your full potential as a Zumba Theatre® Instructor</p>
+          <p className="text-theatre-dark/40 font-bold uppercase tracking-[0.2em] text-xs">Unlock your full potential as a Dance Studio Instructor</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
