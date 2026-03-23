@@ -31,7 +31,7 @@ export default function CalendarContainer({ events, onDateClick, onEventClick, o
           <CalendarIcon className="w-6 h-6 text-rose-bloom" />
         </div>
         <div>
-          <h2 className="text-2xl font-black text-zumba-dark">
+          <h2 className="text-2xl font-black text-studio-dark">
             {view === 'month' ? format(currentDate, 'MMMM yyyy') : 
              view === 'week' ? `Week of ${format(startOfSelectedWeek(currentDate), 'MMM d')}` :
              format(currentDate, 'EEEE, MMM d')}
@@ -170,8 +170,8 @@ export default function CalendarContainer({ events, onDateClick, onEventClick, o
                     className="p-4 glass rounded-2xl cursor-pointer hover:border-rose-bloom/30 transition-all border border-theatre-dark/15"
                   >
                     <div className="text-[10px] font-black text-rose-bloom mb-1">{event.start_time ? format(parseISO(event.start_time), 'hh:mm a') : '00:00 AM'}</div>
-                    <div className="text-xs font-black text-zumba-dark truncate">{event.name || event.routines?.name}</div>
-                    <div className="flex items-center gap-1 mt-2 text-[9px] font-bold text-zumba-dark/30">
+                    <div className="text-xs font-black text-studio-dark truncate">{event.name || event.routines?.name}</div>
+                    <div className="flex items-center gap-1 mt-2 text-[9px] font-bold text-studio-dark/30">
                       <MapPin className="w-2.5 h-2.5" /> {event.location || 'Main Studio'}
                     </div>
                   </motion.div>
@@ -194,13 +194,13 @@ export default function CalendarContainer({ events, onDateClick, onEventClick, o
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-6">
           <div className="p-8 bg-white/70 rounded-[2.5rem] border border-theatre-dark/20">
-            <h3 className="text-xl font-black text-zumba-dark mb-8 flex items-center gap-3">
+            <h3 className="text-xl font-black text-studio-dark mb-8 flex items-center gap-3">
               <Clock className="w-5 h-5 text-rose-bloom" />
               Timeline
             </h3>
             <div className="space-y-8 relative before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-0.5 before:bg-rose-petal/10">
               {dayEvents.length === 0 ? (
-                <div className="py-20 text-center text-zumba-dark/20 font-bold uppercase tracking-widest text-xs">
+                <div className="py-20 text-center text-studio-dark/20 font-bold uppercase tracking-widest text-xs">
                   Nothing scheduled for this day
                 </div>
               ) : (
@@ -211,15 +211,15 @@ export default function CalendarContainer({ events, onDateClick, onEventClick, o
                       <div className="flex justify-between items-start mb-4">
                         <div>
                           <span className="text-xs font-black text-rose-bloom uppercase tracking-widest">{event.start_time ? format(parseISO(event.start_time), 'hh:mm a') : '00:00 AM'}</span>
-                          <h4 className="text-xl font-black text-zumba-dark group-hover:text-rose-bloom transition-colors mt-1">{event.name || event.routines?.name}</h4>
+                          <h4 className="text-xl font-black text-studio-dark group-hover:text-rose-bloom transition-colors mt-1">{event.name || event.routines?.name}</h4>
                         </div>
                         <div className="text-lg font-black text-rose-bloom">${event.price}</div>
                       </div>
                       <div className="flex gap-6">
-                        <div className="flex items-center gap-2 text-xs font-bold text-zumba-dark/40">
+                        <div className="flex items-center gap-2 text-xs font-bold text-studio-dark/40">
                           <MapPin className="w-4 h-4" /> {event.location}
                         </div>
-                        <div className="flex items-center gap-2 text-xs font-bold text-zumba-dark/40">
+                        <div className="flex items-center gap-2 text-xs font-bold text-studio-dark/40">
                           <Clock className="w-4 h-4" /> {event.routines?.duration_minutes}m
                         </div>
                       </div>

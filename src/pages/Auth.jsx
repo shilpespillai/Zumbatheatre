@@ -111,7 +111,7 @@ export default function Auth() {
       }
       
       // 2. Keep minimal session in local storage for the frontend to know they are a guest
-      localStorage.setItem('zumba_guest_session', JSON.stringify({ ...guestProfile, is_guest: true }));
+      localStorage.setItem('studio_guest_session', JSON.stringify({ ...guestProfile, is_guest: true }));
       localStorage.setItem('pending_teacher_code', guestProfile.stage_code);
       
       navigate('/student/dashboard');
@@ -294,12 +294,12 @@ export default function Auth() {
           </div>
 
           <div className="mb-10">
-            {profile || localStorage.getItem('zumba_guest_session') ? (
+            {profile || localStorage.getItem('studio_guest_session') ? (
               <div className="p-6 bg-rose-bloom/5 border border-rose-bloom/10 rounded-[2rem] mb-6 flex items-center justify-between">
                 <div>
                   <h3 className="text-lg font-black text-theatre-dark leading-tight">Welcome back!</h3>
                   <p className="text-[10px] font-bold text-rose-bloom/60 uppercase tracking-widest mt-1">
-                    {profile?.full_name || JSON.parse(localStorage.getItem('zumba_guest_session')).full_name} is signed in
+                    {profile?.full_name || JSON.parse(localStorage.getItem('studio_guest_session')).full_name} is signed in
                   </p>
                 </div>
                 <button 

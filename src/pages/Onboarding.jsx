@@ -269,7 +269,7 @@ export default function Onboarding() {
                     value={formData.bio}
                     onChange={(e) => setFormData({...formData, bio: e.target.value})}
                     className="w-full bg-bloom-white border border-rose-petal/20 rounded-2xl py-5 px-6 focus:outline-none focus:border-rose-bloom transition-all font-bold text-theatre-dark min-h-[120px]"
-                    placeholder="Tell us about your Zumba journey..."
+                    placeholder="Tell us about your Studio journey..."
                     required
                   />
                 </div>
@@ -282,7 +282,7 @@ export default function Onboarding() {
                        value={formData.stage_code}
                        onChange={(e) => setFormData({...formData, stage_code: e.target.value})}
                        className="w-full bg-white border border-rose-bloom/20 rounded-2xl py-5 px-6 focus:outline-none focus:border-rose-bloom transition-all font-mono font-black text-rose-bloom tracking-widest uppercase"
-                       placeholder="E.g. ZUMBA-1234"
+                       placeholder="E.g. STUDIO-1234"
                      />
                      <p className="text-[10px] text-rose-bloom/40 ml-2 italic">Don't have a code? You can join your instructor's stage later.</p>
                    </div>

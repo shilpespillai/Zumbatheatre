@@ -210,7 +210,7 @@ export default function Routines() {
                     <input 
                       required
                       type="text" 
-                      placeholder="e.g. Zumba High Intensity"
+                      placeholder="e.g. Studio High Intensity"
                       value={formData.name}
                       onChange={(e) => setFormData({...formData, name: e.target.value})}
                       className="w-full bg-white/5 border border-white/20 rounded-2xl py-5 px-6 focus:outline-none focus:border-purple-500 transition-all font-bold"

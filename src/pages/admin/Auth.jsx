@@ -88,7 +88,7 @@ export default function AdminAuth() {
                 value={formData.email}
                 onChange={(e) => setFormData({...formData, email: e.target.value})}
                 className="w-full bg-bloom-white border border-rose-petal/20 rounded-2xl py-5 px-6 pl-14 focus:outline-none focus:border-theatre-dark transition-all font-bold text-theatre-dark"
-                placeholder="admin@zumbatheatre.com"
+                placeholder="admin@studiotheatre.com"
                 required
               />
               <Mail className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-theatre-dark/40" />

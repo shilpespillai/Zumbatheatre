@@ -15,10 +15,10 @@ export default {
         peach: "#FFE5D9",
         apricot: "#FFF0E5",
         "bloom-white": "#FFFAFB",
-        "zumba-pink": "#FF2E63",
-        "zumba-lime": "#00FF9D",
-        "zumba-cyan": "#00E0FF",
-        zumba: {
+        "studio-pink": "#FF2E63",
+        "studio-lime": "#00FF9D",
+        "studio-cyan": "#00E0FF",
+        studio: {
           dark: "#050505",
         }
       },

@@ -75,7 +75,7 @@ export default function TeacherDashboard() {
       }
 
       // ONLY generate if absolutely missing from DB
-      const newCode = `ZUMBA-${profile?.full_name?.split(' ')[0].toUpperCase() || 'STAGE'}-${Math.floor(1000 + Math.random() * 9000)}`;
+      const newCode = `STUDIO-${profile?.full_name?.split(' ')[0].toUpperCase() || 'STAGE'}-${Math.floor(1000 + Math.random() * 9000)}`;
       
       await supabase.from('profiles').update({ stage_code: newCode }).eq('id', user.id);
       
@@ -89,7 +89,7 @@ export default function TeacherDashboard() {
   const handleRefreshInviteCode = async () => {
     const toastId = toast.loading('Refreshing stage code...');
     try {
-      const newCode = `ZUMBA-${profile.full_name?.split(' ')[0].toUpperCase() || 'STAGE'}-${Math.floor(1000 + Math.random() * 9000)}`;
+      const newCode = `STUDIO-${profile.full_name?.split(' ')[0].toUpperCase() || 'STAGE'}-${Math.floor(1000 + Math.random() * 9000)}`;
       
       const { error } = await supabase.from('profiles').update({ stage_code: newCode }).eq('id', user.id);
       if (error) throw error;
@@ -423,7 +423,7 @@ export default function TeacherDashboard() {
         <div className="grid grid-cols-1 xl:grid-cols-4 gap-12 items-start transition-all duration-700">
           <section className="xl:col-span-3 bg-bloom-white/80 p-10 rounded-[3.5rem] border border-apricot/60 shadow-2xl shadow-rose-bloom/5">
             <div className="flex justify-between items-center mb-10">
-               <h3 className="text-2xl font-black text-rose-bloom tracking-tight">Zumba Timings</h3>
+               <h3 className="text-2xl font-black text-rose-bloom tracking-tight">Studio Timings</h3>
             </div>
             
             <CalendarContainer 
@@ -604,7 +604,7 @@ export default function TeacherDashboard() {
                              <label className="text-[10px] font-black text-theatre-dark/30 uppercase ml-1">Routine Name</label>
                              <input 
                               type="text" 
-                              placeholder="e.g. Zumba Morning Glow"
+                              placeholder="e.g. Studio Morning Glow"
                               value={newRoutineData.name}
                               onChange={e => setNewRoutineData({...newRoutineData, name: e.target.value})}
                               className="w-full bg-white border border-apricot/20 rounded-xl py-3 px-4 text-sm font-bold focus:border-rose-bloom outline-none transition-all"

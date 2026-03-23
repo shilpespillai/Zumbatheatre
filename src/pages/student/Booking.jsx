@@ -21,7 +21,7 @@ export default function StudentBooking() {
   const navigate = useNavigate();
   const { user, profile: authProfile } = useAuth();
   const [guestProfile, setGuestProfile] = useState(() => {
-    return JSON.parse(localStorage.getItem('zumba_guest_session') || 'null');
+    return JSON.parse(localStorage.getItem('studio_guest_session') || 'null');
   });
 
   const profile = authProfile || guestProfile;
@@ -356,7 +356,7 @@ export default function StudentBooking() {
               </div>
               <div>
                 <div className="flex items-center gap-3 mb-1">
-                   <h1 className="text-3xl font-black text-zumba-dark">{teacher?.full_name || 'Instructor'}</h1>
+                   <h1 className="text-3xl font-black text-studio-dark">{teacher?.full_name || 'Instructor'}</h1>
                    <div className="bg-rose-bloom/10 px-3 py-1 rounded-full flex items-center gap-1">
                       <Star className="w-3 h-3 text-rose-bloom fill-rose-bloom" />
                       <span className="text-[10px] font-black text-rose-bloom uppercase tracking-widest">Master</span>
@@ -382,7 +382,7 @@ export default function StudentBooking() {
               <section className="bg-white/40 p-10 rounded-[3.5rem] border border-white/50 shadow-2xl shadow-rose-bloom/5 mb-12">
                  <div className="mb-10 flex justify-between items-center">
                     <div>
-                      <h3 className="text-2xl font-black text-zumba-dark">Class Availability</h3>
+                      <h3 className="text-2xl font-black text-studio-dark">Class Availability</h3>
                       <p className="text-xs font-bold text-rose-bloom/40 uppercase tracking-widest mt-1">Select a slot to book</p>
                     </div>
                  </div>
@@ -395,15 +395,15 @@ export default function StudentBooking() {
               </section>
 
               <div className="p-10 bg-white/70 rounded-[3rem] border border-rose-petal/20">
-                 <h3 className="text-xl font-black text-zumba-dark mb-6">About the Instructor</h3>
-                 <p className="text-zumba-dark/60 font-medium leading-relaxed max-w-2xl">
+                 <h3 className="text-xl font-black text-studio-dark mb-6">About the Instructor</h3>
+                 <p className="text-studio-dark/60 font-medium leading-relaxed max-w-2xl">
                     With over 10 years of experience in rhythmic movement, {teacher?.full_name?.split(' ')[0]} brings a theatrical flair to every session. Expect high-energy routines, custom-curated soundtracks, and a supportive community vibe.
                  </p>
               </div>
            </div>
 
            <div className="space-y-8">
-              <div className="p-10 bg-gradient-to-br from-zumba-dark to-[#4A3B3E] rounded-[3rem] text-white shadow-2xl relative overflow-hidden">
+              <div className="p-10 bg-gradient-to-br from-studio-dark to-[#4A3B3E] rounded-[3rem] text-white shadow-2xl relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-rose-bloom/20 blur-[80px] rounded-full" />
                 <h3 className="text-xl font-black mb-8 relative z-10">Booking Summary</h3>
                 
@@ -619,11 +619,11 @@ export default function StudentBooking() {
                  <div className="space-y-4">
                     <div className="flex items-center gap-3">
                        <div className="w-2 h-2 rounded-full bg-rose-bloom" />
-                       <span className="text-xs font-bold text-zumba-dark/60">High Energy Theater Style</span>
+                       <span className="text-xs font-bold text-studio-dark/60">High Energy Theater Style</span>
                     </div>
                     <div className="flex items-center gap-3">
                        <div className="w-2 h-2 rounded-full bg-rose-bloom" />
-                       <span className="text-xs font-bold text-zumba-dark/60">Premium Sound System</span>
+                       <span className="text-xs font-bold text-studio-dark/60">Premium Sound System</span>
                     </div>
                  </div>
               </div>

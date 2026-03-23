@@ -18,7 +18,7 @@ export default function UserSettings() {
   const [isGuest, setIsGuest] = useState(false);
   
   useEffect(() => {
-    const guestSess = localStorage.getItem('zumba_guest_session');
+    const guestSess = localStorage.getItem('studio_guest_session');
     if (guestSess) setIsGuest(true);
   }, []);
 

@@ -111,7 +111,7 @@ export default function StudentBrowse() {
                       <MapPin className="w-3.5 h-3.5" /> Core Theatre NYC
                    </div>
                    <p className="text-[#4A3B3E]/60 text-sm leading-relaxed mb-10 line-clamp-3 font-medium">
-                      {teacher.bio || "Experience the high-energy theatrical Zumba movement with a certified master instructor."}
+                      {teacher.bio || "Experience the high-energy theatrical Studio movement with a certified master instructor."}
                    </p>
 
                    <div className="mt-auto flex gap-4">

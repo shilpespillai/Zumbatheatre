@@ -7,13 +7,13 @@ export const ProtectedRoute = ({ children, allowedRoles = [] }) => {
   const location = useLocation();
 
   // Allow Guest Students
-  const guestSession = JSON.parse(localStorage.getItem('zumba_guest_session') || 'null');
+  const guestSession = JSON.parse(localStorage.getItem('studio_guest_session') || 'null');
   const isGuest = !!guestSession;
 
   if (loading) {
     return (
       <div className="min-h-screen bg-[#0A0A0A] flex items-center justify-center">
-        <div className="w-10 h-10 border-4 border-zumba-pink/20 border-t-zumba-pink rounded-full animate-spin" />
+        <div className="w-10 h-10 border-4 border-studio-pink/20 border-t-studio-pink rounded-full animate-spin" />
       </div>
     );
   }

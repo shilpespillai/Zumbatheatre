@@ -16,10 +16,10 @@ class ErrorBoundary extends React.Component {
   }
 
   handleReset = () => {
-    // Clear all potential zumba-related state
+    // Clear all potential studio-related state
     const keysToRemove = [
-      'zumba_guest_session',
-      'zumba_system_config'
+      'studio_guest_session',
+      'studio_system_config'
     ];
     keysToRemove.forEach(key => localStorage.removeItem(key));
     window.location.href = '/';

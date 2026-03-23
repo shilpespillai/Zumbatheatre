@@ -160,7 +160,7 @@ export default function TeacherCalendar() {
               <ChevronLeft className="w-5 h-5 text-rose-bloom" />
             </a>
             <div>
-              <h1 className="text-3xl font-black text-zumba-dark">Schedule Manager</h1>
+              <h1 className="text-3xl font-black text-studio-dark">Schedule Manager</h1>
               <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-rose-bloom/40 mt-1">Design your party timeline</p>
             </div>
           </div>
@@ -199,9 +199,9 @@ export default function TeacherCalendar() {
                     <div className="p-3 bg-rose-bloom/10 rounded-2xl">
                       <Sparkles className="w-6 h-6 text-rose-bloom" />
                     </div>
-                    <h2 className="text-3xl font-black text-zumba-dark">Add New Slot</h2>
+                    <h2 className="text-3xl font-black text-studio-dark">Add New Slot</h2>
                   </div>
-                  <button onClick={() => setIsModalOpen(false)} className="p-3 hover:bg-rose-petal/10 rounded-xl transition-colors text-zumba-dark/30"><X/></button>
+                  <button onClick={() => setIsModalOpen(false)} className="p-3 hover:bg-rose-petal/10 rounded-xl transition-colors text-studio-dark/30"><X/></button>
                </div>
 
                <form onSubmit={handleScheduleSubmit} className="space-y-8">
@@ -232,29 +232,29 @@ export default function TeacherCalendar() {
                         required
                         value={formData.start_time}
                         onChange={(e) => setFormData({...formData, start_time: e.target.value})}
-                        className="w-full bg-bloom-white border border-apricot/40 rounded-2xl py-5 px-6 focus:outline-none focus:border-rose-bloom transition-all font-bold text-zumba-dark"
+                        className="w-full bg-bloom-white border border-apricot/40 rounded-2xl py-5 px-6 focus:outline-none focus:border-rose-bloom transition-all font-bold text-studio-dark"
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-zumba-dark/30 ml-2">Price ($)</label>
+                      <label className="text-[10px] font-black uppercase tracking-widest text-studio-dark/30 ml-2">Price ($)</label>
                       <input 
                         type="number" 
                         step="0.01"
                         placeholder="Default"
                         value={formData.price}
                         onChange={(e) => setFormData({...formData, price: e.target.value})}
-                        className="w-full bg-bloom-white border border-apricot/40 rounded-2xl py-5 px-6 focus:outline-none focus:border-rose-bloom transition-all font-bold text-zumba-dark"
+                        className="w-full bg-bloom-white border border-apricot/40 rounded-2xl py-5 px-6 focus:outline-none focus:border-rose-bloom transition-all font-bold text-studio-dark"
                       />
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-zumba-dark/30 ml-2">Location</label>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-studio-dark/30 ml-2">Location</label>
                     <input 
                       type="text" 
                       value={formData.location}
                       onChange={(e) => setFormData({...formData, location: e.target.value})}
-                      className="w-full bg-bloom-white border border-rose-petal/20 rounded-2xl py-5 px-6 focus:outline-none focus:border-rose-bloom transition-all font-bold text-zumba-dark"
+                      className="w-full bg-bloom-white border border-rose-petal/20 rounded-2xl py-5 px-6 focus:outline-none focus:border-rose-bloom transition-all font-bold text-studio-dark"
                     />
                   </div>
 
@@ -302,9 +302,9 @@ export default function TeacherCalendar() {
                     <div className="p-3 bg-rose-bloom/10 rounded-2xl">
                       <CalendarIcon className="w-6 h-6 text-rose-bloom" />
                     </div>
-                    <h2 className="text-2xl font-black text-zumba-dark">Sessions on {format(selectedDate, 'PPP')}</h2>
+                    <h2 className="text-2xl font-black text-studio-dark">Sessions on {format(selectedDate, 'PPP')}</h2>
                   </div>
-                  <button onClick={() => setSelectedDate(null)} className="p-3 hover:bg-rose-petal/10 rounded-xl transition-colors text-zumba-dark/30"><X/></button>
+                  <button onClick={() => setSelectedDate(null)} className="p-3 hover:bg-rose-petal/10 rounded-xl transition-colors text-studio-dark/30"><X/></button>
                </div>
 
                <div className="space-y-4">
@@ -349,7 +349,7 @@ export default function TeacherCalendar() {
                       })
                   ) : (
                     <div className="p-10 border-2 border-dashed border-apricot/20 rounded-2xl text-center">
-                      <p className="text-sm font-bold text-zumba-dark/30">No sessions scheduled for this day.</p>
+                      <p className="text-sm font-bold text-studio-dark/30">No sessions scheduled for this day.</p>
                     </div>
                   )}
                </div>

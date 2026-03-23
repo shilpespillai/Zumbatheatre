@@ -17,14 +17,14 @@ import { toast } from 'sonner';
 import CalendarContainer from '../../components/CalendarContainer';
 
 const SEED_TEACHERS = [
-  { id: 'seed-smruti-3617', full_name: 'Smruti Pillai', invite_code: 'ZUMBA-SMRUTIPILLAI-3617', role: 'TEACHER' },
-  { id: 'seed-angella-5640', full_name: 'Angella', invite_code: 'ZUMBA-ANGELLA-5640', role: 'TEACHER' }
+  { id: 'seed-smruti-3617', full_name: 'Smruti Pillai', invite_code: 'STUDIO-SMRUTIPILLAI-3617', role: 'TEACHER' },
+  { id: 'seed-angella-5640', full_name: 'Angella', invite_code: 'STUDIO-ANGELLA-5640', role: 'TEACHER' }
 ];
 
 export default function StudentDashboard() {
   const { profile: authProfile, signOut, fetchProfile } = useAuth();
   const [guestProfile, setGuestProfile] = useState(() => {
-    return JSON.parse(localStorage.getItem('zumba_guest_session') || 'null');
+    return JSON.parse(localStorage.getItem('studio_guest_session') || 'null');
   });
   
   const profile = authProfile || guestProfile;
@@ -79,7 +79,7 @@ export default function StudentDashboard() {
     }
 
     const handleStorageChange = (e) => {
-      if (e.key === 'zumba_guest_session') {
+      if (e.key === 'studio_guest_session') {
          const newGuest = JSON.parse(e.newValue || 'null');
          setGuestProfile(newGuest);
          if (newGuest?.linked_teacher_id) {
@@ -116,14 +116,14 @@ export default function StudentDashboard() {
           await supabase.from('profiles').update({ linked_teacher_id: teacher.id }).eq('id', profile.id);
         }
 
-        const guestSess = JSON.parse(localStorage.getItem('zumba_guest_session') || 'null');
+        const guestSess = JSON.parse(localStorage.getItem('studio_guest_session') || 'null');
         // Use existing ID or generate a stable one based on the code to prevent Date.now() loops
         const stableGuestId = guestSess?.id || 'guest-' + btoa(code).slice(0, 12);
         const updatedGuest = guestSess || { id: stableGuestId, role: 'STUDENT', is_guest: true };
         
         updatedGuest.linked_teacher_id = teacher.id;
         updatedGuest.stage_code = code.toUpperCase().trim();
-        localStorage.setItem('zumba_guest_session', JSON.stringify(updatedGuest));
+        localStorage.setItem('studio_guest_session', JSON.stringify(updatedGuest));
         
         // Only update state if it actually changed to prevent unnecessary re-renders
         if (JSON.stringify(updatedGuest) !== JSON.stringify(guestProfile)) {
@@ -169,10 +169,10 @@ export default function StudentDashboard() {
         }
       } else {
         localStorage.removeItem('pending_teacher_code');
-        const guestSess = JSON.parse(localStorage.getItem('zumba_guest_session') || 'null');
+        const guestSess = JSON.parse(localStorage.getItem('studio_guest_session') || 'null');
         if (guestSess && guestSess.stage_code === code) {
           delete guestSess.stage_code;
-          localStorage.setItem('zumba_guest_session', JSON.stringify(guestSess));
+          localStorage.setItem('studio_guest_session', JSON.stringify(guestSess));
           setGuestProfile(guestSess);
         }
         if (code !== '') toast.error('Invalid stage code. Please check with your instructor.');
@@ -288,7 +288,7 @@ export default function StudentDashboard() {
       // 2. Update local guest session if applicable
       if (guestProfile) {
         const updatedGuest = { ...guestProfile, linked_teacher_id: teacherLink.teacher_id };
-        localStorage.setItem('zumba_guest_session', JSON.stringify(updatedGuest));
+        localStorage.setItem('studio_guest_session', JSON.stringify(updatedGuest));
         setGuestProfile(updatedGuest);
       }
       
@@ -351,10 +351,10 @@ export default function StudentDashboard() {
     const routineVarietyWithPerformance = routineVariety.map(r => ({ ...r, performance: totalRoutineBookings > 0 ? (r.count / totalRoutineBookings) * 100 : 0 }));
 
     // Routine Category Mix
-    const categoryCounts = { 'HIIT': 0, 'Yoga': 0, 'Zumba': 0, 'Strength': 0 };
+    const categoryCounts = { 'HIIT': 0, 'Yoga': 0, 'Studio': 0, 'Strength': 0 };
     paidBookings.forEach(booking => {
       const name = (booking.schedules?.routines?.name || '').toUpperCase();
-      if (name.includes('ZUMBA')) categoryCounts['Zumba']++;
+      if (name.includes('STUDIO')) categoryCounts['Studio']++;
       else if (name.includes('YOGA')) categoryCounts['Yoga']++;
       else if (name.includes('HIIT') || name.includes('CARDIO')) categoryCounts['HIIT']++;
       else categoryCounts['Strength']++;
@@ -432,7 +432,7 @@ export default function StudentDashboard() {
       if (studentId) {
         await supabase.from('profiles').update({ linked_teacher_id: null }).eq('id', studentId);
       }
-      localStorage.removeItem('zumba_guest_session');
+      localStorage.removeItem('studio_guest_session');
       localStorage.removeItem('pending_teacher_code');
       setGuestProfile(null);
       await fetchProfile();

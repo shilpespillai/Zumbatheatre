@@ -17,10 +17,10 @@
   --color-bloom-white: var(--bloom-white);
   --color-theatre-dark: var(--theatre-dark);
   --color-theatre-dark: #1A1516;
-  --color-zumba-dark: #050505;
-  --color-zumba-pink: #FF2E63;
-  --color-zumba-lime: #00FF9D;
-  --color-zumba-cyan: #00E0FF;
+  --color-studio-dark: #050505;
+  --color-studio-pink: #FF2E63;
+  --color-studio-lime: #00FF9D;
+  --color-studio-cyan: #00E0FF;
 }
 
 @layer base {

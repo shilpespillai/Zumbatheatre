@@ -4,7 +4,7 @@ const IS_DEV_BYPASS = import.meta.env.VITE_DEV_BYPASS === 'true';
 
 export const getSystemConfig = async () => {
   if (IS_DEV_BYPASS) {
-    const mockConfig = JSON.parse(localStorage.getItem('zumba_system_config') || '{"subscription_price": 10}');
+    const mockConfig = JSON.parse(localStorage.getItem('studio_system_config') || '{"subscription_price": 10}');
     return mockConfig;
   }
 
@@ -24,7 +24,7 @@ export const updateSystemConfig = async (updates) => {
   if (IS_DEV_BYPASS) {
     const current = await getSystemConfig();
     const updated = { ...current, ...updates };
-    localStorage.setItem('zumba_system_config', JSON.stringify(updated));
+    localStorage.setItem('studio_system_config', JSON.stringify(updated));
     return updated;
   }
 

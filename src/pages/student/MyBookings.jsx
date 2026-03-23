@@ -12,7 +12,7 @@ import { toast } from 'sonner';
 export default function MyBookings() {
   const { profile: authProfile, user } = useAuth();
   const [guestProfile] = useState(() => {
-    return JSON.parse(localStorage.getItem('zumba_guest_session') || 'null');
+    return JSON.parse(localStorage.getItem('studio_guest_session') || 'null');
   });
 
   const profile = authProfile || guestProfile;
@@ -275,7 +275,7 @@ export default function MyBookings() {
                  Refunds are issued as Theatre Credits.
               </p>
            </div>
-           <button className="px-10 py-6 bg-zumba-dark text-white rounded-[2rem] font-black uppercase tracking-widest text-[10px] hover:translate-x-2 transition-all">Theatre Rules</button>
+           <button className="px-10 py-6 bg-studio-dark text-white rounded-[2rem] font-black uppercase tracking-widest text-[10px] hover:translate-x-2 transition-all">Theatre Rules</button>
         </Motion.div>
       </div>
 

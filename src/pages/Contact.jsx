@@ -10,11 +10,11 @@ export default function Contact() {
   const email = "aihealthtec@gmail.com";
 
   return (
-    <div className="min-h-screen bg-zumba-dark text-white font-sans overflow-hidden">
+    <div className="min-h-screen bg-studio-dark text-white font-sans overflow-hidden">
       {/* Background Orbs */}
       <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-1/4 -left-20 w-96 h-96 bg-zumba-pink/20 rounded-full blur-[120px] animate-pulse" />
-        <div className="absolute bottom-1/4 -right-20 w-80 h-80 bg-zumba-lime/10 rounded-full blur-[100px] animate-pulse delay-1000" />
+        <div className="absolute top-1/4 -left-20 w-96 h-96 bg-studio-pink/20 rounded-full blur-[120px] animate-pulse" />
+        <div className="absolute bottom-1/4 -right-20 w-80 h-80 bg-studio-lime/10 rounded-full blur-[100px] animate-pulse delay-1000" />
       </div>
 
       <div className="relative z-10 max-w-7xl mx-auto px-6 py-12 lg:py-20">
@@ -22,7 +22,7 @@ export default function Contact() {
           href="/" 
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
-          className="inline-flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-zumba-lime hover:text-white transition-colors mb-16 bg-white/5 border border-white/10 px-6 py-3 rounded-2xl backdrop-blur-xl"
+          className="inline-flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-studio-lime hover:text-white transition-colors mb-16 bg-white/5 border border-white/10 px-6 py-3 rounded-2xl backdrop-blur-xl"
         >
           <ArrowLeft className="w-4 h-4" />
           Back to Theatre
@@ -34,13 +34,13 @@ export default function Contact() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
           >
-            <div className="inline-flex items-center gap-2 bg-zumba-pink/10 border border-zumba-pink/20 px-4 py-2 rounded-full mb-8">
-              <Sparkles className="w-4 h-4 text-zumba-pink" />
-              <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-zumba-pink text-white">Direct Connect</span>
+            <div className="inline-flex items-center gap-2 bg-studio-pink/10 border border-studio-pink/20 px-4 py-2 rounded-full mb-8">
+              <Sparkles className="w-4 h-4 text-studio-pink" />
+              <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-studio-pink text-white">Direct Connect</span>
             </div>
             <h1 className="text-6xl sm:text-7xl lg:text-8xl font-black mb-8 leading-[0.9] tracking-tighter">
               GET IN <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-zumba-pink via-zumba-lime to-zumba-cyan">TOUCH.</span>
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-studio-pink via-studio-lime to-studio-cyan">TOUCH.</span>
             </h1>
             <p className="text-xl text-white/50 font-medium max-w-lg mb-12 leading-relaxed">
               Have questions about your stage, routines, or premium features? Our team is directly reachable for professional inquiries and support.
@@ -49,11 +49,11 @@ export default function Contact() {
             <div className="space-y-8">
               <div className="flex items-start gap-6">
                 <div className="w-14 h-14 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center shrink-0">
-                  <Mail className="w-7 h-7 text-zumba-lime" />
+                  <Mail className="w-7 h-7 text-studio-lime" />
                 </div>
                 <div>
                   <h4 className="text-xs font-black uppercase tracking-widest text-white/30 mb-2">Email Support</h4>
-                  <a href={`mailto:${email}`} className="text-2xl font-black text-white hover:text-zumba-pink transition-colors break-all">
+                  <a href={`mailto:${email}`} className="text-2xl font-black text-white hover:text-studio-pink transition-colors break-all">
                     {email}
                   </a>
                 </div>
@@ -61,7 +61,7 @@ export default function Contact() {
 
               <div className="flex items-start gap-6">
                 <div className="w-14 h-14 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center shrink-0">
-                  <Globe className="w-7 h-7 text-zumba-cyan" />
+                  <Globe className="w-7 h-7 text-studio-cyan" />
                 </div>
                 <div>
                   <h4 className="text-xs font-black uppercase tracking-widest text-white/30 mb-2">Global Presence</h4>
@@ -79,11 +79,11 @@ export default function Contact() {
             className="bg-white/5 backdrop-blur-3xl p-12 lg:p-16 rounded-[4rem] border border-white/10 relative overflow-hidden"
           >
             <div className="absolute top-0 right-0 p-8 opacity-10">
-              <Send className="w-32 h-32 text-zumba-lime rotate-12" />
+              <Send className="w-32 h-32 text-studio-lime rotate-12" />
             </div>
 
             <div className="relative z-10">
-              <div className="w-20 h-20 bg-zumba-lime rounded-3xl flex items-center justify-center mb-10 rotate-12">
+              <div className="w-20 h-20 bg-studio-lime rounded-3xl flex items-center justify-center mb-10 rotate-12">
                 <ShieldCheck className="w-10 h-10 text-black" />
               </div>
               
