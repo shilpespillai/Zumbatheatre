@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion } from 'framer-motion';
+import { motion as Motion } from 'framer-motion';
 import { 
   UserPlus, Calendar, CreditCard, Play, 
   MapPin, Sparkles, Zap, ShieldCheck, 
@@ -7,8 +7,8 @@ import {
   TrendingUp, Users, Presentation
 } from 'lucide-react';
 
-const StepCard = ({ icon: Icon, title, description, color, delay }) => (
-  <motion.div
+const StepCard = ({ icon: IconComponent, title, description, color, delay }) => (
+  <Motion.div
     initial={{ opacity: 0, y: 30 }}
     whileInView={{ opacity: 1, y: 0 }}
     viewport={{ once: true }}
@@ -16,11 +16,11 @@ const StepCard = ({ icon: Icon, title, description, color, delay }) => (
     className="bg-white/5 backdrop-blur-xl p-8 rounded-[2.5rem] border border-white/10 relative group hover:border-white/20 transition-all"
   >
     <div className={`w-14 h-14 rounded-2xl ${color} flex items-center justify-center mb-6 group-hover:scale-110 transition-transform`}>
-      <Icon className="w-8 h-8 text-white" />
+      <IconComponent className="w-8 h-8 text-white" />
     </div>
     <h3 className="text-2xl font-black text-white mb-4">{title}</h3>
     <p className="text-white/60 font-medium leading-relaxed">{description}</p>
-  </motion.div>
+  </Motion.div>
 );
 
 export default function HowItWorks() {
@@ -109,30 +109,30 @@ export default function HowItWorks() {
 
         {/* Hero Section */}
         <section className="pt-20 pb-32 px-6 text-center max-w-4xl mx-auto">
-          <motion.div
+          <Motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             className="inline-flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-2 rounded-full mb-8"
           >
             <Sparkles className="w-4 h-4 text-zumba-lime" />
             <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-zumba-lime">Platform Guide 2026</span>
-          </motion.div>
-          <motion.h1 
+          </Motion.div>
+          <Motion.h1 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className="text-7xl sm:text-8xl font-black mb-8 leading-[0.9] tracking-tighter"
           >
             THE STAGE <br />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-zumba-pink via-zumba-lime to-zumba-cyan">MECHANISM.</span>
-          </motion.h1>
-          <motion.p 
+          </Motion.h1>
+          <Motion.p 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.2 }}
             className="text-xl text-white/50 font-medium max-w-2xl mx-auto leading-relaxed"
           >
             Whether you're leading the workout or burning the calories, we've designed everything to be seamless, energetic, and fun.
-          </motion.p>
+          </Motion.p>
         </section>
 
         {/* Instructor Path */}
@@ -184,7 +184,7 @@ export default function HowItWorks() {
 
         {/* Call to Action */}
         <section className="py-40 px-6 text-center">
-            <motion.div 
+            <Motion.div 
                initial={{ opacity: 0, y: 50 }}
                whileInView={{ opacity: 1, y: 0 }}
                className="bg-gradient-to-br from-zumba-pink/20 to-zumba-cyan/20 backdrop-blur-3xl p-16 rounded-[4rem] border border-white/10 max-w-4xl mx-auto relative overflow-hidden"
@@ -201,7 +201,7 @@ export default function HowItWorks() {
                         Join as Dancer <Star className="w-5 h-5" />
                     </a>
                 </div>
-            </motion.div>
+            </Motion.div>
         </section>
 
         {/* Footer */}

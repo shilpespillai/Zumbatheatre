@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion } from 'framer-motion';
+import { motion as Motion } from 'framer-motion';
 import { 
   Mail, MessageCircle, MapPin, 
   ArrowLeft, Send, ShieldCheck, 
@@ -18,7 +18,7 @@ export default function Contact() {
       </div>
 
       <div className="relative z-10 max-w-7xl mx-auto px-6 py-12 lg:py-20">
-        <motion.a 
+        <Motion.a 
           href="/" 
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
@@ -26,10 +26,10 @@ export default function Contact() {
         >
           <ArrowLeft className="w-4 h-4" />
           Back to Theatre
-        </motion.a>
+        </Motion.a>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-24 items-center">
-          <motion.div
+          <Motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
@@ -69,9 +69,10 @@ export default function Contact() {
                 </div>
               </div>
             </div>
-          </motion.div>
+          </Motion.div>
 
-          <motion.div
+
+          <Motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.2 }}
@@ -97,7 +98,7 @@ export default function Contact() {
                 </p>
               </div>
             </div>
-          </motion.div>
+          </Motion.div>
         </div>
       </div>
 

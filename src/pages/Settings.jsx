@@ -36,12 +36,13 @@ export default function UserSettings() {
       stripe_public_key: '',
       paypal_url: '',
       bank_instructions: ''
-    },
-    loyalty_settings: {
-      enabled: true,
-      required_sessions: 10,
-      reward_type: 'FREE_SESSION'
     }
+  });
+
+  const [loyaltySettings, setLoyaltySettings] = useState({
+    enabled: true,
+    required_sessions: 10,
+    reward_type: 'FREE_SESSION'
   });
 
   useEffect(() => {
@@ -54,22 +55,16 @@ export default function UserSettings() {
       });
       if (profile.payment_settings) {
         setPaymentSettings(profile.payment_settings);
+      }
+      
+      if (profile.loyalty_settings) {
+        setLoyaltySettings(profile.loyalty_settings);
       } else if (profile.role === 'TEACHER') {
-        const defaultSettings = {
-          method: 'manual',
-          enabledMethods: ['manual'],
-          config: {
-            stripe_public_key: '',
-            paypal_url: '',
-            bank_instructions: ''
-          },
-          loyalty_settings: {
-            enabled: true,
-            required_sessions: 10,
-            reward_type: 'FREE_SESSION'
-          }
-        };
-        setPaymentSettings(defaultSettings);
+        setLoyaltySettings({
+          enabled: true,
+          required_sessions: 10,
+          reward_type: 'FREE_SESSION'
+        });
       }
     }
   }, [profile]);
@@ -81,6 +76,7 @@ export default function UserSettings() {
       const updates = {
         ...formData,
         payment_settings: profile.role === 'TEACHER' ? paymentSettings : null,
+        loyalty_settings: profile.role === 'TEACHER' ? loyaltySettings : null,
         updated_at: new Date().toISOString()
       };
 
@@ -433,11 +429,11 @@ export default function UserSettings() {
                                 <p className="text-sm font-medium text-white/70 mb-8 max-w-md">Reward your most dedicated dancers with automated free sessions and digital accolades.</p>
                                 
                                 <div className="flex items-center gap-4 p-4 bg-white/10 rounded-2xl border border-white/20">
-                                   <div className={`w-12 h-6 rounded-full p-1 transition-all cursor-pointer ${paymentSettings.loyalty_settings?.enabled ? 'bg-apricot' : 'bg-white/20'}`}
-                                        onClick={() => setPaymentSettings({...paymentSettings, loyalty_settings: { ...paymentSettings.loyalty_settings, enabled: !paymentSettings.loyalty_settings?.enabled }})}>
-                                      <div className={`w-4 h-4 bg-white rounded-full transition-all ${paymentSettings.loyalty_settings?.enabled ? 'translate-x-6' : 'translate-x-0'}`} />
+                                   <div className={`w-12 h-6 rounded-full p-1 transition-all cursor-pointer ${loyaltySettings?.enabled ? 'bg-apricot' : 'bg-white/20'}`}
+                                        onClick={() => setLoyaltySettings({ ...loyaltySettings, enabled: !loyaltySettings?.enabled })}>
+                                      <div className={`w-4 h-4 bg-white rounded-full transition-all ${loyaltySettings?.enabled ? 'translate-x-6' : 'translate-x-0'}`} />
                                    </div>
-                                   <span className="text-xs font-black uppercase tracking-widest">{paymentSettings.loyalty_settings?.enabled ? 'Program Active' : 'Program Paused'}</span>
+                                   <span className="text-xs font-black uppercase tracking-widest">{loyaltySettings?.enabled ? 'Program Active' : 'Program Paused'}</span>
                                 </div>
                              </div>
                           </div>
@@ -449,8 +445,8 @@ export default function UserSettings() {
                                    <Package className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-theatre-dark/10 group-focus-within:text-rose-bloom transition-colors" />
                                    <input 
                                      type="number" 
-                                     value={paymentSettings.loyalty_settings?.required_sessions || 10}
-                                     onChange={(e) => setPaymentSettings({...paymentSettings, loyalty_settings: { ...paymentSettings.loyalty_settings, required_sessions: parseInt(e.target.value) }})}
+                                     value={loyaltySettings?.required_sessions || 10}
+                                     onChange={(e) => setLoyaltySettings({ ...loyaltySettings, required_sessions: parseInt(e.target.value) })}
                                      className="w-full bg-white/40 border border-apricot/20 rounded-2xl py-5 pl-16 pr-6 focus:outline-none focus:border-rose-bloom transition-all font-bold text-theatre-dark"
                                    />
                                 </div>

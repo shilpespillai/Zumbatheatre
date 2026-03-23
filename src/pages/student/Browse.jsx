@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../api/supabaseClient';
-import { Search, Star, MapPin, ChevronRight, User, Play, Filter, Sparkles } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { Search, Star, MapPin, Calendar, User, Play, Filter, Sparkles } from 'lucide-react';
+import { motion as Motion, AnimatePresence } from 'framer-motion';
 
 export default function StudentBrowse() {
   const [teachers, setTeachers] = useState([]);
@@ -81,7 +81,7 @@ export default function StudentBrowse() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
             {filteredTeachers.map((teacher, i) => (
-              <motion.div 
+              <Motion.div 
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.1 }}
@@ -127,7 +127,7 @@ export default function StudentBrowse() {
                       </button>
                    </div>
                 </div>
-              </motion.div>
+              </Motion.div>
             ))}
           </div>
         )}

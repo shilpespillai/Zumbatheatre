@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../api/supabaseClient';
 import { useAuth } from '../../context/AuthContext';
@@ -9,10 +9,10 @@ import {
 import { 
   ChevronLeft, Calendar as CalendarIcon, Clock, MapPin, 
   Sparkles, ShieldCheck, Heart, Share2, Star,
-  CreditCard, ExternalLink, Banknote, Landmark
+  CreditCard, ExternalLink, Banknote, Landmark, Ticket
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion as Motion, AnimatePresence } from 'framer-motion';
 import CalendarContainer from '../../components/CalendarContainer';
 import { getStripe, createCheckoutSession } from '../../api/stripeService';
 
@@ -39,79 +39,23 @@ export default function StudentBooking() {
   const [selectedMethod, setSelectedMethod] = useState(null);
   const [loyaltyEligible, setLoyaltyEligible] = useState(false);
 
-  useEffect(() => {
-    fetchTeacher();
-    fetchSchedules();
-    if (profile?.id) {
-      fetchCredits();
-      fetchAllStudentBookings();
-    }
-  }, [teacherId, currentMonth, profile?.id]);
-
-  const fetchCredits = async () => {
-    if (!profile?.id || !teacherId) return;
-    try {
-      const { data, error } = await supabase
-        .from('credits')
-        .select('balance')
-        .eq('student_id', profile.id)
-        .eq('teacher_id', teacherId)
-        .single();
-      
-      if (!error && data) {
-        setStudentCredits(parseFloat(data.balance));
-      } else {
-        setStudentCredits(0);
-      }
-    } catch (err) {
-      console.error('[Booking] Fetch credits error:', err);
-    }
-  };
-
-  const fetchAllStudentBookings = async () => {
-    if (!profile?.id) return;
-    try {
-      const { data, error } = await supabase
-        .from('bookings')
-        .select('*, schedules(start_time, routines(name, duration_minutes))')
-        .eq('student_id', profile.id)
-        .not('payment_status', 'in', '("CANCELLED","VOID")');
-      
-      if (!error) {
-        setAllStudentBookings(data || []);
-        
-        // Calculate Loyalty Eligibility
-        const teacherLoyalty = teacher?.loyalty_settings || { required_sessions: 10, enabled: true };
-        if (teacherLoyalty.enabled !== false) {
-          const teacherBookings = (data || []).filter(b => b.teacher_id === teacherId && b.payment_status === 'PAID');
-          const required = teacherLoyalty.required_sessions || 10;
-          const progress = teacherBookings.length % (required + 1);
-          setLoyaltyEligible(progress === required);
-        }
-      }
-    } catch (err) {
-      console.error('[Booking] Fetch all bookings error:', err);
-    }
-  };
-
-  const findCollision = (session) => {
+  const findCollision = useCallback((session) => {
     if (!session || allStudentBookings.length === 0) return null;
     
     const sessionStart = new Date(session.start_time).getTime();
     const sessionEnd = sessionStart + (session.routines?.duration_minutes || 60) * 60 * 1000;
 
     return allStudentBookings.find(booking => {
-      if (booking.schedule_id === session.id) return false; // Don't conflict with itself if already booked (handled by duplicate check)
+      if (booking.schedule_id === session.id) return false; 
       
       const bStart = new Date(booking.schedules.start_time).getTime();
       const bEnd = bStart + (booking.schedules.routines?.duration_minutes || 60) * 60 * 1000;
       
-      // Overlap check: (startA < endB) && (endA > startB)
       return sessionStart < bEnd && sessionEnd > bStart;
     });
-  };
+  }, [allStudentBookings]);
 
-  const fetchTeacher = async () => {
+  const fetchTeacher = useCallback(async () => {
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
@@ -143,9 +87,9 @@ export default function StudentBooking() {
       }
       setTeacher(teacherData);
     }
-  };
+  }, [teacherId]);
 
-  const fetchSchedules = async () => {
+  const fetchSchedules = useCallback(async () => {
     const firstDay = startOfMonth(currentMonth);
     const lastDay = endOfMonth(currentMonth);
     const searchParams = new URLSearchParams(window.location.search);
@@ -177,7 +121,62 @@ export default function StudentBooking() {
     }
 
     setLoading(false);
-  };
+  }, [teacherId, currentMonth]);
+
+  const fetchCredits = useCallback(async () => {
+    if (!profile?.id || !teacherId) return;
+    try {
+      const { data, error } = await supabase
+        .from('credits')
+        .select('balance')
+        .eq('student_id', profile.id)
+        .eq('teacher_id', teacherId)
+        .single();
+      
+      if (!error && data) {
+        setStudentCredits(parseFloat(data.balance));
+      } else {
+        setStudentCredits(0);
+      }
+    } catch (err) {
+      console.error('[Booking] Fetch credits error:', err);
+    }
+  }, [profile?.id, teacherId]);
+
+  const fetchAllStudentBookings = useCallback(async () => {
+    if (!profile?.id) return;
+    try {
+      const { data, error } = await supabase
+        .from('bookings')
+        .select('*, schedules(start_time, routines(name, duration_minutes))')
+        .eq('student_id', profile.id)
+        .not('payment_status', 'in', '("CANCELLED","VOID")');
+      
+      if (!error) {
+        setAllStudentBookings(data || []);
+        
+        // Calculate Loyalty Eligibility
+        const teacherLoyalty = teacher?.loyalty_settings || { required_sessions: 10, enabled: true };
+        if (teacherLoyalty.enabled !== false) {
+          const teacherBookings = (data || []).filter(b => b.teacher_id === teacherId && b.payment_status === 'PAID');
+          const required = teacherLoyalty.required_sessions || 10;
+          const progress = teacherBookings.length % (required + 1);
+          setLoyaltyEligible(progress === required);
+        }
+      }
+    } catch (err) {
+      console.error('[Booking] Fetch all bookings error:', err);
+    }
+  }, [profile?.id, teacherId, teacher?.loyalty_settings]);
+
+  useEffect(() => {
+    fetchTeacher();
+    fetchSchedules();
+    if (profile?.id) {
+      fetchCredits();
+      fetchAllStudentBookings();
+    }
+  }, [fetchTeacher, fetchSchedules, fetchCredits, fetchAllStudentBookings, profile?.id]);
 
   const handleBooking = async (paymentType = 'normal') => {
     if (!profile) {
@@ -410,7 +409,7 @@ export default function StudentBooking() {
                 
                 <AnimatePresence mode="wait">
                   {selectedSession ? (
-                    <motion.div 
+                    <Motion.div 
                       key="selected"
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
@@ -600,9 +599,9 @@ export default function StudentBooking() {
                       <p className="text-center text-[10px] font-bold opacity-40 uppercase tracking-widest">
                         {selectedMethod === 'manual' ? 'Manual Confirmation' : 'Instant Confirmation'}
                       </p>
-                    </motion.div>
+                    </Motion.div>
                   ) : (
-                    <motion.div 
+                    <Motion.div 
                       key="empty"
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
@@ -610,7 +609,7 @@ export default function StudentBooking() {
                     >
                       <CalendarIcon className="w-12 h-12 mb-4" />
                       <p className="text-sm font-black uppercase tracking-widest">Select a session<br/>to continue</p>
-                    </motion.div>
+                    </Motion.div>
                   )}
                 </AnimatePresence>
               </div>

@@ -3,7 +3,6 @@ import { supabase } from '../../api/supabaseClient';
 import { useNavigate } from 'react-router-dom';
 import { ShieldCheck, ArrowLeft, CreditCard, CheckCircle2, Save, Lock, AlertCircle, X } from 'lucide-react';
 import { toast } from 'sonner';
-import { motion } from 'framer-motion';
 
 export default function TeacherPaymentSettings() {
   const navigate = useNavigate();
@@ -19,28 +18,30 @@ export default function TeacherPaymentSettings() {
     }
 
     setLoading(true);
-    const promise = new Promise(async (resolve, reject) => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const promise = new Promise((resolve, reject) => {
+      (async () => {
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 
-        const response = await fetch(`${supabaseUrl}/functions/v1/save-instructor-key`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session?.access_token}`
-          },
-          body: JSON.stringify({ stripeSecretKey: stripeKey })
-        });
+          const response = await fetch(`${supabaseUrl}/functions/v1/save-instructor-key`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${session?.access_token}`
+            },
+            body: JSON.stringify({ stripeSecretKey: stripeKey })
+          });
 
-        const result = await response.json();
-        if (result.error) throw new Error(result.error);
-        
-        resolve(result);
-        setStripeKey('');
-      } catch (error) {
-        reject(error);
-      }
+          const result = await response.json();
+          if (result.error) throw new Error(result.error);
+          
+          resolve(result);
+          setStripeKey('');
+        } catch (error) {
+          reject(error);
+        }
+      })();
     });
 
     toast.promise(promise, {

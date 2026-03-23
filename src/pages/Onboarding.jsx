@@ -23,7 +23,7 @@ import {
   Check
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion as Motion, AnimatePresence } from 'framer-motion';
 
 export default function Onboarding() {
   const { user, profile, fetchProfile, loading: authLoading } = useAuth();
@@ -135,7 +135,7 @@ export default function Onboarding() {
 
       <div className="w-full max-w-4xl relative z-10">
         {showTroubleshooter && (
-          <motion.div 
+          <Motion.div 
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             className="mb-8 p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center justify-between gap-4"
@@ -155,17 +155,17 @@ export default function Onboarding() {
             >
               How to Fix
             </button>
-          </motion.div>
+          </Motion.div>
         )}
 
         <header className="text-center mb-16">
-          <motion.div 
+          <Motion.div 
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             className="w-16 h-16 bg-gradient-to-br from-rose-bloom to-rose-petal rounded-[1.5rem] flex items-center justify-center mx-auto mb-8 rotate-6 shadow-xl shadow-rose-bloom/20"
           >
             <Sparkles className="text-white w-8 h-8" />
-          </motion.div>
+          </Motion.div>
           <h1 className="text-4xl font-black text-theatre-dark mb-4">Complete Your Profile.</h1>
           <div className="flex justify-center gap-2">
             {[1, 2, 3].map(i => (
@@ -176,7 +176,7 @@ export default function Onboarding() {
 
         <AnimatePresence mode="wait">
           {step === 1 && (
-            <motion.div 
+            <Motion.div 
               key="step1"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -223,11 +223,11 @@ export default function Onboarding() {
               >
                 Next Step <ArrowRight className="w-5 h-5" />
               </button>
-            </motion.div>
+            </Motion.div>
           )}
 
           {step === 2 && (
-            <motion.div 
+            <Motion.div 
               key="step2"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -284,11 +284,11 @@ export default function Onboarding() {
                   Almost there <ArrowRight className="w-5 h-5" />
                 </button>
               </form>
-            </motion.div>
+            </Motion.div>
           )}
 
           {step === 3 && (
-            <motion.div 
+            <Motion.div 
               key="step3"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -325,7 +325,7 @@ export default function Onboarding() {
                   </>
                 )}
               </button>
-            </motion.div>
+            </Motion.div>
           )}
         </AnimatePresence>
       </div>

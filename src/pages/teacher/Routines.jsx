@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../api/supabaseClient';
 import { useAuth } from '../../context/AuthContext';
 import { Plus, Trash2, Edit2, Clock, DollarSign, Package, ChevronLeft, Save, X, Sparkles, Zap } from 'lucide-react';
 import { toast } from 'sonner';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion as Motion, AnimatePresence } from 'framer-motion';
 
 export default function Routines() {
   const { user } = useAuth();
@@ -20,11 +20,7 @@ export default function Routines() {
     default_price: 15.00
   });
 
-  useEffect(() => {
-    fetchRoutines();
-  }, [user]);
-
-  const fetchRoutines = async () => {
+  const fetchRoutines = useCallback(async () => {
     try {
       if (!user) return;
       const { data, error } = await supabase
@@ -41,7 +37,11 @@ export default function Routines() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    fetchRoutines();
+  }, [fetchRoutines]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -90,7 +90,8 @@ export default function Routines() {
       if (error) throw error;
       toast.success('Routine deleted');
       fetchRoutines();
-    } catch (error) {
+    } catch (err) {
+      console.error('[Routines] Delete error:', err);
       toast.error('Could not delete routine');
     }
   };
@@ -146,7 +147,7 @@ export default function Routines() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             <AnimatePresence mode="popLayout">
               {routines.map((routine) => (
-                <motion.div 
+                <Motion.div 
                   layout
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
@@ -175,7 +176,7 @@ export default function Routines() {
                       <span className="text-sm font-bold">${routine.default_price}</span>
                     </div>
                   </div>
-                </motion.div>
+                </Motion.div>
               ))}
             </AnimatePresence>
           </div>
@@ -185,14 +186,14 @@ export default function Routines() {
         <AnimatePresence>
           {isModalOpen && (
             <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 sm:p-10">
-              <motion.div 
+              <Motion.div 
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 onClick={() => setIsModalOpen(false)}
                 className="absolute inset-0 bg-black/80 backdrop-blur-sm"
               />
-              <motion.div 
+              <Motion.div 
                 initial={{ opacity: 0, scale: 0.9, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.9, y: 20 }}
@@ -265,7 +266,7 @@ export default function Routines() {
                     {editingRoutine ? 'Save Changes' : 'Create Routine'}
                   </button>
                 </form>
-              </motion.div>
+              </Motion.div>
             </div>
           )}
         </AnimatePresence>

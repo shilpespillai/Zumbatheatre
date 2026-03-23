@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../api/supabaseClient';
 import { Calendar as CalendarIcon, Users, TrendingUp, Plus, LogOut, Settings as SettingsIcon, Package, Sparkles, X, Save, Clock, MapPin, Trash2, ShieldCheck, ArrowRight, RefreshCw, Copy, Lock, AlertTriangle } from 'lucide-react';
 import CalendarContainer from '../../components/CalendarContainer';
 import { toast } from 'sonner';
-import { motion, AnimatePresence } from 'framer-motion';
-import { isSameDay, format, parseISO } from 'date-fns';
+import { motion as Motion, AnimatePresence } from 'framer-motion';
+import { format, parseISO, isSameDay } from 'date-fns';
 
 export default function TeacherDashboard() {
   const { profile, signOut, user } = useAuth();
@@ -55,11 +55,11 @@ export default function TeacherDashboard() {
       setIsAttendanceModalOpen(true);
     };
 
-  }, [user?.id]); // Only depend on user ID to avoid profile-change loops
+  }, [user?.id, fetchRoutines, fetchAllSchedules, ensureInviteCode]);
 
 
 
-  const fetchRoutines = async () => {
+  const fetchRoutines = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('routines')
@@ -71,9 +71,9 @@ export default function TeacherDashboard() {
     } catch (err) {
       console.error('[Dashboard] Fetch routines error:', err);
     }
-  };
+  }, [user.id]);
 
-  const ensureInviteCode = async () => {
+  const ensureInviteCode = useCallback(async () => {
     if (!user?.id) return;
     
     try {
@@ -104,7 +104,7 @@ export default function TeacherDashboard() {
     } catch (e) {
       console.error('[Dashboard] Code check failed:', e);
     }
-  };
+  }, [user?.id, profile?.full_name]);
 
   const handleRefreshInviteCode = async () => {
     const toastId = toast.loading('Refreshing stage code...');
@@ -125,26 +125,7 @@ export default function TeacherDashboard() {
     navigator.clipboard.writeText(text);
     toast.success('Code copied to clipboard!');
   };
-  const fetchAllSchedules = async () => {
-    setLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('schedules')
-        .select('*, routines(name, duration_minutes)')
-        .eq('teacher_id', user.id);
-      
-      if (error) throw error;
-      const schedulesData = data || [];
-      setSchedules(schedulesData);
-      fetchBookings(schedulesData);
-    } catch (err) {
-      console.error('[Dashboard] Fetch schedules error:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchBookings = async (currentSchedules) => {
+  const fetchBookings = useCallback(async (currentSchedules) => {
     const activeSchedules = currentSchedules || schedules;
     if (!activeSchedules || activeSchedules.length === 0) {
       setBookings([]);
@@ -162,7 +143,26 @@ export default function TeacherDashboard() {
     } catch (err) {
       console.error('[Dashboard] Fetch bookings error:', err);
     }
-  };
+  }, [schedules]);
+
+  const fetchAllSchedules = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('schedules')
+        .select('*, routines(name, duration_minutes)')
+        .eq('teacher_id', user.id);
+      
+      if (error) throw error;
+      const schedulesData = data || [];
+      setSchedules(schedulesData);
+      fetchBookings(schedulesData);
+    } catch (err) {
+      console.error('[Dashboard] Fetch schedules error:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [user.id, fetchBookings]);
 
   const handleQuickRoutineSubmit = async (e) => {
     e.preventDefault();
@@ -567,8 +567,8 @@ export default function TeacherDashboard() {
       <AnimatePresence>
         {isModalOpen && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 sm:p-10">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsModalOpen(false)} className="absolute inset-0 bg-rose-bloom/20 backdrop-blur-md" />
-            <motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} className="bg-bloom-white w-full max-w-xl p-10 rounded-[3rem] relative z-20 overflow-hidden shadow-2xl border border-apricot/50">
+            <Motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsModalOpen(false)} className="absolute inset-0 bg-rose-bloom/20 backdrop-blur-md" />
+            <Motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} className="bg-bloom-white w-full max-w-xl p-10 rounded-[3rem] relative z-20 overflow-hidden shadow-2xl border border-apricot/50">
                <div className="flex justify-between items-center mb-10">
                   <div className="flex items-center gap-4">
                     <div className="p-3 bg-rose-bloom/10 rounded-2xl">
@@ -594,7 +594,7 @@ export default function TeacherDashboard() {
 
                     <AnimatePresence mode="wait">
                       {isAddingRoutine ? (
-                        <motion.div 
+                        <Motion.div 
                           key="quick-add"
                           initial={{ opacity: 0, x: 20 }}
                           animate={{ opacity: 1, x: 0 }}
@@ -639,9 +639,9 @@ export default function TeacherDashboard() {
                            >
                              Save & Use this Routine
                            </button>
-                        </motion.div>
+                        </Motion.div>
                       ) : (
-                        <motion.div 
+                        <Motion.div 
                           key="select-routine"
                           initial={{ opacity: 0, x: -20 }}
                           animate={{ opacity: 1, x: 0 }}
@@ -685,7 +685,7 @@ export default function TeacherDashboard() {
                               </button>
                             )}
                           </div>
-                        </motion.div>
+                        </Motion.div>
                       )}
                     </AnimatePresence>
                     {routines.length === 0 && !isAddingRoutine && (
@@ -736,7 +736,7 @@ export default function TeacherDashboard() {
                     Confirm Schedule
                   </button>
                </form>
-            </motion.div>
+            </Motion.div>
           </div>
         )}
       </AnimatePresence>
@@ -744,14 +744,14 @@ export default function TeacherDashboard() {
       <AnimatePresence>
         {isCancelModalOpen && (
           <div className="fixed inset-0 z-[110] flex items-center justify-center p-6">
-            <motion.div 
+            <Motion.div 
               initial={{ opacity: 0 }} 
               animate={{ opacity: 1 }} 
               exit={{ opacity: 0 }} 
               onClick={() => setIsCancelModalOpen(false)} 
               className="absolute inset-0 bg-theatre-dark/60 backdrop-blur-xl" 
             />
-            <motion.div 
+            <Motion.div 
               initial={{ opacity: 0, scale: 0.9, y: 20 }} 
               animate={{ opacity: 1, scale: 1, y: 0 }} 
               exit={{ opacity: 0, scale: 0.9, y: 20 }} 
@@ -784,7 +784,7 @@ export default function TeacherDashboard() {
                   Keep Scheduled
                 </button>
               </div>
-            </motion.div>
+            </Motion.div>
           </div>
         )}
       </AnimatePresence>
@@ -793,14 +793,14 @@ export default function TeacherDashboard() {
       <AnimatePresence>
         {isAttendanceModalOpen && selectedSessionForAttendance && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 sm:p-10">
-            <motion.div 
+            <Motion.div 
               initial={{ opacity: 0 }} 
               animate={{ opacity: 1 }} 
               exit={{ opacity: 0 }} 
               onClick={() => setIsAttendanceModalOpen(false)} 
               className="absolute inset-0 bg-theatre-dark/40 backdrop-blur-md" 
             />
-            <motion.div 
+            <Motion.div 
               initial={{ opacity: 0, scale: 0.9, y: 20 }} 
               animate={{ opacity: 1, scale: 1, y: 0 }} 
               exit={{ opacity: 0, scale: 0.9, y: 20 }} 
@@ -842,7 +842,7 @@ export default function TeacherDashboard() {
                 {(selectedSessionForAttendance.bookings?.length || 0) > 0 ? (
                   <div className="space-y-4">
                     {selectedSessionForAttendance.bookings.map((booking, i) => (
-                      <motion.div 
+                      <Motion.div 
                         key={booking.id || i}
                         initial={{ opacity: 0, x: -10 }}
                         animate={{ opacity: 1, x: 0 }}
@@ -882,7 +882,7 @@ export default function TeacherDashboard() {
                               <ArrowRight className="w-4 h-4" />
                            </button>
                         </div>
-                      </motion.div>
+                      </Motion.div>
                     ))}
                   </div>
                 ) : (
@@ -900,7 +900,7 @@ export default function TeacherDashboard() {
                     Export Attendance List
                  </button>
               </div>
-            </motion.div>
+            </Motion.div>
           </div>
         )}
       </AnimatePresence>
@@ -908,8 +908,8 @@ export default function TeacherDashboard() {
       <AnimatePresence>
         {isErrorModalOpen && (
           <div className="fixed inset-0 z-[120] flex items-center justify-center p-6">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsErrorModalOpen(false)} className="absolute inset-0 bg-theatre-dark/60 backdrop-blur-xl" />
-            <motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} className="bg-bloom-white w-full max-w-md p-10 rounded-[3.5rem] relative z-20 text-center shadow-2xl border border-rose-bloom/20">
+            <Motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsErrorModalOpen(false)} className="absolute inset-0 bg-theatre-dark/60 backdrop-blur-xl" />
+            <Motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} className="bg-bloom-white w-full max-w-md p-10 rounded-[3.5rem] relative z-20 text-center shadow-2xl border border-rose-bloom/20">
               <div className="w-20 h-20 bg-rose-bloom/10 rounded-3xl flex items-center justify-center mx-auto mb-8">
                 <AlertTriangle className="w-10 h-10 text-rose-bloom" />
               </div>
@@ -927,7 +927,7 @@ export default function TeacherDashboard() {
               >
                 Sync with Present
               </button>
-            </motion.div>
+            </Motion.div>
           </div>
         )}
       </AnimatePresence>

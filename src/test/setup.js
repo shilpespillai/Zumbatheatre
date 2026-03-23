@@ -17,6 +17,5 @@ vi.mock('@supabase/supabase-js', () => ({
       eq: vi.fn(),
       single: vi.fn(),
     })),
-  },
+  })),
 }))
-```

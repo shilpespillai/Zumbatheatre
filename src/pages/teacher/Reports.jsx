@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../api/supabaseClient';
 import { useAuth } from '../../context/AuthContext';
 import { 
@@ -6,8 +6,8 @@ import {
   Calendar, PieChart, BarChart3, ChevronLeft, Download, Filter,
   Sparkles, ArrowUpRight, Activity, ArrowRight
 } from 'lucide-react';
-import { motion } from 'framer-motion';
-import { format, subDays, startOfDay, endOfDay, eachDayOfInterval, isSameDay, subMonths, isSameMonth } from 'date-fns';
+import { motion as Motion } from 'framer-motion';
+import { format, subDays, eachDayOfInterval, isSameDay, subMonths, isSameMonth, parseISO } from 'date-fns';
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, Cell, PieChart as RePieChart, Pie, Sector
@@ -33,11 +33,7 @@ export default function TeacherReports() {
   });
   const [timeRange, setTimeRange] = useState('90days');
 
-  useEffect(() => {
-    if (user) fetchReportData();
-  }, [user, timeRange]);
-
-  const fetchReportData = async () => {
+  const fetchReportData = useCallback(async () => {
     setLoading(true);
     try {
       let routines, schedules, payments, bookings;
@@ -210,7 +206,11 @@ export default function TeacherReports() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, timeRange]);
+
+  useEffect(() => {
+    if (user) fetchReportData();
+  }, [user, timeRange, fetchReportData]);
 
   return (
     <div className="min-h-screen bg-bloom-white text-[#4A3B3E] p-6 sm:p-10 font-sans relative overflow-hidden">
@@ -223,7 +223,7 @@ export default function TeacherReports() {
         {!profile?.is_subscribed && (
           <div className="absolute inset-x-[-2rem] inset-y-[-2rem] z-[80] flex items-center justify-center rounded-[4rem] overflow-hidden">
              <div className="absolute inset-0 bg-bloom-white/40 backdrop-blur-md" />
-             <motion.div 
+             <Motion.div 
                initial={{ opacity: 0, y: 20 }}
                animate={{ opacity: 1, y: 0 }}
                className="relative z-10 bg-white p-12 rounded-[3.5rem] border border-apricot/40 shadow-2xl text-center max-w-sm"
@@ -242,7 +242,7 @@ export default function TeacherReports() {
                   Activate Premium <ArrowRight className="w-4 h-4" />
                 </a>
                 <p className="mt-6 text-[10px] font-black text-rose-bloom/40 uppercase tracking-[0.2em] italic">Only $10 / Month</p>
-             </motion.div>
+             </Motion.div>
           </div>
         )}
         
@@ -289,7 +289,7 @@ export default function TeacherReports() {
                 { label: 'Stage Occupancy', value: `${reportData.occupanyRate}%`, icon: Activity, color: 'text-rose-bloom' },
                 { label: 'Routines Active', value: reportData.activeRoutines, icon: Sparkles, color: 'text-rose-bloom' },
               ].map((stat, i) => (
-                <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.1 }} key={i} className="bg-white/70 backdrop-blur-3xl p-8 rounded-[3rem] border border-theatre-dark/20 shadow-xl relative overflow-hidden group">
+                <Motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.1 }} key={i} className="bg-white/70 backdrop-blur-3xl p-8 rounded-[3rem] border border-theatre-dark/20 shadow-xl relative overflow-hidden group">
                   <div className="flex justify-between items-start mb-6">
                     <div className="p-4 bg-rose-petal/10 rounded-2xl"><stat.icon className={`w-6 h-6 ${stat.color}`} /></div>
                     <div className="text-[10px] font-black text-rose-bloom flex items-center gap-1"><ArrowUpRight className="w-3 h-3" /> Live</div>
@@ -298,7 +298,7 @@ export default function TeacherReports() {
                     <div className="text-[10px] font-black text-[#4A3B3E]/40 uppercase tracking-widest mb-1">{stat.label}</div>
                     <div className="text-4xl font-black text-theatre-dark">{stat.value}</div>
                   </div>
-                </motion.div>
+                </Motion.div>
               ))}
             </div>
 

@@ -1,16 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../api/supabaseClient';
 import { useAuth } from '../../context/AuthContext';
 import { 
   format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, 
-  isSameMonth, isSameDay, addDays, parseISO, startOfDay
+  isSameDay, parseISO, startOfDay
 } from 'date-fns';
 import { 
   ChevronLeft, Plus, MapPin, Clock, 
   DollarSign, Package, Calendar as CalendarIcon, X, Save, Sparkles
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion as Motion, AnimatePresence } from 'framer-motion';
 import CalendarContainer from '../../components/CalendarContainer';
 
 export default function TeacherCalendar() {
@@ -34,23 +34,15 @@ export default function TeacherCalendar() {
     max_seats: 20
   });
 
-  useEffect(() => {
-    if (user) {
-      fetchRoutines();
-      fetchSchedules();
-    }
-
-  }, [user, currentMonth]);
-
-  const fetchRoutines = async () => {
+  const fetchRoutines = useCallback(async () => {
     const { data } = await supabase
       .from('routines')
       .select('*')
       .eq('teacher_id', user.id);
     setRoutines(data || []);
-  };
+  }, [user.id]);
 
-  const fetchSchedules = async () => {
+  const fetchSchedules = useCallback(async () => {
     const firstDay = startOfMonth(currentMonth);
     const lastDay = endOfMonth(currentMonth);
 
@@ -63,7 +55,14 @@ export default function TeacherCalendar() {
 
     if (error) console.error('Error fetching schedules:', error);
     else setSchedules(data || []);
-  };
+  }, [user.id, currentMonth]);
+
+  useEffect(() => {
+    if (user) {
+      fetchRoutines();
+      fetchSchedules();
+    }
+  }, [user, currentMonth, fetchRoutines, fetchSchedules]);
 
   const handleScheduleSubmit = async (e) => {
     e.preventDefault();
@@ -167,14 +166,14 @@ export default function TeacherCalendar() {
           </div>
 
           {selectedDate && startOfDay(selectedDate) >= startOfDay(new Date()) && (
-            <motion.button
+            <Motion.button
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               onClick={() => setIsModalOpen(true)}
               className="btn-premium bg-theatre-dark text-white px-8 py-4 rounded-2xl flex items-center gap-2 hover:bg-rose-bloom transition-all shadow-xl shadow-rose-bloom/10"
             >
               <Plus className="w-5 h-5" /> Quick Schedule
-            </motion.button>
+            </Motion.button>
           )}
         </header>
 
@@ -193,8 +192,8 @@ export default function TeacherCalendar() {
       <AnimatePresence>
         {isModalOpen && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 sm:p-10">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsModalOpen(false)} className="absolute inset-0 bg-rose-petal/20 backdrop-blur-md" />
-            <motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} className="bg-white w-full max-w-xl p-10 rounded-[3rem] relative z-20 overflow-hidden shadow-2xl border border-apricot/40">
+            <Motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsModalOpen(false)} className="absolute inset-0 bg-rose-petal/20 backdrop-blur-md" />
+            <Motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} className="bg-white w-full max-w-xl p-10 rounded-[3rem] relative z-20 overflow-hidden shadow-2xl border border-apricot/40">
                <div className="flex justify-between items-center mb-10">
                   <div className="flex items-center gap-4">
                     <div className="p-3 bg-rose-bloom/10 rounded-2xl">
@@ -287,7 +286,7 @@ export default function TeacherCalendar() {
                     );
                   })()}
                </form>
-            </motion.div>
+            </Motion.div>
           </div>
         )}
       </AnimatePresence>
@@ -296,8 +295,8 @@ export default function TeacherCalendar() {
       <AnimatePresence>
         {selectedDate && !isModalOpen && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 sm:p-10">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setSelectedDate(null)} className="absolute inset-0 bg-rose-petal/20 backdrop-blur-md" />
-            <motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} className="bg-white w-full max-w-xl p-10 rounded-[3rem] relative z-20 overflow-hidden shadow-2xl border border-apricot/40">
+            <Motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setSelectedDate(null)} className="absolute inset-0 bg-rose-petal/20 backdrop-blur-md" />
+            <Motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} className="bg-white w-full max-w-xl p-10 rounded-[3rem] relative z-20 overflow-hidden shadow-2xl border border-apricot/40">
                <div className="flex justify-between items-center mb-10">
                   <div className="flex items-center gap-4">
                     <div className="p-3 bg-rose-bloom/10 rounded-2xl">
@@ -354,7 +353,7 @@ export default function TeacherCalendar() {
                     </div>
                   )}
                </div>
-            </motion.div>
+            </Motion.div>
           </div>
         )}
       </AnimatePresence>
@@ -363,8 +362,8 @@ export default function TeacherCalendar() {
       <AnimatePresence>
         {isCancelModalOpen && cancellingSession && (
           <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 sm:p-10">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsCancelModalOpen(false)} className="absolute inset-0 bg-theatre-dark/40 backdrop-blur-sm" />
-            <motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} className="bg-white w-full max-w-lg p-10 rounded-[3rem] relative z-20 overflow-hidden shadow-2xl border-2 border-red-100">
+            <Motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsCancelModalOpen(false)} className="absolute inset-0 bg-theatre-dark/40 backdrop-blur-sm" />
+            <Motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} className="bg-white w-full max-w-lg p-10 rounded-[3rem] relative z-20 overflow-hidden shadow-2xl border-2 border-red-100">
                <div className="flex justify-between items-center mb-8">
                   <div className="flex items-center gap-4">
                     <div className="p-3 bg-red-50 rounded-2xl">
@@ -410,7 +409,7 @@ export default function TeacherCalendar() {
                     </button>
                   </div>
                </div>
-            </motion.div>
+            </Motion.div>
           </div>
         )}
       </AnimatePresence>

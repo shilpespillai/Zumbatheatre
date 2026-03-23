@@ -7,12 +7,13 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion as Motion, AnimatePresence } from 'framer-motion';
 import { Turnstile } from '@marsidev/react-turnstile';
 import Honeypot from '../components/Honeypot';
+import { v4 as uuidv4 } from 'uuid';
 
 export default function Auth() {
-  const { fetchProfile, user, profile } = useAuth();
+  const { user, profile } = useAuth();
   const navigate = useNavigate();
   const searchParams = new URLSearchParams(window.location.search);
   const initialRole = searchParams.get('role') || 'student';
@@ -38,7 +39,7 @@ export default function Auth() {
         const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 4000));
         await Promise.race([supabase.from('profiles').select('id').limit(1), timeout]);
         setConnectionStatus('ok');
-      } catch (err) {
+      } catch {
         console.warn('[Auth] Connection seems blocked or slow.');
         setConnectionStatus('blocked');
         setShowTroubleshooter(true);
@@ -88,11 +89,25 @@ export default function Auth() {
     };
     
     try {
-      // 1. Permanently record guest in Suppabase (Zero Mock-Data Policy)
-      const { error: upsertError } = await supabase.from('profiles').upsert(guestProfile);
-      if (upsertError) {
-        console.warn('[Auth] Guest upsert to DB failed, falling back to local only:', upsertError);
-        // We still let them in if it's a minor error, but the primary goal is DB storage
+      // Check if this guest already exists (Account Already Exists Check)
+      const { data: existingProfile, error: fetchError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', stableId)
+        .maybeSingle();
+
+      if (fetchError) console.warn('[Auth] Checking existing guest failed:', fetchError);
+      
+      if (existingProfile) {
+        toast.info(`Welcome back, ${formData.fullName}! Entering the stage...`);
+      } else {
+        // 1. Permanently record guest in Supabase (Zero Mock-Data Policy)
+        const { error: upsertError } = await supabase.from('profiles').upsert(guestProfile);
+        if (upsertError) {
+          console.warn('[Auth] Guest upsert to DB failed, falling back to local only:', upsertError);
+          // We still let them in if it's a minor error, but the primary goal is DB storage
+        }
+        toast.success(`Welcome to the stage, ${formData.fullName}!`);
       }
       
       // 2. Keep minimal session in local storage for the frontend to know they are a guest
@@ -100,7 +115,6 @@ export default function Auth() {
       localStorage.setItem('pending_teacher_code', guestProfile.stage_code);
       
       navigate('/student/dashboard');
-      toast.success(`Welcome to the stage, ${formData.fullName}!`);
     } catch (err) {
       console.error('[Auth] Guest entrance failed:', err);
       toast.error('Could not enter the stage. Please check your connection.');
@@ -155,6 +169,14 @@ export default function Auth() {
         });
         
         if (error) throw error;
+
+        // If identities is an empty array, it means the user already exists
+        if (data.user && data.user.identities && data.user.identities.length === 0) {
+          toast.error('An account with this email already exists. Please log in instead.');
+          setIsLogin(true); // Switch to login tab for convenience
+          setLoading(false);
+          return;
+        }
         
         if (data.user) {
           await supabase.from('profiles').upsert({ 

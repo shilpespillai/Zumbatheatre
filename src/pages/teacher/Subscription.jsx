@@ -6,12 +6,12 @@ import {
   Sparkles, Zap, Trophy, Heart
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { motion } from 'framer-motion';
+import { motion as Motion } from 'framer-motion';
 import { getStripe, createCheckoutSession } from '../../api/stripeService';
 import { getSystemConfig } from '../../api/systemConfig';
 
 export default function TeacherSubscription() {
-  const { profile, fetchProfile } = useAuth();
+  const { profile } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [price, setPrice] = useState(10);
@@ -98,7 +98,7 @@ export default function TeacherSubscription() {
           <div className="space-y-8">
             <h2 className="text-2xl font-black tracking-tight mb-8">What's included in Pro?</h2>
             {plan.features.map((feature, i) => (
-              <motion.div 
+              <Motion.div 
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: i * 0.1 }}
@@ -109,7 +109,7 @@ export default function TeacherSubscription() {
                   <CheckCircle2 className="w-4 h-4 text-emerald-500" />
                 </div>
                 <span className="font-bold text-theatre-dark/70 text-sm">{feature}</span>
-              </motion.div>
+              </Motion.div>
             ))}
             
             <div className="pt-8 flex gap-6">

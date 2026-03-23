@@ -6,12 +6,12 @@ import {
   Ticket, AlertCircle, CheckCircle2, XCircle, Sparkles, X, Octagon
 } from 'lucide-react';
 import { format, parseISO, isAfter, isSameDay, addDays, subDays, startOfDay } from 'date-fns';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion as Motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 
 export default function MyBookings() {
   const { profile: authProfile, user } = useAuth();
-  const [guestProfile, setGuestProfile] = useState(() => {
+  const [guestProfile] = useState(() => {
     return JSON.parse(localStorage.getItem('zumba_guest_session') || 'null');
   });
 
@@ -187,7 +187,7 @@ export default function MyBookings() {
                 const canCancel = !isPast && !isSessionCancelled && (booking.payment_status === 'PENDING' || booking.payment_status === 'PAID') && booking.status !== 'CANCELLED';
 
                 return (
-                  <motion.div 
+                  <Motion.div 
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.95 }}
@@ -253,14 +253,14 @@ export default function MyBookings() {
                          </div>
                        )}
                     </div>
-                  </motion.div>
+                  </Motion.div>
                 );
               })}
             </AnimatePresence>
           </div>
         )}
 
-        <motion.div 
+        <Motion.div 
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
           className="mt-24 p-12 bg-white/70 backdrop-blur-xl rounded-[4rem] border border-rose-petal/20 flex flex-col md:flex-row items-center gap-10 shadow-2xl shadow-rose-bloom/5"
@@ -276,15 +276,15 @@ export default function MyBookings() {
               </p>
            </div>
            <button className="px-10 py-6 bg-zumba-dark text-white rounded-[2rem] font-black uppercase tracking-widest text-[10px] hover:translate-x-2 transition-all">Theatre Rules</button>
-        </motion.div>
+        </Motion.div>
       </div>
 
       {/* Professional Cancellation Modal */}
       <AnimatePresence>
         {isCancelModalOpen && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 sm:p-10">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsCancelModalOpen(false)} className="absolute inset-0 bg-theatre-dark/40 backdrop-blur-md" />
-            <motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} className="bg-white w-full max-w-md p-10 rounded-[3rem] relative z-20 overflow-hidden shadow-2xl border border-rose-petal/20">
+            <Motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsCancelModalOpen(false)} className="absolute inset-0 bg-theatre-dark/40 backdrop-blur-md" />
+            <Motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} className="bg-white w-full max-w-md p-10 rounded-[3rem] relative z-20 overflow-hidden shadow-2xl border border-rose-petal/20">
                <div className="flex flex-col items-center text-center mb-8">
                   <div className="w-16 h-16 bg-rose-bloom/10 rounded-2xl flex items-center justify-center mb-6">
                     <Octagon className="w-8 h-8 text-rose-bloom" />
@@ -312,7 +312,7 @@ export default function MyBookings() {
                     No, Keep My Spot
                   </button>
                </div>
-            </motion.div>
+            </Motion.div>
           </div>
         )}
       </AnimatePresence>

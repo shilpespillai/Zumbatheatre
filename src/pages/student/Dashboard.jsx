@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../api/supabaseClient';
 import { useNavigate } from 'react-router-dom';
@@ -8,7 +8,7 @@ import {
   LogOut, Settings as SettingsIcon, CheckCircle2, Activity, PieChart, BarChart3,
   DollarSign, TrendingUp
 } from 'lucide-react';
-import { isSameDay, format, parseISO, subDays, eachDayOfInterval, startOfWeek, endOfWeek, subMonths, isSameMonth } from 'date-fns';
+import { isSameDay, format, parseISO, subDays, eachDayOfInterval, subMonths, isSameMonth } from 'date-fns';
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, Cell, PieChart as RePieChart, Pie, RadialBarChart, RadialBar, Legend
@@ -199,24 +199,21 @@ export default function StudentDashboard() {
         totalSpent: 0, monthlySpent: 0, quarterlySpent: 0, ytdSpent: 0, spendingTrend: []
       });
     }
-  }, [profile?.id, profile?.linked_teacher_id]);
+  }, [profile?.id, profile?.linked_teacher_id, fetchMyBookings]);
 
   useEffect(() => {
     if (myBookings.length > 0 && allSchedules.length > 0) {
       calculateStudentMetrics(myBookings, allSchedules);
     }
-    if (isGlobalMode) {
-      fetchGlobalSchedules();
-    }
-  }, [myBookings, allSchedules, timeRange, isGlobalMode, selectedDate]);
+  }, [myBookings, allSchedules, calculateStudentMetrics]);
 
   useEffect(() => {
     if (profile?.id && profile?.linked_teacher_id) {
       fetchStudentCredits();
     }
-  }, [profile?.id, profile?.linked_teacher_id]);
+  }, [profile?.id, profile?.linked_teacher_id, fetchStudentCredits]);
 
-  const fetchStudentCredits = async () => {
+  const fetchStudentCredits = useCallback(async () => {
     if (!profile?.id || !profile?.linked_teacher_id) return;
     try {
       const { data, error } = await supabase
@@ -234,9 +231,9 @@ export default function StudentDashboard() {
     } catch (err) {
       console.error('[Dashboard] Fetch credits error:', err);
     }
-  };
+  }, [profile?.id, profile?.linked_teacher_id]);
 
-  const fetchAllAvailableSchedules = async (explicitTeacherId) => {
+  const fetchAllAvailableSchedules = useCallback(async (explicitTeacherId) => {
     const teacherId = explicitTeacherId || profile?.linked_teacher_id;
     if (!teacherId) { setAllSchedules([]); setLoading(false); return; }
     setLoading(true);
@@ -264,9 +261,9 @@ export default function StudentDashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [profile?.linked_teacher_id]);
 
-  const fetchTeacherProfile = async (explicitTeacherId) => {
+  const fetchTeacherProfile = useCallback(async (explicitTeacherId) => {
     const teacherId = explicitTeacherId || profile?.linked_teacher_id;
     if (!teacherId) return;
     try {
@@ -280,7 +277,28 @@ export default function StudentDashboard() {
     } catch (err) {
       console.error('[Dashboard] Fetch teacher profile error:', err);
     }
-  };
+  }, [profile?.linked_teacher_id]);
+
+  const fetchGlobalSchedules = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('schedules')
+        .select(`
+          *,
+          routines (name, duration_minutes),
+          profiles (full_name)
+        `)
+        .eq('status', 'SCHEDULED')
+        .limit(20);
+      if (error) throw error;
+      setGlobalSchedules(data || []);
+    } catch (err) {
+      console.error('[Dashboard] Global fetch error:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   const handleSwitchStage = async (teacherLink) => {
     const studentId = profile?.id || guestProfile?.id;
@@ -308,7 +326,6 @@ export default function StudentDashboard() {
 
       // 4. Refresh Dashboard
       toast.success(`Switched to: ${teacherLink.full_name}'s Stage`);
-      await fetchProfile();
       await fetchTeacherProfile(teacherLink.teacher_id);
       await fetchAllAvailableSchedules(teacherLink.teacher_id);
     } catch (err) {
@@ -318,7 +335,7 @@ export default function StudentDashboard() {
     }
   };
 
-  const fetchMyBookings = async () => {
+  const fetchMyBookings = useCallback(async () => {
     const studentId = profile?.id || guestProfile?.id;
     if (!studentId) return;
     try {
@@ -333,9 +350,9 @@ export default function StudentDashboard() {
     } catch (err) {
       console.error('[Dashboard] Fetch bookings error:', err);
     }
-  };
+  }, [profile?.id, guestProfile?.id]);
 
-  const calculateStudentMetrics = (bookings, schedules) => {
+  const calculateStudentMetrics = useCallback((bookings, schedules) => {
     let startDate;
     const now = new Date();
     if (timeRange === '30days') startDate = subDays(now, 30);
@@ -424,7 +441,7 @@ export default function StudentDashboard() {
         isUnlocked: loyaltyCount === loyaltySettings.required_sessions
       }
     });
-  };
+  }, [timeRange, profile?.linked_teacher_id, teacherProfile?.loyalty_settings]);
 
   const handleJoinStage = async (e) => {
     e.preventDefault();

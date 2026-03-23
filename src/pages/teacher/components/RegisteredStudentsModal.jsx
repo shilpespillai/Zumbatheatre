@@ -1,6 +1,6 @@
 import React from 'react';
 import { Users, X, Plus, ArrowRight } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion as Motion, AnimatePresence } from 'framer-motion';
 import { format, parseISO } from 'date-fns';
 
 export default function RegisteredStudentsModal({ session, onClose, onMarkAsPaid }) {
@@ -8,14 +8,14 @@ export default function RegisteredStudentsModal({ session, onClose, onMarkAsPaid
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 sm:p-10">
-      <motion.div 
+      <Motion.div 
         initial={{ opacity: 0 }} 
         animate={{ opacity: 1 }} 
         exit={{ opacity: 0 }} 
         onClick={onClose} 
         className="absolute inset-0 bg-theatre-dark/40 backdrop-blur-md" 
       />
-      <motion.div 
+      <Motion.div 
         initial={{ opacity: 0, scale: 0.9, y: 20 }} 
         animate={{ opacity: 1, scale: 1, y: 0 }} 
         exit={{ opacity: 0, scale: 0.9, y: 20 }} 
@@ -57,7 +57,7 @@ export default function RegisteredStudentsModal({ session, onClose, onMarkAsPaid
           {(session.bookings?.length || 0) > 0 ? (
             <div className="space-y-4">
               {session.bookings.map((booking, i) => (
-                <motion.div 
+                <Motion.div 
                   key={booking.id || i}
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
@@ -97,7 +97,7 @@ export default function RegisteredStudentsModal({ session, onClose, onMarkAsPaid
                         <ArrowRight className="w-4 h-4" />
                      </button>
                   </div>
-                </motion.div>
+                </Motion.div>
               ))}
             </div>
           ) : (
@@ -115,7 +115,7 @@ export default function RegisteredStudentsModal({ session, onClose, onMarkAsPaid
               Export Attendance List
            </button>
         </div>
-      </motion.div>
+      </Motion.div>
     </div>
   );
 }
