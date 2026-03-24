@@ -34,11 +34,18 @@ export const AuthProvider = ({ children }) => {
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log(`[AuthContext] Auth Event: ${event}`);
       const currentUser = session?.user ?? null;
-      setUser(currentUser);
       
+      // Update user state immediately
+      setUser(currentUser);
+
       if (currentUser) {
-        await fetchProfile(currentUser.id);
+        // Only fetch if it's a NEW session or the ID changed
+        // USER_UPDATED events happen during metadata syncs; we don't want to reset profile to null then
+        if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || !profile || profile.id !== currentUser.id) {
+          await fetchProfile(currentUser.id, currentUser);
+        }
       } else {
         setProfile(null);
         setLoading(false);
@@ -51,13 +58,23 @@ export const AuthProvider = ({ children }) => {
     };
   }, []);
 
+  const [lastFetchedId, setLastFetchedId] = useState(null);
+
   const fetchProfile = async (userId, currentUserObj = null) => {
     const id = userId || user?.id;
     const activeUser = currentUserObj || user;
     if (!id) return;
     
+    // Deduplication: Don't refetch if we just fetched this ID and it's stable
+    // (We allow manual overrides by passing userId explicitly)
+    if (id === lastFetchedId && !userId) {
+      console.log(`[AuthContext] Skipping redundant fetch for ${id}`);
+      return;
+    }
+
     try {
       console.log(`[AuthContext] Fetching profile for ${id}...`);
+      setLastFetchedId(id);
       
       const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('AuthContext Fetch Timeout')), 8000));
       const fetchPromise = supabase.from('profiles').select('*').eq('id', id).single();

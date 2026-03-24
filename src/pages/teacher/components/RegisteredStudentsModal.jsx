@@ -73,8 +73,10 @@ export default function RegisteredStudentsModal({ session, onClose, onMarkAsPaid
                       )}
                     </div>
                     <div>
-                      <div className="font-black text-studio-dark">{booking.student?.full_name}</div>
-                      <div className="text-[10px] font-bold text-studio-dark/30 uppercase tracking-widest">{booking.student?.email}</div>
+                      <div className="font-black text-studio-dark">{booking.student?.full_name || 'Guest Artist'}</div>
+                      <div className="text-[10px] font-bold text-studio-dark/30 uppercase tracking-widest">
+                        {booking.student?.email || 'Anonymous Student'}
+                      </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">

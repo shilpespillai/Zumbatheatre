@@ -250,7 +250,7 @@ export default function StudentDashboard() {
         s.teacher_id === teacherLink.teacher_id ? { ...s, last_visited: new Date().toISOString() } : s
       ).sort((a, b) => new Date(b.last_visited) - new Date(a.last_visited));
       
-      await supabase.from('profiles').update({ visited_stages: updatedVisited }).eq('id', studentId);
+      await supabase.from('profiles').update({ visited_stages: updatedVisited }).eq('id', profile.id);
       setVisitedStages(updatedVisited);
 
       // 4. Refresh Dashboard
@@ -269,8 +269,8 @@ export default function StudentDashboard() {
     try {
       const { data, error } = await supabase
         .from('bookings')
-        .select('*, schedules(start_time, routines(name))')
-        .eq('student_id', studentId)
+        .select('*, schedules(id, start_time, routines(name))')
+        .eq('student_id', profile.id)
         .in('payment_status', ['PAID', 'PENDING', 'VOID']);
       
       if (error) throw error;
@@ -521,12 +521,37 @@ export default function StudentDashboard() {
                                 
                                 <h5 className="text-sm font-black text-studio-dark mb-6 group-hover/card:text-rose-bloom transition-colors">{session.routines?.name}</h5>
                                 
-                                <button
-                                  onClick={() => navigate(`/student/book/${session.teacher_id}${isGlobalMode ? '' : `?sessionId=${session.id}`}`)}
-                                  className="w-full py-4 bg-studio-dark text-white rounded-2xl font-black uppercase text-[9px] tracking-widest flex items-center justify-center gap-2 hover:bg-rose-bloom transition-all shadow-lg shadow-studio-dark/10"
-                                >
-                                  Book Routine <ArrowRight className="w-4 h-4" />
-                                </button>
+                                 {(() => {
+                                   const myBooking = myBookings.find(b => b.schedule_id === session.id);
+                                   const isFull = (session.seats_taken || 0) >= (session.max_seats || 20);
+                                   
+                                   if (myBooking) {
+                                     const isPaid = myBooking.payment_status === 'PAID';
+                                     return (
+                                       <div className={`w-full py-4 rounded-2xl font-black uppercase text-[9px] tracking-widest flex items-center justify-center gap-2 border-2 ${isPaid ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-rose-bloom/10 text-rose-bloom border-rose-bloom/20'}`}>
+                                         {isPaid ? <CheckCircle2 className="w-4 h-4" /> : <Sparkles className="w-4 h-4" />}
+                                         {isPaid ? 'PAID & READY' : 'RESERVED'}
+                                       </div>
+                                     );
+                                   }
+
+                                   if (isFull) {
+                                     return (
+                                       <div className="w-full py-4 bg-studio-dark/10 text-studio-dark/40 rounded-2xl font-black uppercase text-[9px] tracking-widest flex items-center justify-center gap-2 cursor-not-allowed">
+                                         <X className="w-4 h-4" /> SOLD OUT
+                                       </div>
+                                     );
+                                   }
+
+                                   return (
+                                     <button
+                                       onClick={() => navigate(`/student/book/${session.teacher_id}${isGlobalMode ? '' : `?sessionId=${session.id}`}`)}
+                                       className="w-full py-4 bg-studio-dark text-white rounded-2xl font-black uppercase text-[9px] tracking-widest flex items-center justify-center gap-2 hover:bg-rose-bloom transition-all shadow-lg shadow-studio-dark/10"
+                                     >
+                                       Book Routine <ArrowRight className="w-4 h-4" />
+                                     </button>
+                                   );
+                                 })()}
                               </div>
                             ))
                         ) : (

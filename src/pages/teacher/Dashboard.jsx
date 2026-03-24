@@ -126,6 +126,7 @@ export default function TeacherDashboard() {
     const activeSchedules = currentSchedules || schedules;
     if (!activeSchedules || activeSchedules.length === 0) {
       setBookings([]);
+      setRecentBookings([]); // Also clear recent bookings
       return;
     }
 
@@ -133,10 +134,19 @@ export default function TeacherDashboard() {
       const { data, error } = await supabase
         .from('bookings')
         .select('*, student:student_id(full_name, avatar_url, email)')
-        .in('schedule_id', activeSchedules.map(s => s.id));
+        .in('schedule_id', activeSchedules.map(s => s.id))
+        .order('created_at', { ascending: false }); // Added order by created_at
       
       if (error) throw error;
-      setBookings(data || []);
+      
+      setBookings(data || []); // Keep original setBookings call
+
+      // Filter out any invalid bookings or handle null students for recent bookings
+      const validRecent = (data || []).map(b => ({
+        ...b,
+        student: b.student || { full_name: 'Guest Artist', email: 'Anonymous' }
+      }));
+      setRecentBookings(validRecent);
     } catch (err) {
       console.error('[Dashboard] Fetch bookings error:', err);
     }
@@ -875,7 +885,9 @@ export default function TeacherDashboard() {
                           </div>
                           <div>
                             <div className="font-black text-studio-dark">{booking.student?.full_name}</div>
-                            <div className="text-[10px] font-bold text-studio-dark/30 uppercase tracking-widest">{booking.student?.email}</div>
+                            <div className="text-[10px] font-bold text-studio-dark/30 uppercase tracking-widest">
+                              {booking.student?.email || 'Anonymous Student'}
+                            </div>
                           </div>
                         </div>
                         <div className="flex items-center gap-3">

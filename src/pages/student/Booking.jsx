@@ -180,7 +180,7 @@ export default function StudentBooking() {
     }
     if (!selectedSession) {
       toast.error('Please select a session to book.');
-      if (booking) return;
+      return;
     }
 
     // Silent Auth students now have a real session, so we only block if totally unauthenticated
@@ -192,15 +192,7 @@ export default function StudentBooking() {
       return;
     }
 
-    setBooking(true);
-    
-    if (new Date(selectedSession.start_time) < new Date()) {
-      toast.error('This session has already expired.');
-      setBooking(false);
-      return;
-    }
-
-    toast.loading('Processing your booking...');
+    const toastId = toast.loading('Processing your booking...');
 
     try {
       // 1. Prevent Duplicate Bookings - Check Supabase
@@ -212,14 +204,14 @@ export default function StudentBooking() {
         .not('payment_status', 'in', '("CANCELLED","VOID")');
       
       if (existingBookings && existingBookings.length > 0) {
-        toast.error('You have already reserved a spot for this session.');
+        toast.error('You have already reserved a spot for this session.', { id: toastId });
         setBooking(false);
         return;
       }
 
       if (paymentType === 'credits') {
         if (studentCredits < selectedSession.price) {
-          toast.error('Insufficient credits for this stage.');
+          toast.error('Insufficient credits for this stage.', { id: toastId });
           setBooking(false);
           return;
         }
@@ -267,7 +259,7 @@ export default function StudentBooking() {
           status: 'SUCCEEDED'
         });
 
-        toast.success('Booked instantly using your credits!');
+        toast.success('Booked instantly using your credits!', { id: toastId });
         navigate('/student/dashboard');
         return;
       }
@@ -296,7 +288,7 @@ export default function StudentBooking() {
           status: 'SUCCEEDED'
         });
 
-        toast.success('Congratulations! Your 11th session is FREE.');
+        toast.success('Congratulations! Your 11th session is FREE.', { id: toastId });
         navigate('/student/dashboard');
         return;
       }
@@ -310,32 +302,40 @@ export default function StudentBooking() {
           name: selectedSession.routine?.name || 'Dance Session', 
           price: selectedSession.price || 15 
         }], { 
-          teacherId: selectedSession.teacher_id 
+          teacherId: selectedSession.teacher_id,
+          studentId: profile.id,
+          scheduleId: selectedSession.id
         });
+        toast.dismiss(toastId);
         await stripe.redirectToCheckout({ sessionId: session.id });
-      } else if (paymentMethod === 'paypal') {
-        window.location.href = paymentConfig.paypal_url;
       } else {
-        // Manual Flow Insertion in Supabase
-        const { error: manualError } = await supabase
+        // PayPal & Manual Flow Insertion in Supabase
+        const { error: bookingError } = await supabase
           .from('bookings')
           .insert({
-            student_id: user.id, // Use auth user ID directly for safety
+            student_id: profile.id,
             schedule_id: selectedSession.id,
             amount: selectedSession.price,
-            payment_method: 'MANUAL',
+            payment_method: paymentMethod.toUpperCase(),
             payment_status: 'PENDING'
           });
 
-        if (manualError) throw manualError;
+        if (bookingError) throw bookingError;
 
-        toast.success('Spot reserved! Manual payment instructions shown.');
-        navigate('/student/dashboard');
+        if (paymentMethod === 'paypal') {
+          toast.success('Redirecting to PayPal...', { id: toastId });
+          setTimeout(() => {
+            window.location.href = paymentConfig.paypal_url;
+          }, 1000);
+        } else {
+          toast.success('Spot reserved! Manual payment instructions shown.', { id: toastId });
+          navigate('/student/dashboard');
+        }
       }
 
     } catch (error) {
       console.error('[Booking] Error:', error);
-      toast.error('Failed to book session. Please try again.');
+      toast.error('Failed to book session. Please try again.', { id: toastId });
     } finally {
       setBooking(false);
     }
@@ -541,7 +541,9 @@ export default function StudentBooking() {
 
                         <div className="flex justify-between items-center px-1">
                           <span className="text-[10px] font-bold opacity-40 uppercase tracking-widest">Available Seats</span>
-                          <span className="text-[10px] font-black text-rose-petal tracking-widest">12 / 20</span>
+                          <span className="text-[10px] font-black text-rose-petal tracking-widest">
+                            {(selectedSession.seats_taken || 0)} / {(selectedSession.max_seats || 20)}
+                          </span>
                         </div>
                         <div className="flex justify-between items-center px-1">
                           <span className="text-[10px] font-bold opacity-40 uppercase tracking-widest">Total Energy</span>
@@ -550,6 +552,28 @@ export default function StudentBooking() {
                       </div>
 
                       {(() => {
+                        const myBooking = allStudentBookings.find(b => b.schedule_id === selectedSession.id);
+                        if (myBooking) {
+                          const isPaid = myBooking.payment_status === 'PAID';
+                          return (
+                            <div className="py-8 text-center bg-white/5 rounded-[2.5rem] border border-white/10 mt-4">
+                              <div className={`w-16 h-16 rounded-full mx-auto mb-6 flex items-center justify-center ${isPaid ? 'bg-emerald-500/20 text-emerald-500' : 'bg-rose-bloom/20 text-rose-bloom'}`}>
+                                {isPaid ? <CheckCircle2 className="w-8 h-8" /> : <Sparkles className="w-8 h-8" />}
+                              </div>
+                              <h4 className="text-xl font-black mb-2 uppercase tracking-tight">You're All Set!</h4>
+                              <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-6">
+                                {isPaid ? 'You have a confirmed spot for this routine.' : 'Your reservation is pending confirmation.'}
+                              </p>
+                              <button 
+                                onClick={() => navigate('/student/bookings')}
+                                className="px-8 py-4 bg-white/10 hover:bg-white/20 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest transition-all"
+                              >
+                                View My Bookings
+                              </button>
+                            </div>
+                          );
+                        }
+
                         const isExpired = selectedSession && new Date(selectedSession.start_time) < new Date();
                         return (
                           <>

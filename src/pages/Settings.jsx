@@ -13,11 +13,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 
 export default function UserSettings() {
-  const { profile, fetchProfile, signOut } = useAuth();
+  const { profile, fetchProfile, signOut, isTeacher, isStudent } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('profile');
   const [isGuest, setIsGuest] = useState(false);
+  const [lastSyncedProfile, setLastSyncedProfile] = useState(null);
   
   useEffect(() => {
     const guestSess = localStorage.getItem('studio_guest_session');
@@ -48,7 +49,7 @@ export default function UserSettings() {
   });
 
   useEffect(() => {
-    if (profile) {
+    if (profile && JSON.stringify(profile) !== JSON.stringify(lastSyncedProfile)) {
       setFormData({
         full_name: profile.full_name || '',
         phone: profile.phone || '',
@@ -61,24 +62,31 @@ export default function UserSettings() {
       
       if (profile.loyalty_settings) {
         setLoyaltySettings(profile.loyalty_settings);
-      } else if (profile?.role === 'TEACHER') {
+      } else if (isTeacher) {
         setLoyaltySettings({
           enabled: true,
           required_sessions: 10,
           reward_type: 'FREE_SESSION'
         });
       }
+      setLastSyncedProfile(profile);
     }
-  }, [profile]);
+  }, [profile, isTeacher, lastSyncedProfile]);
 
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
+    if (!profile?.id) {
+      toast.error('Session expired. Please log in again.');
+      return;
+    }
+    
     setLoading(true);
     try {
-      if (!profile) throw new Error('No active profile found.');
-      
-      const isTeacher = profile?.role?.toUpperCase() === 'TEACHER';
-      
+      // Capture current role and id locally to avoid race conditions with profile state
+      const currentRole = profile.role?.toUpperCase();
+      const currentId = profile.id;
+      const currentStageCode = profile.stage_code;
+
       const updates = {
         full_name: formData.full_name,
         avatar_url: formData.avatar_url,
@@ -87,49 +95,43 @@ export default function UserSettings() {
         updated_at: new Date().toISOString()
       };
 
-      // Only include teacher-specific settings if the user is a teacher
-      if (isTeacher) {
+      if (currentRole === 'TEACHER') {
         updates.payment_settings = paymentSettings;
         updates.loyalty_settings = loyaltySettings;
       }
 
-      console.log('[Settings] Saving updates:', updates);
+      console.log('[Settings] Saving updates for:', currentId);
 
       const { error } = await supabase
         .from('profiles')
         .update(updates)
-        .eq('id', profile.id);
+        .eq('id', currentId);
 
       if (error) {
-        console.error('[Settings] Database update failed:', error);
-        // If it's a "column not found" error, it means migrations haven't run yet
-        if (error.code === '42703') {
-          toast.error('Database schema out of sync. Please run the latest migrations.');
-          return;
-        }
+        console.error('[Settings] DB update failed:', error);
+        if (error.code === '42703') throw new Error('Database schema out of sync. Please apply migrations.');
         throw error;
       }
 
-      // SYNC TO AUTH METADATA (Unblockable path for resilience)
+      // 2. Sync to Auth Metadata (Include role and stage_code to prevent identity loss)
       const { error: metaError } = await supabase.auth.updateUser({
         data: {
           full_name: formData.full_name,
           phone: formData.phone,
           bio: formData.bio,
-          role: profile?.role,
+          role: currentRole,
+          stage_code: currentStageCode,
           avatar_url: formData.avatar_url
         }
       });
 
-      if (metaError) {
-        console.warn('[Settings] Metadata sync failed:', metaError);
-      }
+      if (metaError) console.warn('[Settings] Metadata sync warning:', metaError);
       
-      await fetchProfile();
-      toast.success('Settings updated successfully!');
+      await fetchProfile(currentId);
+      toast.success('Settings synchronized successfully!');
     } catch (err) {
       console.error('[Settings] Update error:', err);
-      toast.error(err.message || 'Failed to update settings');
+      toast.error(err.message || 'Failed to save settings');
     } finally {
       setLoading(false);
     }
@@ -204,7 +206,7 @@ export default function UserSettings() {
 
   const tabs = [
     { id: 'profile', label: 'Profile Settings', icon: User },
-    ...(profile?.role?.toUpperCase() === 'TEACHER' ? [
+    ...(isTeacher ? [
       { id: 'finance', label: 'Stage Finance', icon: Landmark },
       { id: 'loyalty', label: 'Loyalty & Rewards', icon: Sparkles }
     ] : []),
