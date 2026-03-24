@@ -91,36 +91,23 @@ export default function Auth() {
         throw new Error('Invalid stage code. Please check with your instructor.');
       }
 
-      // 2. Deterministic Guest Credentials (Silent Auth)
-      // Use a standard domain like .live to avoid "invalid email" TLD errors
-      const seed = btoa(formData.fullName.toLowerCase().trim() + teacher.id).replace(/[^a-f0-9]/g, '');
-      const guestEmail = `guest_${seed.slice(0, 12)}@studiomember.live`;
-      const guestPassword = `Guest!${seed.slice(0, 8)}`;
+      // 2. Anonymous Sign-in (Rate Limit Resilient)
+      // This bypasses 429 Email Rate Limits while still providing a unique DB identity
+      console.log('[Auth] Attempting Anonymous Sign-in for:', formData.fullName);
       
-      console.log('[Auth] Attempting Silent Auth for guest:', guestEmail);
-      
-      // 3. Try to sign in or sign up silently
-      let { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-        email: guestEmail,
-        password: guestPassword
+      const { data: authData, error: authError } = await supabase.auth.signInAnonymously({
+        options: {
+          data: { 
+            full_name: formData.fullName, 
+            role: 'STUDENT'
+            // DO NOT pass stage_code here! Teachers own the stage codes.
+          }
+        }
       });
 
       if (authError) {
-        // Assume account doesn't exist, try to sign up
-        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-          email: guestEmail,
-          password: guestPassword,
-          options: {
-            data: { 
-              full_name: formData.fullName, 
-              role: 'STUDENT'
-              // DO NOT pass stage_code here! Teachers own the stage codes.
-            }
-          }
-        });
-        
-        if (signUpError) throw signUpError;
-        authData = signUpData;
+        console.error('[Auth] Anonymous Auth failed:', authError);
+        throw new Error('Entrance failed. Please ensure Anonymous Auth is enabled in Supabase.');
       }
 
       if (!authData.user) throw new Error('Authentication failed');
