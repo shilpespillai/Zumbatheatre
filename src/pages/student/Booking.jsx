@@ -19,7 +19,7 @@ import { getStripe, createCheckoutSession } from '../../api/stripeService';
 export default function StudentBooking() {
   const { teacherId } = useParams();
   const navigate = useNavigate();
-  const { user, profile } = useAuth();
+  const { user, profile, fetchProfile } = useAuth();
 
   const [teacher, setTeacher] = useState(null);
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -188,6 +188,27 @@ export default function StudentBooking() {
       fetchAllStudentBookings();
     }
   }, [profile?.id, teacherId, fetchCredits, fetchAllStudentBookings]);
+
+  // 4. Auto-Link to this teacher if visiting their booking page
+  useEffect(() => {
+    const autoLinkTeacher = async () => {
+      // Only proceed if we have a valid logged in student and they are visiting a specific teacher
+      if (profile?.id && teacherId && profile.linked_teacher_id !== teacherId) {
+        console.log('[Booking] Synchronizing stage context:', teacherId);
+        const { error } = await supabase
+          .from('profiles')
+          .update({ linked_teacher_id: teacherId })
+          .eq('id', profile.id);
+        
+        if (!error) {
+          // Re-sync AuthContext so the Dashboard knows which stage we are now in
+          await fetchProfile(profile.id);
+        }
+      }
+    };
+
+    autoLinkTeacher();
+  }, [profile?.id, teacherId, profile?.linked_teacher_id, fetchProfile]);
 
   const handleBooking = async (paymentType = 'normal') => {
     if (!profile) {
