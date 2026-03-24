@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../api/supabaseClient';
-import { Calendar as CalendarIcon, Users, TrendingUp, Plus, LogOut, Settings as SettingsIcon, Package, Sparkles, X, Save, Clock, MapPin, Trash2, ShieldCheck, ArrowRight, RefreshCw, Copy, Lock, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Calendar as CalendarIcon, Users, TrendingUp, Plus, LogOut, Settings as SettingsIcon, Package, Sparkles, X, Save, Clock, MapPin, Trash2, ShieldCheck, ArrowRight, RefreshCw, Copy, Lock, AlertTriangle } from 'lucide-react';
 import CalendarContainer from '../../components/CalendarContainer';
 import { toast } from 'sonner';
 import { motion as Motion, AnimatePresence } from 'framer-motion';
@@ -10,7 +10,6 @@ import {
   AreaChart, Area, ResponsiveContainer, Tooltip as ReTooltip, XAxis
 } from 'recharts';
 import { Link } from 'react-router-dom';
-import StudioAI from '../../components/common/StudioAI';
 
 export default function TeacherDashboard() {
   const { profile, signOut, user } = useAuth();
@@ -48,7 +47,6 @@ export default function TeacherDashboard() {
     revenueTrend: [],
     studentTrend: []
   });
-  const [recentBookings, setRecentBookings] = useState([]);
 
 
   const fetchRoutines = useCallback(async () => {
@@ -975,10 +973,6 @@ export default function TeacherDashboard() {
           </div>
         )}
       </AnimatePresence>
-
-      {/* Studio AI Assistant */}
-      <StudioAI studioMetrics={snapshotData} userRole="Teacher" />
-
       {/* Stylish Cancellation Modal */}
       <AnimatePresence>
         {isCancelModalOpen && (

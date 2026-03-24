@@ -14,7 +14,6 @@ import {
 } from 'recharts';
 import { toast } from 'sonner';
 import CalendarContainer from '../../components/CalendarContainer';
-import StudioAI from '../../components/common/StudioAI';
 
 const SEED_TEACHERS = [
   { id: 'seed-smruti-3617', full_name: 'Smruti Pillai', invite_code: 'STUDIO-SMRUTIPILLAI-3617', role: 'TEACHER' },
@@ -896,7 +895,6 @@ export default function StudentDashboard() {
           </div>
         )}
       </div>
-      <StudioAI studioMetrics={studentStats} userRole="Student" />
     </div>
   );
 }
