@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
 import { supabase } from '../../api/supabaseClient';
 import { useAuth } from '../../context/AuthContext';
+import { Link, useNavigate } from 'react-router-dom';
 import { 
   Calendar, Clock, MapPin, ChevronLeft, 
   Ticket, AlertCircle, CheckCircle2, XCircle, Sparkles, X, Octagon, ArrowRight
@@ -65,10 +65,13 @@ export default function MyBookings() {
       const refundAmount = Number(bookingToCancel.schedules?.price) || 0;
       const isPaid = bookingToCancel.payment_status === 'PAID';
 
-      // 1. Update Booking Status in Supabase
+      // 1. Update Booking Status in Supabase using valid payment_status values
+      // payment_status must be ('PENDING', 'PAID', 'VOID', 'REFUNDED')
+      const targetStatus = isPaid ? 'REFUNDED' : 'VOID';
+      
       const { error: cancelError } = await supabase
         .from('bookings')
-        .update({ status: 'CANCELLED', payment_status: 'CANCELLED' })
+        .update({ payment_status: targetStatus })
         .eq('id', bookingToCancel.id);
       
       if (cancelError) throw cancelError;
@@ -142,9 +145,9 @@ export default function MyBookings() {
       <div className="max-w-5xl mx-auto relative z-10">
         <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-16 gap-8">
            <div className="flex items-center gap-6">
-            <a href="/student/dashboard" className="p-4 bg-white rounded-2xl border border-rose-petal/10 hover:bg-rose-petal/5 transition-all shadow-sm">
+            <Link to="/student/dashboard" className="p-4 bg-white rounded-2xl border border-rose-petal/10 hover:bg-rose-petal/5 transition-all shadow-sm">
               <ChevronLeft className="w-6 h-6 text-rose-bloom" />
-            </a>
+            </Link>
             <div>
               <h1 className="text-4xl font-black text-studio-dark mb-1">My Studio Sessions.</h1>
               <p className="text-rose-bloom/40 font-bold uppercase tracking-[0.2em] text-[10px]">Manage your energy and upcoming rhythms</p>
@@ -179,7 +182,7 @@ export default function MyBookings() {
              <Ticket className="w-20 h-20 text-rose-bloom/10 mx-auto mb-8" />
              <h3 className="text-2xl font-black text-studio-dark/30 mb-4">The Stage is Empty</h3>
              <p className="text-[#4A3B3E]/40 max-w-sm mx-auto mb-10 font-medium leading-relaxed">No sessions found for {format(selectedDate, 'MMM do')}. Check another date or discover new classes!</p>
-             <a href="/student/dashboard" className="btn-premium bg-gradient-to-r from-rose-bloom to-rose-petal text-white inline-flex items-center gap-2">Discover Classes <Sparkles className="w-4 h-4" /></a>
+             <Link to="/student/dashboard" className="btn-premium bg-gradient-to-r from-rose-bloom to-rose-petal text-white inline-flex items-center gap-2">Discover Classes <Sparkles className="w-4 h-4" /></Link>
           </div>
         ) : (
           <div className="space-y-8">

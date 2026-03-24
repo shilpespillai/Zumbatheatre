@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../api/supabaseClient';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { 
   Plus, Calendar as CalendarIcon, Clock, MapPin, 
   Sparkles, Search, SlidersHorizontal, Heart, Ticket, Eye, Lock, ArrowRight, X,
@@ -467,7 +467,7 @@ export default function StudentDashboard() {
              <button onClick={() => navigate('/student/bookings')} className="px-8 py-5 bg-white border border-apricot/40 text-rose-bloom rounded-[2rem] font-black uppercase tracking-widest text-xs shadow-sm flex items-center gap-3">
                 <Ticket className="w-5 h-5" /> My Bookings
              </button>
-             <a href="/student/settings" className="p-5 bg-white rounded-2xl border border-apricot/40 hover:bg-apricot/5 shadow-sm"><SettingsIcon className="w-6 h-6 text-rose-bloom" /></a>
+             <Link to="/student/settings" className="p-5 bg-white rounded-2xl border border-apricot/40 hover:bg-apricot/5 shadow-sm"><SettingsIcon className="w-6 h-6 text-rose-bloom" /></Link>
              <button onClick={signOut} className="p-5 bg-white rounded-2xl border border-studio-dark/20 hover:bg-rose-petal/5 transition-all shadow-sm"><LogOut className="w-6 h-6 text-rose-bloom" /></button>
           </div>
         </header>
@@ -494,14 +494,21 @@ export default function StudentDashboard() {
         </div>
 
         {activeTab === 'studio' ? (
-          !profile?.linked_teacher_id ? (
+          loading ? (
+            <div className="flex flex-col items-center justify-center py-32 bg-white/40 backdrop-blur-xl rounded-[4rem] border-2 border-dashed border-apricot/50">
+               <div className="w-12 h-12 border-4 border-rose-bloom/20 border-t-rose-bloom rounded-full animate-spin mb-6" />
+               <p className="text-[10px] font-black uppercase tracking-[0.2em] text-rose-bloom/40">Synchronizing Stage...</p>
+            </div>
+          ) : !profile?.linked_teacher_id ? (
             <div className="flex flex-col items-center justify-center py-32 bg-white/40 backdrop-blur-xl rounded-[4rem] border-2 border-dashed border-apricot/50">
                <Lock className="w-16 h-16 text-rose-bloom mb-10 opacity-30" />
                <h2 className="text-4xl font-black text-studio-dark mb-4 text-center tracking-tighter">Your private stage is waiting.</h2>
                <p className="text-studio-dark/40 font-bold uppercase tracking-widest text-[9px] mb-12 max-w-sm text-center">Enter your instructor's code to unlock exclusive choreography.</p>
                <form onSubmit={handleJoinStage} className="w-full max-w-md flex flex-col gap-4">
                   <input type="text" placeholder="CODE" value={linkingCode} onChange={(e) => setLinkingCode(e.target.value)} className="w-full bg-white border border-apricot/60 rounded-2xl py-6 px-8 text-center text-xl font-black text-rose-bloom uppercase tracking-widest" />
-                  <button className="w-full bg-studio-dark text-white py-6 rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-3">Unlock Stage <ArrowRight className="w-5 h-5" /></button>
+                  <button disabled={linking} className="w-full bg-studio-dark text-white py-6 rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-3">
+                    {linking ? 'Unlocking...' : 'Unlock Stage'} <ArrowRight className="w-5 h-5" />
+                  </button>
                </form>
             </div>
           ) : (
