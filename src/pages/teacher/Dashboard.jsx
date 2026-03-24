@@ -272,7 +272,11 @@ export default function TeacherDashboard() {
     try {
       const { error } = await supabase
         .from('bookings')
-        .update({ payment_status: 'PAID', payment_method: 'MANUAL' })
+        .update({ 
+          payment_status: 'PAID', 
+          payment_method: 'MANUAL',
+          status: 'BOOKED'
+        })
         .eq('id', bookingId);
       if (error) throw error;
       
@@ -343,7 +347,7 @@ export default function TeacherDashboard() {
           if (existingCredit) {
             await supabase
               .from('credits')
-              .update({ balance: Number(existingCredit.balance) + Number(booking.price) })
+              .update({ balance: Number(existingCredit.balance) + Number(sessionToCancel.price) })
               .eq('student_id', booking.student_id)
               .eq('teacher_id', user.id);
           } else {
@@ -352,7 +356,7 @@ export default function TeacherDashboard() {
               .insert([{
                 student_id: booking.student_id,
                 teacher_id: user.id,
-                balance: Number(booking.price)
+                balance: Number(sessionToCancel.price)
               }]);
           }
         }
@@ -370,7 +374,8 @@ export default function TeacherDashboard() {
       fetchAllSchedules();
     } catch (error) {
       console.error('[Dashboard] Cancellation failed:', error);
-      toast.error('Failed to cancel session');
+      const msg = error.message || 'Check your connection or permissions.';
+      toast.error(`Failed to cancel session: ${msg}`);
     }
   };
 
