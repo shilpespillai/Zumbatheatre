@@ -5,7 +5,10 @@ import { Calendar as CalendarIcon, Users, TrendingUp, Plus, LogOut, Settings as 
 import CalendarContainer from '../../components/CalendarContainer';
 import { toast } from 'sonner';
 import { motion as Motion, AnimatePresence } from 'framer-motion';
-import { format, parseISO, isSameDay } from 'date-fns';
+import { format, parseISO, isSameDay, subDays, startOfDay, endOfDay } from 'date-fns';
+import { 
+  AreaChart, Area, ResponsiveContainer, Tooltip as ReTooltip, XAxis
+} from 'recharts';
 
 export default function TeacherDashboard() {
   const { profile, signOut, user } = useAuth();
@@ -37,6 +40,12 @@ export default function TeacherDashboard() {
   const [selectedSessionToCancel, setSelectedSessionToCancel] = useState(null);
   const [isErrorModalOpen, setIsErrorModalOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [snapshotData, setSnapshotData] = useState({
+    totalStudents: 0,
+    weeklyRevenue: 0,
+    revenueTrend: [],
+    studentTrend: []
+  });
 
 
   const fetchRoutines = useCallback(async () => {
@@ -152,6 +161,49 @@ export default function TeacherDashboard() {
     }
   }, [schedules]);
 
+  const fetchSnapshotMetrics = useCallback(async () => {
+    try {
+      const { data: paymentsData } = await supabase
+        .from('payments')
+        .select('amount, created_at')
+        .eq('teacher_id', user.id);
+      
+      const { data: studentsData } = await supabase
+        .from('bookings')
+        .select('student_id, created_at')
+        .in('schedule_id', schedules.map(s => s.id));
+
+      if (!paymentsData) return;
+
+      const last7Days = Array.from({ length: 7 }, (_, i) => subDays(new Date(), i)).reverse();
+      
+      const revenueTrend = last7Days.map(day => {
+        const dayPayments = paymentsData.filter(p => isSameDay(new Date(p.created_at), day));
+        return {
+          day: format(day, 'EEE'),
+          amount: dayPayments.reduce((sum, p) => sum + Number(p.amount), 0)
+        };
+      });
+
+      const studentTrend = last7Days.map(day => {
+        const dayBookings = (studentsData || []).filter(b => isSameDay(new Date(b.created_at), day));
+        return {
+          day: format(day, 'EEE'),
+          count: dayBookings.length
+        };
+      });
+
+      setSnapshotData({
+        totalStudents: new Set((studentsData || []).map(b => b.student_id)).size,
+        weeklyRevenue: revenueTrend.reduce((sum, r) => sum + r.amount, 0),
+        revenueTrend,
+        studentTrend
+      });
+    } catch (e) {
+      console.error('[Dashboard] Snapshot error:', e);
+    }
+  }, [user.id, schedules]);
+
   const fetchAllSchedules = useCallback(async () => {
     setLoading(true);
     try {
@@ -164,6 +216,7 @@ export default function TeacherDashboard() {
       const schedulesData = data || [];
       setSchedules(schedulesData);
       fetchBookings(schedulesData);
+      fetchSnapshotMetrics();
     } catch (err) {
       console.error('[Dashboard] Fetch schedules error:', err);
     } finally {
@@ -487,8 +540,73 @@ export default function TeacherDashboard() {
 
         {/* Removed Subscription Banner to allow free access */}
 
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-16">
+           <div className="bg-white/60 backdrop-blur-3xl p-8 rounded-[3rem] border border-apricot/30 shadow-xl relative overflow-hidden group">
+              <div className="flex justify-between items-start mb-4">
+                 <div className="p-3 bg-rose-bloom/10 rounded-2xl"><TrendingUp className="w-5 h-5 text-rose-bloom" /></div>
+                 <div className="text-[9px] font-black text-rose-bloom uppercase tracking-widest">+12%</div>
+              </div>
+              <div className="flex justify-between items-end">
+                 <div>
+                    <div className="text-[10px] font-black text-studio-dark/30 uppercase tracking-widest mb-1">Weekly Rhythm</div>
+                    <div className="text-3xl font-black text-studio-dark">${snapshotData.weeklyRevenue}</div>
+                 </div>
+                 <div className="h-10 w-24">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={snapshotData.revenueTrend}>
+                        <defs>
+                          <linearGradient id="miniRevenue" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#FE7A8A" stopOpacity={0.4}/><stop offset="95%" stopColor="#FE7A8A" stopOpacity={0}/>
+                          </linearGradient>
+                        </defs>
+                        <Area type="monotone" dataKey="amount" stroke="#FE7A8A" strokeWidth={3} fill="url(#miniRevenue)" animationDuration={1500} />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                 </div>
+              </div>
+           </div>
+
+           <div className="bg-white/60 backdrop-blur-3xl p-8 rounded-[3rem] border border-apricot/30 shadow-xl relative overflow-hidden group">
+              <div className="flex justify-between items-start mb-4">
+                 <div className="p-3 bg-studio-dark/10 rounded-2xl"><Users className="w-5 h-5 text-studio-dark" /></div>
+                 <div className="text-[9px] font-black text-studio-dark/30 uppercase tracking-widest">Live</div>
+              </div>
+              <div className="flex justify-between items-end">
+                 <div>
+                    <div className="text-[10px] font-black text-studio-dark/30 uppercase tracking-widest mb-1">Dancer Base</div>
+                    <div className="text-3xl font-black text-studio-dark">{snapshotData.totalStudents}</div>
+                 </div>
+                 <div className="h-10 w-24">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={snapshotData.studentTrend}>
+                        <defs>
+                          <linearGradient id="miniStudents" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#4A3B3E" stopOpacity={0.4}/><stop offset="95%" stopColor="#4A3B3E" stopOpacity={0}/>
+                          </linearGradient>
+                        </defs>
+                        <Area type="monotone" dataKey="count" stroke="#4A3B3E" strokeWidth={3} fill="url(#miniStudents)" animationDuration={1500} />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                 </div>
+              </div>
+           </div>
+
+           <a href="/teacher/reports" className="lg:col-span-2 bg-studio-dark p-8 rounded-[3rem] border border-white/10 shadow-2xl relative overflow-hidden group hover:bg-studio-dark/95 transition-all">
+              <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform"><TrendingUp className="w-24 h-24 text-white" /></div>
+              <div className="relative z-10 flex h-full items-center justify-between">
+                 <div>
+                   <h4 className="text-2xl font-black text-white italic mb-2">View Full Performance Studio</h4>
+                   <p className="text-[10px] font-bold text-white/40 uppercase tracking-[0.3em]">Deep dive into your stage financials & trends</p>
+                 </div>
+                 <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center group-hover:translate-x-2 transition-transform">
+                   <ArrowRight className="text-white w-6 h-6" />
+                 </div>
+              </div>
+           </a>
+        </div>
+
         <div className="grid grid-cols-1 xl:grid-cols-4 gap-12 items-start transition-all duration-700">
-          <section className="xl:col-span-3 bg-bloom-white/80 p-10 rounded-[3.5rem] border border-apricot/60 shadow-2xl shadow-rose-bloom/5">
+           <section className="xl:col-span-3 bg-bloom-white/80 p-10 rounded-[3.5rem] border border-apricot/60 shadow-2xl shadow-rose-bloom/5">
             <div className="flex justify-between items-center mb-10">
                <h3 className="text-2xl font-black text-rose-bloom tracking-tight">Studio Timings</h3>
             </div>

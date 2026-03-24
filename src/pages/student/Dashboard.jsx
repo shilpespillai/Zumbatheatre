@@ -10,8 +10,7 @@ import {
 } from 'lucide-react';
 import { isSameDay, format, parseISO, subDays, eachDayOfInterval, subMonths, isSameMonth } from 'date-fns';
 import { 
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  BarChart, Bar, Cell, PieChart as RePieChart, Pie, RadialBarChart, RadialBar, Legend
+  AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar, Cell, PieChart as RePieChart, Pie, Sector
 } from 'recharts';
 import { toast } from 'sonner';
 import CalendarContainer from '../../components/CalendarContainer';
@@ -47,7 +46,71 @@ export default function StudentDashboard() {
     ytdSpent: 0,
     spendingTrend: []
   });
-  const [timeRange, setTimeRange] = useState('90days');
+  const [timeRange, setTimeRange] = useState('30days');
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  const onPieEnter = (_, index) => {
+    setActiveIndex(index);
+  };
+
+  const CustomTooltip = ({ active, payload, label }) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-studio-dark/95 backdrop-blur-xl p-4 rounded-2xl border border-white/10 shadow-2xl">
+          <p className="text-[8px] font-black uppercase tracking-widest text-white/40 mb-2">{label}</p>
+          {payload.map((entry, index) => (
+            <div key={index} className="flex items-center gap-2 mb-1">
+              <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: entry.color }} />
+              <p className="text-xs font-black text-white">
+                {entry.name === 'amount' ? `$${entry.value}` : `${entry.value} Sessions`}
+              </p>
+            </div>
+          ))}
+        </div>
+      );
+    }
+    return null;
+  };
+
+  const renderActiveShape = (props) => {
+    const RADIAN = Math.PI / 180;
+    const { cx, cy, midAngle, innerRadius, outerRadius, startAngle, endAngle, fill, payload, percent, value } = props;
+    const sin = Math.sin(-RADIAN * midAngle);
+    const cos = Math.cos(-RADIAN * midAngle);
+    const sx = cx + (outerRadius + 10) * cos;
+    const sy = cy + (outerRadius + 10) * sin;
+    const mx = cx + (outerRadius + 30) * cos;
+    const my = cy + (outerRadius + 30) * sin;
+    const ex = mx + (cos >= 0 ? 1 : -1) * 22;
+    const ey = my;
+    const textAnchor = cos >= 0 ? 'start' : 'end';
+
+    return (
+      <g>
+        <text x={cx} y={cy} dy={8} textAnchor="middle" fill={fill} className="text-[10px] font-black uppercase tracking-tighter shadow-sm">
+          {payload.name}
+        </text>
+        <Sector
+          cx={cx}
+          cy={cy}
+          innerRadius={innerRadius}
+          outerRadius={outerRadius}
+          startAngle={startAngle}
+          endAngle={endAngle}
+          fill={fill}
+        />
+        <Sector
+          cx={cx}
+          cy={cy}
+          startAngle={startAngle}
+          endAngle={endAngle}
+          innerRadius={outerRadius + 6}
+          outerRadius={outerRadius + 10}
+          fill={fill}
+        />
+      </g>
+    );
+  };
   const [studentCredits, setStudentCredits] = useState(0);
   const [visitedStages, setVisitedStages] = useState([]);
   const navigate = useNavigate();
@@ -736,34 +799,57 @@ export default function StudentDashboard() {
                    <div className="px-6 py-4 bg-bloom-white rounded-3xl border border-apricot/20 text-center"><div className="text-[9px] font-black text-studio-dark/30 uppercase mb-1">Total Power</div><div className="text-2xl font-black text-studio-dark">${studentStats.totalSpent}</div></div>
                  </div>
                </div>
-               <div className="h-72 w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={studentStats.spendingTrend}>
-                      <defs>
-                        <linearGradient id="colorStudentGrowth" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#FE7A8A" stopOpacity={0.2}/><stop offset="95%" stopColor="#FE7A8A" stopOpacity={0}/></linearGradient>
-                      </defs>
-                      <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 900, fill: '#4A3B3E40' }} />
-                      <YAxis hide />
-                      <Tooltip contentStyle={{ backgroundColor: '#4A3B3E', borderRadius: '16px', border: 'none', color: '#fff', fontSize: '10px' }} />
-                      <Area type="monotone" dataKey="amount" stroke="#FE7A8A" strokeWidth={5} fill="url(#colorStudentGrowth)" animationDuration={2000} />
-                      <Area type="monotone" dataKey="sessions" stroke="#4A3B3E" strokeWidth={2} strokeDasharray="4 4" fill="transparent" />
-                    </AreaChart>
-                  </ResponsiveContainer>
-               </div>
+                <div className="h-72 w-full">
+                   <ResponsiveContainer width="100%" height="100%">
+                     <AreaChart data={studentStats.spendingTrend}>
+                       <defs>
+                         <linearGradient id="colorStudentGrowth" x1="0" y1="0" x2="0" y2="1">
+                           <stop offset="5%" stopColor="#FE7A8A" stopOpacity={0.6}/>
+                           <stop offset="40%" stopColor="#FE7A8A" stopOpacity={0.2}/>
+                           <stop offset="95%" stopColor="#FE7A8A" stopOpacity={0}/>
+                         </linearGradient>
+                       </defs>
+                       <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 900, fill: '#4A3B3E40' }} dy={10} />
+                       <YAxis hide />
+                       <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#FE7A8A', strokeWidth: 2, strokeDasharray: '5 5' }} />
+                       <Area 
+                         type="monotone" 
+                         dataKey="amount" 
+                         stroke="#FE7A8A" 
+                         strokeWidth={6} 
+                         fillOpacity={1} 
+                         fill="url(#colorStudentGrowth)" 
+                         animationDuration={2500}
+                         activeDot={{ r: 8, fill: '#FE7A8A', stroke: '#fff', strokeWidth: 4 }}
+                       />
+                       <Area type="monotone" dataKey="sessions" stroke="#4A3B3E" strokeWidth={2} strokeDasharray="6 6" fill="transparent" />
+                     </AreaChart>
+                   </ResponsiveContainer>
+                </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
                <div className="bg-white/70 backdrop-blur-3xl p-10 rounded-[3rem] border border-studio-dark/20 shadow-xl">
                   <div className="flex justify-between items-center mb-10"><h3 className="text-xl font-black text-studio-dark uppercase tracking-tighter">Routine Mix</h3><PieChart className="w-5 h-5 text-rose-bloom opacity-30" /></div>
-                  <div className="h-56 w-full">
+                   <div className="h-56 w-full">
                     <ResponsiveContainer width="100%" height="100%">
                       <RePieChart>
-                        <Pie data={studentStats.routineCategoryMix} innerRadius={60} outerRadius={80} paddingAngle={8} dataKey="value" stroke="none">
+                        <Pie 
+                          activeIndex={activeIndex}
+                          activeShape={renderActiveShape}
+                          data={studentStats.routineCategoryMix} 
+                          innerRadius={55} 
+                          outerRadius={75} 
+                          paddingAngle={10} 
+                          dataKey="value" 
+                          stroke="none"
+                          onMouseEnter={onPieEnter}
+                        >
                           {studentStats.routineCategoryMix.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={['#FE7A8A', '#FFB38A', '#4A3B3E', '#FFB38A'][index % 4]} />
+                            <Cell key={`cell-${index}`} fill={['#FE7A8A', '#4A3B3E', '#FFB38A'][index % 3]} />
                           ))}
                         </Pie>
-                        <Tooltip />
+                        <Tooltip content={<CustomTooltip />} />
                       </RePieChart>
                     </ResponsiveContainer>
                   </div>
@@ -776,14 +862,15 @@ export default function StudentDashboard() {
 
                <div className="lg:col-span-2 bg-white/70 backdrop-blur-3xl p-10 rounded-[3.5rem] border border-studio-dark/20 shadow-xl">
                   <div className="flex justify-between items-center mb-10"><h3 className="text-xl font-black text-studio-dark uppercase tracking-tighter italic">Weekly Energy</h3><TrendingUp className="w-5 h-5 text-rose-bloom opacity-30" /></div>
-                  <div className="h-56 w-full">
+                   <div className="h-56 w-full">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={studentStats.consistency}>
-                        <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 900, fill: '#4A3B3E40' }} />
+                        <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 900, fill: '#4A3B3E40' }} dy={10} />
                         <YAxis hide />
-                        <Bar dataKey="count" radius={[10, 10, 0, 0]}>
+                        <Tooltip content={<CustomTooltip />} cursor={{ fill: '#FE7A8A', fillOpacity: 0.1 }} />
+                        <Bar dataKey="count" radius={[12, 12, 12, 12]} barSize={20}>
                           {studentStats.consistency.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.count > 0 ? '#FE7A8A' : '#FE7A8A20'} />
+                            <Cell key={`cell-${index}`} fill={entry.count > 0 ? '#FE7A8A' : '#4A3B3E10'} />
                           ))}
                         </Bar>
                       </BarChart>

@@ -139,51 +139,6 @@ export default function TeacherReports() {
         { name: 'New Talent', value: Math.max(0, uniqueStudentsCount - repeatStudentsCount) }
       ];
 
-      // Dynamic Trend Density
-      let trendDays = timeRange === '30days' ? 30 : timeRange === '90days' ? 90 : 180;
-      if (timeRange === 'year' || timeRange === 'all' || timeRange === 'ytd') trendDays = 365;
-
-      const trendInterval = eachDayOfInterval({
-        start: subDays(new Date(), trendDays - 1),
-        end: new Date()
-      });
-
-      const revenueTrend = (trendDays > 60 ? trendInterval.filter((_, i) => i % 5 === 0) : trendInterval).map(date => {
-        const dayRevenue = payments
-          .filter(p => isSameDay(new Date(p.created_at), date))
-          .reduce((sum, p) => sum + Number(p.amount), 0);
-        return {
-          date: format(date, 'MMM d'),
-          amount: dayRevenue
-        };
-      });
-
-      const routineStats = routines.map(r => {
-        const routineSchedules = schedules.filter(s => s.routine_id === r.id && new Date(s.start_time) >= startDate);
-        const routineSId = routineSchedules.map(s => s.id);
-        const routinePayments = payments.filter(p => routineSId.includes(p.bookings.schedule_id));
-        return {
-          name: r.name,
-          bookings: routinePayments.length,
-          revenue: routinePayments.reduce((sum, p) => sum + Number(p.amount), 0),
-          performance: routinePayments.length > 0 ? Math.min(100, Math.round((routinePayments.length / 50) * 100)) : 0
-        };
-      }).sort((a, b) => b.bookings - a.bookings).slice(0, 5);
-      
-      const hourCounts = Array(24).fill(0).map((_, i) => ({ hour: i, count: 0 }));
-      rangeSchedules.forEach(s => {
-        const hour = new Date(s.start_time).getHours();
-        const bookingsCount = filteredBookings.filter(b => b.schedule_id === s.id && b.payment_status === 'PAID').length;
-        hourCounts[hour].count += bookingsCount;
-      });
-      const peakHours = hourCounts.filter(h => h.count > 0 || (h.hour >= 9 && h.hour <= 21));
-
-      const currentMonthPayments = payments.filter(p => isSameMonth(new Date(p.created_at), new Date()));
-      const mRevenue = currentMonthPayments.reduce((sum, p) => sum + Number(p.amount), 0);
-      const daysInMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
-      const currentDay = new Date().getDate();
-      const projectedRevenue = currentDay > 0 ? Math.round((mRevenue / currentDay) * daysInMonth) : mRevenue;
-
       setReportData({
         totalRevenue,
         totalBookings: totalPaidBookings,
@@ -207,6 +162,48 @@ export default function TeacherReports() {
       setLoading(false);
     }
   }, [user, timeRange]);
+
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  const onPieEnter = (_, index) => {
+    setActiveIndex(index);
+  };
+
+  const CustomTooltip = ({ active, payload, label }) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-studio-dark/95 backdrop-blur-xl p-4 rounded-2xl border border-white/10 shadow-2xl">
+          <p className="text-[8px] font-black uppercase tracking-widest text-white/40 mb-2">{label}</p>
+          {payload.map((entry, index) => (
+            <div key={index} className="flex items-center gap-2 mb-1">
+              <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: entry.color }} />
+              <p className="text-xs font-black text-white">
+                {entry.name === 'amount' ? `$${entry.value}` : 
+                 entry.name === 'bookings' ? `${entry.value} Bookings` : entry.value}
+              </p>
+            </div>
+          ))}
+        </div>
+      );
+    }
+    return null;
+  };
+
+  const renderActiveShape = (props) => {
+    const RADIAN = Math.PI / 180;
+    const { cx, cy, midAngle, innerRadius, outerRadius, startAngle, endAngle, fill, payload, percent, value } = props;
+    const sin = Math.sin(-RADIAN * midAngle);
+    const cos = Math.cos(-RADIAN * midAngle);
+    return (
+      <g>
+        <text x={cx} y={cy} dy={8} textAnchor="middle" fill={fill} className="text-[10px] font-black uppercase tracking-tighter shadow-sm">
+          {payload.name}
+        </text>
+        <Sector cx={cx} cy={cy} innerRadius={innerRadius} outerRadius={outerRadius} startAngle={startAngle} endAngle={endAngle} fill={fill} />
+        <Sector cx={cx} cy={cy} startAngle={startAngle} endAngle={endAngle} innerRadius={outerRadius + 6} outerRadius={outerRadius + 10} fill={fill} />
+      </g>
+    );
+  };
 
   useEffect(() => {
     if (user) fetchReportData();
@@ -315,13 +312,24 @@ export default function TeacherReports() {
                      <AreaChart data={reportData.revenueTrend || []}>
                        <defs>
                          <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                           <stop offset="5%" stopColor="#FE7A8A" stopOpacity={0.3}/><stop offset="95%" stopColor="#FE7A8A" stopOpacity={0}/>
+                           <stop offset="5%" stopColor="#FE7A8A" stopOpacity={0.6}/>
+                           <stop offset="40%" stopColor="#FE7A8A" stopOpacity={0.2}/>
+                           <stop offset="95%" stopColor="#FE7A8A" stopOpacity={0}/>
                          </linearGradient>
                        </defs>
-                       <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 9, fontWeight: 900, fill: '#4A3B3E60' }} />
+                       <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 9, fontWeight: 900, fill: '#4A3B3E60' }} dy={10} />
                        <YAxis hide />
-                       <Tooltip contentStyle={{ backgroundColor: '#4A3B3E', borderRadius: '16px', border: 'none', color: '#fff', fontSize: '10px', padding: '12px' }} itemStyle={{ color: '#FE7A8A', fontWeight: 900 }} />
-                       <Area type="monotone" dataKey="amount" stroke="#FE7A8A" strokeWidth={4} fillOpacity={1} fill="url(#colorRevenue)" animationDuration={1500} />
+                       <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#FE7A8A', strokeWidth: 2, strokeDasharray: '5 5' }} />
+                       <Area 
+                         type="monotone" 
+                         dataKey="amount" 
+                         stroke="#FE7A8A" 
+                         strokeWidth={6} 
+                         fillOpacity={1} 
+                         fill="url(#colorRevenue)" 
+                         animationDuration={1500}
+                         activeDot={{ r: 8, fill: '#FE7A8A', stroke: '#fff', strokeWidth: 4 }}
+                       />
                      </AreaChart>
                    </ResponsiveContainer>
                 </div>
@@ -350,10 +358,11 @@ export default function TeacherReports() {
                 <div className="h-48 w-full mt-8">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={reportData.peakHours || []}>
-                      <XAxis dataKey="hour" tickFormatter={(h) => `${h > 12 ? h-12 : h}${h >= 12 ? 'p' : 'a'}`} axisLine={false} tickLine={false} tick={{ fontSize: 8, fontWeight: 900, fill: '#4A3B3E40' }} />
-                      <Bar dataKey="count" radius={[4, 4, 0, 0]}>
+                      <XAxis dataKey="hour" tickFormatter={(h) => `${h > 12 ? h-12 : h}${h >= 12 ? 'p' : 'a'}`} axisLine={false} tickLine={false} tick={{ fontSize: 8, fontWeight: 900, fill: '#4A3B3E40' }} dy={10} />
+                      <Tooltip content={<CustomTooltip />} cursor={{ fill: '#FE7A8A', fillOpacity: 0.1 }} />
+                      <Bar dataKey="count" radius={[10, 10, 10, 10]} barSize={12}>
                         {(reportData.peakHours || []).map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.count === Math.max(...(reportData.peakHours || []).map(h => h.count)) ? '#FE7A8A' : '#FE7A8A30'} />
+                          <Cell key={`cell-${index}`} fill={entry.count === Math.max(...(reportData.peakHours || []).map(h => h.count)) ? '#FE7A8A' : '#4A3B3E15'} />
                         ))}
                       </Bar>
                     </BarChart>
@@ -390,51 +399,71 @@ export default function TeacherReports() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10 mt-10">
-               <div className="bg-white/70 backdrop-blur-3xl p-10 rounded-[3.5rem] border border-studio-dark/20 shadow-xl">
-                  <div className="flex justify-between items-center mb-8">
-                    <h3 className="text-xl font-black text-studio-dark uppercase tracking-tighter italic">Audience Studio</h3>
-                    <Users className="w-5 h-5 text-rose-bloom opacity-20" />
-                  </div>
-                  <div className="h-56 w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <RePieChart>
-                        <Pie data={reportData.audienceLoyalty} innerRadius={60} outerRadius={80} paddingAngle={8} dataKey="value" stroke="none">
-                          {reportData.audienceLoyalty.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={index === 0 ? '#4A3B3E' : '#FE7A8A'} />
-                          ))}
-                        </Pie>
-                        <Tooltip />
-                      </RePieChart>
-                    </ResponsiveContainer>
-                  </div>
-                  <div className="flex justify-around mt-6">
-                    {reportData.audienceLoyalty.map((entry, index) => (
-                      <div key={index} className="text-center">
-                        <div className="text-[9px] font-black uppercase text-studio-dark/30 mb-1">{entry.name}</div>
-                        <div className="text-xl font-black text-studio-dark">{entry.value}</div>
-                      </div>
-                    ))}
-                  </div>
-               </div>
+                <div className="bg-white/70 backdrop-blur-3xl p-10 rounded-[3.5rem] border border-studio-dark/20 shadow-xl">
+                   <div className="flex justify-between items-center mb-8">
+                     <h3 className="text-xl font-black text-studio-dark uppercase tracking-tighter italic">Audience Studio</h3>
+                     <Users className="w-5 h-5 text-rose-bloom opacity-20" />
+                   </div>
+                   <div className="h-56 w-full">
+                     <ResponsiveContainer width="100%" height="100%">
+                       <RePieChart>
+                         <Pie 
+                           activeIndex={activeIndex}
+                           activeShape={renderActiveShape}
+                           data={reportData.audienceLoyalty} 
+                           innerRadius={55} 
+                           outerRadius={75} 
+                           paddingAngle={10} 
+                           dataKey="value" 
+                           stroke="none"
+                           onMouseEnter={onPieEnter}
+                         >
+                           {reportData.audienceLoyalty.map((entry, index) => (
+                             <Cell key={`cell-${index}`} fill={index === 0 ? '#4A3B3E' : '#FE7A8A'} />
+                           ))}
+                         </Pie>
+                         <Tooltip content={<CustomTooltip />} />
+                       </RePieChart>
+                     </ResponsiveContainer>
+                   </div>
+                   <div className="flex justify-around mt-6">
+                     {reportData.audienceLoyalty.map((entry, index) => (
+                       <div key={index} className="text-center">
+                         <div className="text-[9px] font-black uppercase text-studio-dark/30 mb-1">{entry.name}</div>
+                         <div className="text-xl font-black text-studio-dark">{entry.value}</div>
+                       </div>
+                     ))}
+                   </div>
+                </div>
 
-               <div className="bg-white/70 backdrop-blur-3xl p-10 rounded-[3.5rem] border border-studio-dark/20 shadow-xl">
-                  <div className="flex justify-between items-center mb-8">
-                    <h3 className="text-xl font-black text-studio-dark uppercase tracking-tighter italic">Top Routines</h3>
-                    <PieChart className="w-5 h-5 text-rose-bloom opacity-20" />
-                  </div>
-                  <div className="h-56 w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <RePieChart>
-                        <Pie data={reportData.popularRoutines} innerRadius={60} outerRadius={80} paddingAngle={8} dataKey="bookings" stroke="none">
-                          {reportData.popularRoutines.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={['#FE7A8A', '#FFB38A', '#4A3B3E'][index % 3]} />
-                          ))}
-                        </Pie>
-                        <Tooltip />
-                      </RePieChart>
-                    </ResponsiveContainer>
-                  </div>
-               </div>
+                <div className="bg-white/70 backdrop-blur-3xl p-10 rounded-[3.5rem] border border-studio-dark/20 shadow-xl">
+                   <div className="flex justify-between items-center mb-8">
+                     <h3 className="text-xl font-black text-studio-dark uppercase tracking-tighter italic">Top Routines</h3>
+                     <PieChart className="w-5 h-5 text-rose-bloom opacity-20" />
+                   </div>
+                   <div className="h-56 w-full">
+                     <ResponsiveContainer width="100%" height="100%">
+                       <RePieChart>
+                         <Pie 
+                           activeIndex={activeIndex}
+                           activeShape={renderActiveShape}
+                           data={reportData.popularRoutines} 
+                           innerRadius={55} 
+                           outerRadius={75} 
+                           paddingAngle={10} 
+                           dataKey="bookings" 
+                           stroke="none"
+                           onMouseEnter={onPieEnter}
+                         >
+                           {reportData.popularRoutines.map((entry, index) => (
+                             <Cell key={`cell-${index}`} fill={['#FE7A8A', '#4A3B3E', '#FFB38A'][index % 3]} />
+                           ))}
+                         </Pie>
+                         <Tooltip content={<CustomTooltip />} />
+                       </RePieChart>
+                     </ResponsiveContainer>
+                   </div>
+                </div>
 
                <div className="bg-white/70 backdrop-blur-3xl p-10 rounded-[3.5rem] border border-studio-dark/20 shadow-2xl">
                 <div className="flex justify-between items-center mb-8">
