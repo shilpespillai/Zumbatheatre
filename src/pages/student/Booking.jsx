@@ -142,7 +142,7 @@ export default function StudentBooking() {
     try {
       const { data, error } = await supabase
         .from('bookings')
-        .select('*, schedules(start_time, routines(name, duration_minutes))')
+        .select('*, schedules(teacher_id, start_time, routines(name, duration_minutes))')
         .eq('student_id', profile.id)
         .not('payment_status', 'in', '("CANCELLED","VOID")');
       
@@ -153,7 +153,7 @@ export default function StudentBooking() {
         const teacherLoyalty = teacher?.loyalty_settings || { required_sessions: 10, enabled: true };
         if (teacherLoyalty.enabled !== false) {
           const teacherBookings = (data || []).filter(b => 
-            b.teacher_id === teacherId && 
+            (b.teacher_id === teacherId || b.schedules?.teacher_id === teacherId) && 
             ['PAID', 'PENDING'].includes(b.payment_status) && 
             b.payment_method !== 'LOYALTY_REWARD'
           );

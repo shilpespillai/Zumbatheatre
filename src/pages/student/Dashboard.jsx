@@ -297,7 +297,7 @@ export default function StudentDashboard() {
     try {
       const { data, error } = await supabase
         .from('bookings')
-        .select('*, schedules(id, start_time, routines(name))')
+        .select('*, schedules(id, start_time, teacher_id, routines(name))')
         .eq('student_id', profile.id)
         .in('payment_status', ['PAID', 'PENDING', 'VOID']);
       
@@ -382,7 +382,7 @@ export default function StudentDashboard() {
 
     // Loyalty Progress (Specific to active teacher)
     const activeTeacherBookings = bookings.filter(b => 
-      b.teacher_id === profile?.linked_teacher_id && 
+      (b.schedules?.teacher_id === profile?.linked_teacher_id) && 
       ['PAID', 'PENDING'].includes(b.payment_status) &&
       b.payment_method !== 'LOYALTY_REWARD'
     );
