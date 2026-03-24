@@ -439,12 +439,12 @@ export default function StudentDashboard() {
   };
 
   useEffect(() => {
-    // Only calculate metrics if the user is looking at the performance tab
-    // This saves CPU/Memory during initial load of Studio Mode
-    if (activeTab === 'performance' && myBookings.length > 0 && allSchedules.length > 0) {
+    // Calculate metrics whenever bookings or schedules change
+    // This ensures the Studio Mode loyalty card is always accurate.
+    if (myBookings.length > 0 && allSchedules.length > 0) {
       calculateStudentMetrics(myBookings, allSchedules);
     }
-  }, [myBookings, allSchedules, activeTab, calculateStudentMetrics]);
+  }, [myBookings, allSchedules, calculateStudentMetrics]);
 
   // Combined fetch for performance data when switching tabs if needed
   useEffect(() => {

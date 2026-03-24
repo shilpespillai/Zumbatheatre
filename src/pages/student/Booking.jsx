@@ -497,10 +497,12 @@ export default function StudentBooking() {
                                         className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${selectedMethod === 'stripe' ? 'bg-rose-bloom/10 border-rose-bloom text-rose-bloom shadow-lg shadow-rose-bloom/10' : 'bg-white/5 border-white/10 text-white/40 hover:border-white/20'}`}
                                       >
                                         <div className="flex items-center gap-3">
-                                          <CreditCard className="w-4 h-4" />
+                                          <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all ${selectedMethod === 'stripe' ? 'border-rose-bloom shadow-[0_0_8px_rgba(255,107,129,0.3)]' : 'border-white/10'}`}>
+                                            {selectedMethod === 'stripe' && <div className="w-1.5 h-1.5 bg-rose-bloom rounded-full" />}
+                                          </div>
                                           <span className="text-[10px] font-black uppercase tracking-widest">Stripe</span>
                                         </div>
-                                        {selectedMethod === 'stripe' && <Sparkles className="w-3 h-3" />}
+                                        <CreditCard className={`w-4 h-4 ${selectedMethod === 'stripe' ? 'text-rose-bloom' : 'text-white/20'}`} />
                                       </button>
                                     )}
                                     {isAvailable('paypal') && (
@@ -509,10 +511,12 @@ export default function StudentBooking() {
                                         className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${selectedMethod === 'paypal' ? 'bg-rose-bloom/10 border-rose-bloom text-rose-bloom shadow-lg shadow-rose-bloom/10' : 'bg-white/5 border-white/10 text-white/40 hover:border-white/20'}`}
                                       >
                                         <div className="flex items-center gap-3">
-                                          <ExternalLink className="w-4 h-4" />
+                                          <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all ${selectedMethod === 'paypal' ? 'border-rose-bloom shadow-[0_0_8px_rgba(255,107,129,0.3)]' : 'border-white/10'}`}>
+                                            {selectedMethod === 'paypal' && <div className="w-1.5 h-1.5 bg-rose-bloom rounded-full" />}
+                                          </div>
                                           <span className="text-[10px] font-black uppercase tracking-widest">PayPal</span>
                                         </div>
-                                        {selectedMethod === 'paypal' && <Sparkles className="w-3 h-3" />}
+                                        <ExternalLink className={`w-4 h-4 ${selectedMethod === 'paypal' ? 'text-rose-bloom' : 'text-white/20'}`} />
                                       </button>
                                     )}
                                     {isAvailable('manual') && (
@@ -520,11 +524,13 @@ export default function StudentBooking() {
                                         onClick={() => setSelectedMethod('manual')}
                                         className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${selectedMethod === 'manual' ? 'bg-rose-bloom/10 border-rose-bloom text-rose-bloom shadow-lg shadow-rose-bloom/10' : 'bg-white/5 border-white/10 text-white/40 hover:border-white/20'}`}
                                       >
-                                        <div className="flex items-center gap-3 text-left">
-                                          <Banknote className="w-4 h-4" />
+                                        <div className="flex items-center gap-3">
+                                          <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all ${selectedMethod === 'manual' ? 'border-rose-bloom shadow-[0_0_8px_rgba(255,107,129,0.3)]' : 'border-white/10'}`}>
+                                            {selectedMethod === 'manual' && <div className="w-1.5 h-1.5 bg-rose-bloom rounded-full" />}
+                                          </div>
                                           <span className="text-[10px] font-black uppercase tracking-widest">Bank Transfer</span>
                                         </div>
-                                        {selectedMethod === 'manual' && <Sparkles className="w-3 h-3" />}
+                                        <Banknote className={`w-4 h-4 ${selectedMethod === 'manual' ? 'text-rose-bloom' : 'text-white/20'}`} />
                                       </button>
                                     )}
                                   </>
@@ -621,7 +627,7 @@ export default function StudentBooking() {
                                   {selectedMethod === 'stripe' ? <CreditCard className="w-5 h-5" /> : 
                                    selectedMethod === 'paypal' ? <ExternalLink className="w-5 h-5" /> : 
                                    <ShieldCheck className="w-5 h-5" />}
-                                  {selectedMethod === 'manual' ? 'Reserve My Spot' : 'Pay Online & Book'}
+                                  {selectedMethod === 'manual' ? 'Reserve My Spot' : 'Online Payment'}
                                 </>
                               )}
                             </button>
