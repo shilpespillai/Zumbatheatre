@@ -117,20 +117,28 @@ export const AuthProvider = ({ children }) => {
   };
 
   const signOut = async () => {
-    // Optimistic local state clear for speed
-    setUser(null);
-    setProfile(null);
-    localStorage.removeItem('studio_guest_session');
-    localStorage.removeItem('pending_teacher_code');
-    
-    // Redirect immediately
-    window.location.href = '/';
-    
-    // Fire-and-forget network signout
     try {
-      supabase.auth.signOut();
+      // 1. Fire network signout and AWAIT it to ensure cookie/localstorage cleanup
+      await supabase.auth.signOut();
+      
+      // 2. Clear local auth state
+      setUser(null);
+      setProfile(null);
+      setLastFetchedId(null);
+      
+      // 3. Clear all potential persistence tokens
+      localStorage.removeItem('studio_guest_session');
+      localStorage.removeItem('pending_teacher_code');
+      localStorage.removeItem('supabase.auth.token'); // Hard-clear Supabase internal token if present
+      
+      // 4. Redirect to home with a clean state
+      window.location.href = '/auth?role=teacher';
     } catch (err) {
-      console.error('[AuthContext] Background SignOut error:', err);
+      console.error('[AuthContext] SignOut error:', err);
+      // Fallback: Force clear and redirect even on error
+      setUser(null);
+      setProfile(null);
+      window.location.href = '/auth';
     }
   };
 

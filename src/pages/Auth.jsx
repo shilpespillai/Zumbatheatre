@@ -54,7 +54,11 @@ export default function Auth() {
 
   // Redirect if already logged in (Teachers/Admins)
   useEffect(() => {
-    // ONLY redirect if we have a definitive profile/role state
+    // 1. SUPPRESS auto-redirect if we JUST logged out (prevents loops)
+    const loggedOut = searchParams.get('loggedout') === 'true';
+    if (loggedOut) return;
+
+    // 2. ONLY redirect if we have a definitive profile/role state
     // AND the current UI tab matches that role.
     if (user && !authLoading && !loading) {
       if (profile) {
@@ -325,9 +329,15 @@ export default function Auth() {
                   </p>
                 </div>
                 <button 
-                  onClick={() => {
-                    supabase.auth.signOut();
-                    window.location.reload();
+                  onClick={async () => {
+                    const toastId = toast.loading('Signing out...');
+                    try {
+                      await supabase.auth.signOut();
+                      localStorage.clear(); // Nuclear option for auth cleanup
+                      window.location.href = '/auth?role=teacher&loggedout=true';
+                    } catch (err) {
+                      window.location.reload();
+                    }
                   }}
                   className="p-3 bg-white border border-rose-bloom/20 rounded-xl text-rose-bloom hover:bg-rose-bloom hover:text-white transition-all shadow-sm"
                   title="Sign Out to switch account"
