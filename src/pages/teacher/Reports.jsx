@@ -3,7 +3,7 @@ import {
   TrendingUp, Users, Activity, 
   ChevronLeft, ArrowRight, Download, Filter, Search, MoreHorizontal,
   Layout, PieChart as PieIcon, BarChart3, TrendingDown, Clock, MapPin, Sparkles,
-  ArrowUpRight, CheckCircle2
+  ArrowUpRight, CheckCircle2, DollarSign, Lock
 } from 'lucide-react';
 import { motion as Motion, AnimatePresence } from 'framer-motion';
 import { format, subDays, isSameMonth, parseISO, subMonths } from 'date-fns';
