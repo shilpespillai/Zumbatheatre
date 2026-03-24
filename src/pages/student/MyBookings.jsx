@@ -62,7 +62,8 @@ export default function MyBookings() {
     
     try {
       const teacherId = bookingToCancel.schedules?.teacher_id;
-      const refundAmount = Number(bookingToCancel.amount) || 0;
+      const refundAmount = Number(bookingToCancel.schedules?.price) || 0;
+      const isPaid = bookingToCancel.payment_status === 'PAID';
 
       // 1. Update Booking Status in Supabase
       const { error: cancelError } = await supabase
@@ -72,8 +73,35 @@ export default function MyBookings() {
       
       if (cancelError) throw cancelError;
 
-      // 2. Clear state and notify
-      toast.success('Your reservation has been cancelled and the spot has been released.');
+      // 2. Refund if Paid
+      if (isPaid && teacherId && refundAmount > 0) {
+        const { data: existingCredit } = await supabase
+          .from('credits')
+          .select('balance')
+          .eq('student_id', profile.id)
+          .eq('teacher_id', teacherId)
+          .single();
+
+        if (existingCredit) {
+          await supabase
+            .from('credits')
+            .update({ balance: Number(existingCredit.balance) + refundAmount })
+            .eq('student_id', profile.id)
+            .eq('teacher_id', teacherId);
+        } else {
+          await supabase
+            .from('credits')
+            .insert([{
+              student_id: profile.id,
+              teacher_id: teacherId,
+              balance: refundAmount
+            }]);
+        }
+        toast.success(`Cancellation confirmed. ${refundAmount}$ has been added to your studio credits.`);
+      } else {
+        toast.success('Your reservation has been cancelled and the spot has been released.');
+      }
+      
       setIsCancelModalOpen(false);
       setBookingToCancel(null);
       fetchBookings();
@@ -159,9 +187,7 @@ export default function MyBookings() {
               {filteredBookings.map((booking, i) => {
                 const isPast = new Date(booking.schedules?.start_time) < new Date();
                 const isSessionCancelled = booking.schedules?.status === 'CANCELLED';
-                // Students can only cancel PENDING (Reserved) spots. 
-                // Once it's PAID (Confirmed), only the teacher can cancel it (which triggers the refund loop).
-                const canCancel = !isPast && !isSessionCancelled && booking.payment_status === 'PENDING' && booking.status !== 'CANCELLED';
+                const canCancel = !isPast && !isSessionCancelled && booking.status !== 'CANCELLED';
 
                 return (
                   <Motion.div 
@@ -271,7 +297,9 @@ export default function MyBookings() {
                     Are you sure you want to cancel your spot for <span className="text-rose-bloom font-black">{bookingToCancel?.schedules?.routines?.name}</span>?
                   </p>
                   <p className="text-[10px] text-rose-bloom font-black uppercase tracking-widest mt-4 p-3 bg-rose-bloom/5 rounded-xl border border-rose-bloom/10">
-                    This is a reserved spot. If you confirm, your spot will be released immediately. No payment was made.
+                    {bookingToCancel?.payment_status === 'PAID' 
+                      ? `You will receive a refund of ${bookingToCancel?.schedules?.price || 0}$ as Studio Credits.`
+                      : "This is a reserved spot. If you confirm, your spot will be released immediately. No payment was made."}
                   </p>
                </div>
 
