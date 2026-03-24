@@ -79,9 +79,9 @@ export default function Auth() {
     }
   }, [user, profile, authLoading, loading, role, navigate]);
 
-  const handleGuestEntrance = async () => {
-    if (!formData.fullName || !formData.stageCode) {
-      toast.error('Please provide your name and the stage code.');
+  const handleStudentAuth = async () => {
+    if (!formData.email || !formData.password || !formData.fullName || !formData.stageCode) {
+      toast.error('Please provide all details to join the stage.');
       return;
     }
     
@@ -90,10 +90,9 @@ export default function Auth() {
     
     try {
       // 1. Resolve Teacher ID from Stage Code first
-      console.log('[Auth] Resolving teacher for code:', targetCode);
       const { data: teacher, error: teacherError } = await supabase
         .from('profiles')
-        .select('id')
+        .select('id, full_name')
         .eq('stage_code', targetCode)
         .eq('role', 'TEACHER')
         .single();
@@ -102,32 +101,40 @@ export default function Auth() {
         throw new Error('Invalid stage code. Please check with your instructor.');
       }
 
-      // 2. Anonymous Sign-in (Rate Limit Resilient)
-      // This bypasses 429 Email Rate Limits while still providing a unique DB identity
-      console.log('[Auth] Attempting Anonymous Sign-in for:', formData.fullName);
-      
-      const { data: authData, error: authError } = await supabase.auth.signInAnonymously({
+      // 2. Persistent Sign-up or Sign-in
+      // We use signUp which handles both creating a new user or returning "User already registered"
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
         options: {
           data: { 
             full_name: formData.fullName, 
             role: 'STUDENT'
-            // DO NOT pass stage_code here! Teachers own the stage codes.
           }
         }
       });
 
       if (authError) {
-        console.error('[Auth] Anonymous Auth failed:', authError);
-        throw new Error('Entrance failed. Please ensure Anonymous Auth is enabled in Supabase.');
+        // If they already exist, try signing in
+        if (authError.message.includes('already registered')) {
+          const { error: loginError } = await supabase.auth.signInWithPassword({
+            email: formData.email,
+            password: formData.password
+          });
+          if (loginError) throw loginError;
+        } else {
+          throw authError;
+        }
       }
 
-      if (!authData.user) throw new Error('Authentication failed');
+      const currentUser = authData?.user || (await supabase.auth.getUser()).data.user;
+      if (!currentUser) throw new Error('Authentication failed');
 
       // 4. Ensure Profile exists and is linked
       const { error: profileError } = await supabase
         .from('profiles')
         .upsert({
-          id: authData.user.id,
+          id: currentUser.id,
           full_name: formData.fullName,
           role: 'STUDENT',
           linked_teacher_id: teacher.id
@@ -136,14 +143,13 @@ export default function Auth() {
       if (profileError) console.warn('[Auth] Profile upsert failed:', profileError);
       
       // 5. Cleanup and Navigate
-      localStorage.removeItem('studio_guest_session');
       localStorage.setItem('pending_teacher_code', targetCode);
       
       toast.success(`Welcome to the stage, ${formData.fullName}!`);
       navigate('/student/dashboard');
     } catch (err) {
-      console.error('[Auth] Silent Auth entrance failed:', err);
-      toast.error(err.message || 'Could not enter the stage.');
+      console.error('[Auth] Persistent Student Auth failed:', err);
+      toast.error(err.message || 'Could not join the stage.');
     } finally {
       setLoading(false);
     }
@@ -166,7 +172,7 @@ export default function Auth() {
     }
     
     if (role === 'student') {
-      handleGuestEntrance();
+      handleStudentAuth();
       return;
     }
 
@@ -213,9 +219,16 @@ export default function Auth() {
         }
         
         toast.success('Instructor account created! Check your email to confirm.');
+        setShowTroubleshooter(true); // Proactively show troubleshooting guide
       }
     } catch (error) {
-      toast.error(error.message);
+      console.error('[Auth] Error:', error);
+      if (error.message?.toLowerCase().includes('confirm')) {
+        setShowTroubleshooter(true);
+        toast.error('Email not confirmed. Please check your spam or see the troubleshooting guide below.');
+      } else {
+        toast.error(error.message);
+      }
     } finally {
       setLoading(false);
     }
@@ -373,8 +386,8 @@ export default function Auth() {
               </div>
             )}
 
-            {/* Email & Password - Only for Teachers */}
-            {role === 'teacher' && (
+            {/* Email & Password - For BOTH Student and Teacher for persistent accounts */}
+            {(role === 'student' || role === 'teacher') && (
               <>
                 <div className="space-y-3">
                   <label className="text-[10px] font-black uppercase tracking-widest text-[#4A3B3E]/40 ml-2">Email Address</label>
@@ -468,6 +481,60 @@ export default function Auth() {
                 {isLogin ? "Need a Studio Entrance? Step inside" : "Already leading? Sign back in"}
               </button>
             )}
+
+            <AnimatePresence>
+              {showTroubleshooter && (
+                <Motion.div 
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="mt-10 overflow-hidden"
+                >
+                  <div className="p-8 bg-rose-bloom/5 border border-rose-bloom/10 rounded-[2.5rem] relative">
+                    <button 
+                      onClick={() => setShowTroubleshooter(false)}
+                      className="absolute top-4 right-4 p-2 hover:bg-rose-bloom/10 rounded-full text-rose-bloom/40 hover:text-rose-bloom"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                    <div className="flex items-center gap-4 mb-6">
+                      <div className="w-10 h-10 bg-rose-bloom/10 rounded-xl flex items-center justify-center">
+                        <AlertTriangle className="w-5 h-5 text-rose-bloom" />
+                      </div>
+                      <h3 className="text-sm font-black text-studio-dark uppercase tracking-widest">Auth Troubleshooter</h3>
+                    </div>
+                    
+                    <div className="space-y-6">
+                      <div>
+                        <h4 className="text-[10px] font-black text-rose-bloom uppercase tracking-[0.2em] mb-2">1. The Rate Limit Problem</h4>
+                        <p className="text-xs text-[#4A3B3E]/60 leading-relaxed font-medium">
+                          Supabase projects have a default limit of <span className="text-rose-bloom font-black">3 emails per hour</span>. If you've tried several times, you won't receive more emails until next hour.
+                        </p>
+                      </div>
+
+                      <div>
+                        <h4 className="text-[10px] font-black text-rose-bloom uppercase tracking-[0.2em] mb-2">2. The Solution (Highly Recommended)</h4>
+                        <p className="text-xs text-[#4A3B3E]/60 leading-relaxed font-medium mb-4">
+                          To unblock yourself immediately, disable the email confirmation requirement in your Supabase Dashboard:
+                        </p>
+                        <ul className="space-y-2 text-[10px] font-bold text-studio-dark/40 list-disc pl-4 uppercase tracking-[0.1em]">
+                          <li>Go to <span className="text-studio-dark">Authentication</span> → <span className="text-studio-dark">Providers</span></li>
+                          <li>Select <span className="text-studio-dark">Email</span></li>
+                          <li>Turn OFF <span className="text-studio-dark">"Confirm Email"</span></li>
+                          <li>Save changes and try logging in again!</li>
+                        </ul>
+                      </div>
+
+                      <div className="pt-4 border-t border-rose-bloom/10">
+                        <p className="text-[9px] text-rose-bloom/40 italic font-medium leading-relaxed">
+                          Note: For production, we recommend using a custom SMTP provider like Resend or SendGrid to bypass these limits.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </Motion.div>
+              )}
+            </AnimatePresence>
 
             <a 
               href="/"

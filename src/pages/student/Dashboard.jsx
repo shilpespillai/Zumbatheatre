@@ -6,7 +6,7 @@ import {
   Plus, Calendar as CalendarIcon, Clock, MapPin, 
   Sparkles, Search, SlidersHorizontal, Heart, Ticket, Eye, Lock, ArrowRight, X,
   LogOut, Settings as SettingsIcon, CheckCircle2, Activity, PieChart, BarChart3,
-  DollarSign, TrendingUp, XCircle
+  DollarSign, TrendingUp, XCircle, ChevronLeft, ChevronDown
 } from 'lucide-react';
 import { isSameDay, format, parseISO, subDays, eachDayOfInterval, subMonths, isSameMonth } from 'date-fns';
 import { 
@@ -48,6 +48,7 @@ export default function StudentDashboard() {
   });
   const [timeRange, setTimeRange] = useState('30days');
   const [activeIndex, setActiveIndex] = useState(0);
+  const [conflicts, setConflicts] = useState(new Set());
 
   const onPieEnter = (_, index) => {
     setActiveIndex(index);
@@ -328,27 +329,22 @@ export default function StudentDashboard() {
     }
   }, []);
 
-  const handleSwitchStage = async (teacherLink) => {
-    if (!profile?.id) return;
-    
+  const handleSwitchStage = async (stage) => {
     setLoading(true);
     try {
-      // 1. Update active link in DB
-      await supabase.from('profiles').update({ linked_teacher_id: teacherLink.teacher_id }).eq('id', profile.id);
+      // 1. Update active teacher in DB
+      await supabase.from('profiles').update({ linked_teacher_id: stage.teacher_id }).eq('id', profile.id);
       
-      // 3. Update visited stages order
-      const updatedVisited = visitedStages.map(s => 
-        s.teacher_id === teacherLink.teacher_id ? { ...s, last_visited: new Date().toISOString() } : s
-      ).sort((a, b) => new Date(b.last_visited) - new Date(a.last_visited));
+      // 2. Clear local storage and trigger re-fetch
+      localStorage.removeItem('pending_teacher_code');
+      await fetchProfile(profile.id);
       
-      await supabase.from('profiles').update({ visited_stages: updatedVisited }).eq('id', profile.id);
-      setVisitedStages(updatedVisited);
-
-      // 4. Refresh Dashboard
-      toast.success(`Switched to: ${teacherLink.full_name}'s Stage`);
-      await fetchTeacherProfile(teacherLink.teacher_id);
-      await fetchAllAvailableSchedules(teacherLink.teacher_id);
+      // 3. UI Feedback
+      toast.success(`Switched to ${stage.full_name}'s Stage`);
+      setActiveTab('studio');
+      setIsGlobalMode(false);
     } catch (err) {
+      console.error('[Dashboard] Switch stage error:', err);
       toast.error('Failed to switch stage');
     } finally {
       setLoading(false);
@@ -501,13 +497,42 @@ export default function StudentDashboard() {
     }
   };
 
+  const detectConflicts = useCallback((schedules) => {
+    const conflictSet = new Set();
+    const sorted = [...schedules].sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
+    
+    for (let i = 0; i < sorted.length; i++) {
+      for (let j = i + 1; j < sorted.length; j++) {
+        const s1 = sorted[i];
+        const s2 = sorted[j];
+        
+        if (s1.teacher_id === s2.teacher_id) continue;
+
+        const start1 = new Date(s1.start_time).getTime();
+        const end1 = start1 + (s1.routines?.duration_minutes || 60) * 60000;
+        const start2 = new Date(s2.start_time).getTime();
+        const end2 = start2 + (s2.routines?.duration_minutes || 60) * 60000;
+
+        if (start1 < end2 && start2 < end1) {
+          conflictSet.add(s1.id);
+          conflictSet.add(s2.id);
+        }
+      }
+    }
+    setConflicts(conflictSet);
+  }, []);
+
   useEffect(() => {
-    // Calculate metrics whenever bookings or schedules change
-    // This ensures the Studio Mode loyalty card is always accurate.
     if (myBookings.length > 0 && allSchedules.length > 0) {
       calculateStudentMetrics(myBookings, allSchedules);
     }
-  }, [myBookings, allSchedules, calculateStudentMetrics]);
+
+    if (isGlobalMode && globalSchedules.length > 0) {
+      detectConflicts(globalSchedules);
+    } else {
+      setConflicts(new Set());
+    }
+  }, [myBookings, allSchedules, globalSchedules, isGlobalMode, calculateStudentMetrics, detectConflicts]);
 
   // Combined fetch for performance data when switching tabs if needed
   useEffect(() => {
@@ -526,7 +551,34 @@ export default function StudentDashboard() {
             </h1>
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-studio-dark/80 mt-1">Student Performance Center</p>
           </div>
-          <div className="flex gap-4">
+          <div className="flex flex-wrap items-center gap-4">
+             {/* Stage Switcher Dropdown */}
+             {visitedStages.length > 1 && (
+               <div className="relative group">
+                 <button className="px-6 py-5 bg-white/40 backdrop-blur-md border border-rose-petal/20 rounded-2xl font-black uppercase tracking-widest text-[9px] flex items-center gap-2 hover:bg-white/60 transition-all text-studio-dark">
+                    My Stages ({visitedStages.length}) <ChevronLeft className="w-3 h-3 -rotate-90" />
+                 </button>
+                 <div className="absolute top-full right-0 mt-2 w-64 bg-white/95 backdrop-blur-2xl rounded-[2rem] border border-rose-petal/20 shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-[100] p-4 scale-95 group-hover:scale-100 origin-top-right">
+                    <p className="text-[8px] font-black uppercase tracking-widest text-rose-bloom/40 mb-3 ml-2">Previously Visited</p>
+                    <div className="space-y-1">
+                      {visitedStages.map((stage) => (
+                        <button 
+                          key={stage.teacher_id}
+                          onClick={() => handleSwitchStage(stage)}
+                          className={`w-full p-4 rounded-xl flex items-center justify-between hover:bg-rose-bloom/5 transition-all group/item ${stage.teacher_id === profile?.linked_teacher_id ? 'bg-rose-bloom/10 border border-rose-bloom/10' : ''}`}
+                        >
+                          <div className="text-left">
+                            <div className="text-[11px] font-black text-studio-dark group-hover/item:text-rose-bloom">{stage.full_name}</div>
+                            <div className="text-[8px] font-bold text-studio-dark/30 uppercase tracking-tighter">{stage.stage_code}</div>
+                          </div>
+                          {stage.teacher_id === profile?.linked_teacher_id && <CheckCircle2 className="w-4 h-4 text-rose-bloom" />}
+                        </button>
+                      ))}
+                    </div>
+                 </div>
+               </div>
+             )}
+
              <button onClick={() => navigate('/student/bookings')} className="px-8 py-5 bg-white border border-apricot/40 text-rose-bloom rounded-[2rem] font-black uppercase tracking-widest text-xs shadow-sm flex items-center gap-3">
                 <Ticket className="w-5 h-5" /> My Bookings
              </button>
@@ -609,19 +661,24 @@ export default function StudentDashboard() {
                           (isGlobalMode ? globalSchedules : allSchedules)
                             .filter(s => isSameDay(parseISO(s.start_time), selectedDate))
                             .map((session, idx) => (
-                              <div key={idx} className="bg-white p-6 rounded-3xl border border-apricot/10 hover:border-rose-bloom transition-all group/card shadow-sm">
-                                <div className="flex justify-between items-start mb-4">
-                                  <div className="flex items-center gap-3">
-                                    <div className="p-3 bg-apricot/5 rounded-2xl">
-                                      <Clock className="w-4 h-4 text-rose-bloom" />
-                                    </div>
-                                    <div>
-                                      <div className="text-[10px] font-black text-rose-bloom uppercase tracking-widest">{format(parseISO(session.start_time), 'h:mm a')}</div>
-                                      <div className="text-[8px] font-bold text-studio-dark/30 uppercase tracking-tighter">{session.routines?.duration_minutes || 60} MIN</div>
-                                    </div>
-                                  </div>
-                                  <div className="text-lg font-black text-studio-dark">${session.price}</div>
+                              <div key={idx} className={`flex items-center justify-between p-6 bg-white/60 rounded-2xl border transition-all ${conflicts.has(session.id) ? 'border-red-500/50 bg-red-500/5 shadow-lg shadow-red-500/10 animate-pulse' : 'border-rose-petal/10 hover:border-rose-petal/30'}`}>
+                          <div className="flex items-center gap-4">
+                             <div className={`p-3 rounded-xl ${conflicts.has(session.id) ? 'bg-red-500/20' : 'bg-rose-petal/10'}`}>
+                                <Clock className={`w-4 h-4 ${conflicts.has(session.id) ? 'text-red-600' : 'text-rose-bloom'}`} />
+                             </div>
+                             <div>
+                                <div className="text-xs font-black text-studio-dark tracking-tight flex items-center gap-2">
+                                  {format(parseISO(session.start_time), 'hh:mm a')}
+                                  {conflicts.has(session.id) && (
+                                    <span className="text-[8px] bg-red-600 text-white px-2 py-0.5 rounded-full uppercase tracking-widest">Conflict</span>
+                                  )}
                                 </div>
+                                <div className="text-[10px] font-bold text-[#4A3B3E]/40 uppercase tracking-widest">{session.routines?.name}</div>
+                                {isGlobalMode && session.profiles?.full_name && (
+                                  <div className="text-[8px] font-black text-rose-bloom/60 uppercase tracking-tighter">Instructor: {session.profiles.full_name}</div>
+                                )}
+                             </div>
+                          </div>
                                 
                                 <h5 className="text-sm font-black text-studio-dark mb-6 group-hover/card:text-rose-bloom transition-colors">{session.routines?.name}</h5>
                                 
