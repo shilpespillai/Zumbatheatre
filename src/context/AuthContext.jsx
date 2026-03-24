@@ -117,20 +117,20 @@ export const AuthProvider = ({ children }) => {
   };
 
   const signOut = async () => {
+    // Optimistic local state clear for speed
+    setUser(null);
+    setProfile(null);
+    localStorage.removeItem('studio_guest_session');
+    localStorage.removeItem('pending_teacher_code');
+    
+    // Redirect immediately
+    window.location.href = '/';
+    
+    // Fire-and-forget network signout
     try {
-      await supabase.auth.signOut();
-      setUser(null);
-      setProfile(null);
-      localStorage.removeItem('studio_guest_session');
-      localStorage.removeItem('pending_teacher_code');
-      window.location.href = '/';
+      supabase.auth.signOut();
     } catch (err) {
-      console.error('[AuthContext] SignOut failed:', err);
-      // Force local logout even if network fails
-      setUser(null);
-      setProfile(null);
-      localStorage.removeItem('studio_guest_session');
-      window.location.href = '/';
+      console.error('[AuthContext] Background SignOut error:', err);
     }
   };
 

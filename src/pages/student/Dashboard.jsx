@@ -406,20 +406,31 @@ export default function StudentDashboard() {
   };
 
   const handleDisconnect = async () => {
-    setLoading(true);
-    try {
-      if (profile?.id) {
-        await supabase.from('profiles').update({ linked_teacher_id: null }).eq('id', profile.id);
+    // Optimistic cleanup of local storage
+    localStorage.removeItem('studio_guest_session');
+    localStorage.removeItem('pending_teacher_code');
+    
+    if (profile?.id) {
+      const updatePromise = supabase
+        .from('profiles')
+        .update({ linked_teacher_id: null })
+        .eq('id', profile.id);
+
+      toast.promise(updatePromise, {
+        loading: 'Disconnecting from stage...',
+        success: 'Stage cleared!',
+        error: 'Disconnected (syncing with cloud...)'
+      });
+
+      try {
+        await updatePromise;
+        await fetchProfile(profile.id); // Fast re-sync
+        navigate('/');
+      } catch (err) {
+        navigate('/');
       }
-      localStorage.removeItem('studio_guest_session');
-      localStorage.removeItem('pending_teacher_code');
-      await fetchProfile();
-      toast.success('Stage presence cleared.');
-      setTimeout(() => { window.location.href = '/'; }, 500);
-    } catch (err) {
-      console.error('[Dashboard] Disconnect error:', err);
-    } finally {
-      setLoading(false);
+    } else {
+      navigate('/');
     }
   };
 
