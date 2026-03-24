@@ -76,9 +76,8 @@ export default function StudentBooking() {
         if (config.bank_instructions) available.push('manual');
       }
       
-      if (available.length > 0) {
-        setSelectedMethod(settings.method || available[0]);
-      }
+      // ONLY set default if not already selected to avoid resetting on re-fetches
+      setSelectedMethod(current => current || settings.method || (available.length > 0 ? available[0] : null));
       setTeacher(teacherData);
     }
   }, [teacherId]);
@@ -167,14 +166,28 @@ export default function StudentBooking() {
     }
   }, [profile?.id, teacherId, teacher?.loyalty_settings]);
 
+  // 1. Fetch Teacher Profile (Once per teacherId)
   useEffect(() => {
-    fetchTeacher();
-    fetchSchedules();
-    if (profile?.id) {
+    if (teacherId) {
+      fetchTeacher();
+    }
+  }, [teacherId, fetchTeacher]);
+
+  // 2. Fetch Schedules (When month changes)
+  useEffect(() => {
+    if (teacherId) {
+      setLoading(true);
+      fetchSchedules();
+    }
+  }, [teacherId, currentMonth, fetchSchedules]);
+
+  // 3. Fetch User Context (Credits/Bookings)
+  useEffect(() => {
+    if (profile?.id && teacherId) {
       fetchCredits();
       fetchAllStudentBookings();
     }
-  }, [fetchTeacher, fetchSchedules, fetchCredits, fetchAllStudentBookings, profile?.id]);
+  }, [profile?.id, teacherId, fetchCredits, fetchAllStudentBookings]);
 
   const handleBooking = async (paymentType = 'normal') => {
     if (!profile) {
