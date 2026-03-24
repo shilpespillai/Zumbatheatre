@@ -399,6 +399,14 @@ export default function TeacherDashboard() {
       
       if (error) throw error;
       
+      // 3. Clear local state for this session if modal is open
+      if (selectedSessionForAttendance?.id === scheduleId) {
+        setSelectedSessionForAttendance({
+          ...selectedSessionForAttendance,
+          bookings: []
+        });
+      }
+
       toast.success('Session re-activated! Bookings have been cleared for a fresh start.');
       fetchAllSchedules();
     } catch (error) {
@@ -897,11 +905,15 @@ export default function TeacherDashboard() {
                 <div className="grid grid-cols-3 gap-4">
                    <div className="bg-bloom-white p-4 rounded-2xl border border-apricot/30 text-center">
                       <div className="text-[8px] font-black uppercase text-studio-dark/30 mb-1">Total Booked</div>
-                      <div className="text-xl font-black text-studio-dark">{selectedSessionForAttendance.bookings?.length || 0}</div>
+                      <div className="text-xl font-black text-studio-dark">
+                        {(selectedSessionForAttendance.bookings || []).filter(b => selectedSessionForAttendance.status === 'CANCELLED' || b.status !== 'CANCELLED').length}
+                      </div>
                    </div>
                    <div className="bg-bloom-white p-4 rounded-2xl border border-apricot/30 text-center">
                       <div className="text-[8px] font-black uppercase text-studio-dark/30 mb-1">Remaining</div>
-                      <div className="text-xl font-black text-rose-bloom">{(selectedSessionForAttendance.max_seats || 0) - (selectedSessionForAttendance.bookings?.length || 0)}</div>
+                      <div className="text-xl font-black text-rose-bloom">
+                        {(selectedSessionForAttendance.max_seats || 0) - (selectedSessionForAttendance.bookings || []).filter(b => selectedSessionForAttendance.status === 'CANCELLED' || b.status !== 'CANCELLED').length}
+                      </div>
                    </div>
                    <div className="bg-bloom-white p-4 rounded-2xl border border-apricot/30 text-center">
                       <div className="text-[8px] font-black uppercase text-studio-dark/30 mb-1">Capacity</div>
@@ -911,9 +923,11 @@ export default function TeacherDashboard() {
               </div>
 
               <div className="overflow-y-auto p-10 custom-scrollbar flex-1">
-                {(selectedSessionForAttendance.bookings?.length || 0) > 0 ? (
+                {((selectedSessionForAttendance.bookings || []).filter(b => selectedSessionForAttendance.status === 'CANCELLED' || b.status !== 'CANCELLED').length) > 0 ? (
                   <div className="space-y-4">
-                    {selectedSessionForAttendance.bookings.map((booking, i) => (
+                    {(selectedSessionForAttendance.bookings || [])
+                      .filter(b => selectedSessionForAttendance.status === 'CANCELLED' || b.status !== 'CANCELLED')
+                      .map((booking, i) => (
                       <Motion.div 
                         key={booking.id || i}
                         initial={{ opacity: 0, x: -10 }}
