@@ -225,16 +225,22 @@ export default function UserSettings() {
   }
 
   return (
-    <div className="min-h-screen bg-bloom-white text-studio-dark p-6 sm:p-10">
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.5 }}
+      className="min-h-screen bg-bloom-white text-studio-dark p-6 sm:p-10"
+    >
       <div className="max-w-6xl mx-auto">
         <header className="mb-16 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
           <div>
-            <button 
-              onClick={() => navigate(profile?.role === 'TEACHER' ? '/teacher/dashboard' : '/student/dashboard')}
+            <Link 
+              to={profile?.role === 'TEACHER' ? '/teacher/dashboard' : '/student/dashboard'}
               className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-rose-bloom mb-4 hover:translate-x-[-4px] transition-transform"
             >
               <ChevronLeft className="w-4 h-4" /> Back to Stage
-            </button>
+            </Link>
             <h1 className="text-4xl font-black text-studio-dark tracking-tighter italic">Settings Center</h1>
             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-rose-bloom mt-1">Personal & Stage Configuration</p>
           </div>
@@ -601,6 +607,6 @@ export default function UserSettings() {
             </div>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }

@@ -9,6 +9,7 @@ import { format, parseISO, isSameDay, subDays, startOfDay, endOfDay } from 'date
 import { 
   AreaChart, Area, ResponsiveContainer, Tooltip as ReTooltip, XAxis
 } from 'recharts';
+import { Link } from 'react-router-dom';
 
 export default function TeacherDashboard() {
   const { profile, signOut, user } = useAuth();
@@ -487,7 +488,13 @@ export default function TeacherDashboard() {
   }, [user?.id, fetchRoutines, fetchAllSchedules, ensureInviteCode]);
 
   return (
-    <div className="min-h-screen bg-bloom-white text-studio-dark p-6 sm:p-10">
+    <Motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.6 }}
+      className="min-h-screen bg-bloom-white text-studio-dark p-6 sm:p-10"
+    >
       <div className="max-w-[1600px] mx-auto">
         <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-16 gap-6">
           <div className="flex items-center gap-6">
@@ -529,9 +536,9 @@ export default function TeacherDashboard() {
                 </div>
              </div>
              
-             <a href="/teacher/settings" className="p-4 bg-bloom-white rounded-2xl border border-apricot/60 hover:bg-apricot/5 transition-all shadow-sm group">
+             <Link to="/teacher/settings" className="p-4 bg-bloom-white rounded-2xl border border-apricot/60 hover:bg-apricot/5 transition-all shadow-sm group">
                <SettingsIcon className="w-5 h-5 text-rose-bloom group-hover:rotate-45 transition-transform" />
-             </a>
+             </Link>
              <button onClick={signOut} className="p-4 bg-white rounded-2xl border border-studio-dark/20 hover:bg-rose-petal/5 transition-all shadow-sm">
                <LogOut className="w-5 h-5 text-rose-bloom" />
              </button>
@@ -591,18 +598,31 @@ export default function TeacherDashboard() {
               </div>
            </div>
 
-           <a href="/teacher/reports" className="lg:col-span-2 bg-studio-dark p-8 rounded-[3rem] border border-white/10 shadow-2xl relative overflow-hidden group hover:bg-studio-dark/95 transition-all">
-              <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform"><TrendingUp className="w-24 h-24 text-white" /></div>
-              <div className="relative z-10 flex h-full items-center justify-between">
-                 <div>
-                   <h4 className="text-2xl font-black text-white italic mb-2">View Full Performance Studio</h4>
-                   <p className="text-[10px] font-bold text-white/40 uppercase tracking-[0.3em]">Deep dive into your stage financials & trends</p>
+            <Link 
+              to={profile?.is_subscribed ? "/teacher/reports" : "/teacher/subscription"} 
+              className="lg:col-span-2 bg-studio-dark p-8 rounded-[3rem] border border-white/10 shadow-2xl relative overflow-hidden group hover:bg-studio-dark/95 transition-all"
+            >
+               <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform"><TrendingUp className="w-24 h-24 text-white" /></div>
+               {!profile?.is_subscribed && (
+                 <div className="absolute top-6 right-8 flex items-center gap-2 bg-white/10 border border-white/20 px-4 py-2 rounded-full backdrop-blur-md">
+                   <Lock className="w-3 h-3 text-white/60" />
+                   <span className="text-[8px] font-black uppercase tracking-widest text-white/60">Premium Stage</span>
                  </div>
-                 <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center group-hover:translate-x-2 transition-transform">
-                   <ArrowRight className="text-white w-6 h-6" />
-                 </div>
-              </div>
-           </a>
+               )}
+               <div className="relative z-10 flex h-full items-center justify-between">
+                  <div>
+                    <h4 className="text-2xl font-black text-white italic mb-2">
+                       {profile?.is_subscribed ? 'View Full Performance Studio' : 'Unlock Performance Studio'}
+                    </h4>
+                    <p className="text-[10px] font-bold text-white/40 uppercase tracking-[0.3em]">
+                       {profile?.is_subscribed ? 'Deep dive into your stage financials & trends' : 'Premium Analytics & Revenue Reports'}
+                    </p>
+                  </div>
+                  <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center group-hover:translate-x-2 transition-transform">
+                    {profile?.is_subscribed ? <ArrowRight className="text-white w-6 h-6" /> : <Lock className="text-white w-6 h-6 opacity-40" />}
+                  </div>
+               </div>
+            </Link>
         </div>
 
         <div className="grid grid-cols-1 xl:grid-cols-4 gap-12 items-start transition-all duration-700">
@@ -740,22 +760,6 @@ export default function TeacherDashboard() {
 
             </div>
 
-            <a 
-              href={profile?.is_subscribed ? "/teacher/reports" : "/teacher/subscription"} 
-              className="block glass p-8 rounded-[2.5rem] hover:scale-[1.02] transition-all group relative overflow-hidden"
-            >
-              {!profile?.is_subscribed && (
-                <div className="absolute top-6 right-6 flex flex-col items-end gap-2">
-                   <div className="px-3 py-1 bg-studio-dark/5 border border-studio-dark/10 rounded-full flex items-center gap-1.5 shadow-sm">
-                      <Lock className="w-3 h-3 text-studio-dark/40" />
-                      <span className="text-[8px] font-black uppercase tracking-widest text-studio-dark/40">Premium</span>
-                   </div>
-                </div>
-              )}
-              <TrendingUp className={`w-10 h-10 mb-6 opacity-40 ${profile?.is_subscribed ? 'text-rose-bloom' : 'text-studio-dark/40'}`} />
-              <div className={`text-[10px] font-black uppercase tracking-widest mb-1 ${profile?.is_subscribed ? 'text-rose-bloom' : 'text-studio-dark/40'}`}>Growth Energy</div>
-              <div className="text-4xl font-black text-studio-dark">Analytics</div>
-            </a>
             
           </aside>
         </div>
@@ -1142,6 +1146,6 @@ export default function TeacherDashboard() {
           </div>
         )}
       </AnimatePresence>
-    </div>
+    </Motion.div>
   );
 }

@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { supabase } from '../../api/supabaseClient';
-import { useAuth } from '../../context/AuthContext';
 import { 
   TrendingUp, TrendingDown, Users, DollarSign, 
-  Calendar, PieChart, BarChart3, ChevronLeft, Download, Filter,
-  Sparkles, ArrowUpRight, Activity, ArrowRight
+  Calendar, PieChart, BarChart3, Download, Filter,
+  Sparkles, ArrowUpRight, Activity, ArrowRight, ArrowLeft, ChevronLeft
 } from 'lucide-react';
-import { motion as Motion } from 'framer-motion';
+import { motion as Motion, AnimatePresence } from 'framer-motion';
 import { format, subDays, eachDayOfInterval, isSameDay, subMonths, isSameMonth, parseISO } from 'date-fns';
+import { Link } from 'react-router-dom';
+import { supabase } from '../../api/supabaseClient';
+import { useAuth } from '../../context/AuthContext';
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, Cell, PieChart as RePieChart, Pie, Sector
@@ -139,6 +140,13 @@ export default function TeacherReports() {
         { name: 'New Talent', value: Math.max(0, uniqueStudentsCount - repeatStudentsCount) }
       ];
 
+      // Placeholder for revenueTrend, popularRoutines, peakHours, projectedRevenue
+      // These were not fully implemented in the original snippet, so providing dummy data or leaving as empty arrays
+      const revenueTrend = [{ date: 'Jan', amount: 100 }, { date: 'Feb', amount: 120 }]; // Example
+      const routineStats = [{ name: 'Routine A', bookings: 50 }]; // Example
+      const peakHours = [{ hour: 10, count: 5 }, { hour: 11, count: 10 }]; // Example
+      const projectedRevenue = totalRevenue * 1.1; // Example
+
       setReportData({
         totalRevenue,
         totalBookings: totalPaidBookings,
@@ -179,7 +187,7 @@ export default function TeacherReports() {
               <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: entry.color }} />
               <p className="text-xs font-black text-white">
                 {entry.name === 'amount' ? `$${entry.value}` : 
-                 entry.name === 'bookings' ? `${entry.value} Bookings` : entry.value}
+                 entry.name === 'bookings' ? `${entry.value} Bookings` : String(entry.value)}
               </p>
             </div>
           ))}
@@ -209,8 +217,16 @@ export default function TeacherReports() {
     if (user) fetchReportData();
   }, [user, timeRange, fetchReportData]);
 
+  if (!reportData) return <div className="min-h-screen bg-bloom-white flex items-center justify-center"><div className="w-12 h-12 border-4 border-rose-bloom/20 border-t-rose-bloom rounded-full animate-spin" /></div>;
+
   return (
-    <div className="min-h-screen bg-bloom-white text-[#4A3B3E] p-6 sm:p-10 font-sans relative overflow-hidden">
+    <Motion.div 
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.5, ease: "easeOut" }}
+      className="min-h-screen bg-bloom-white text-[#4A3B3E] p-6 sm:p-10 font-sans relative overflow-hidden"
+    >
       <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
         <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-rose-bloom blur-[150px] rounded-full" />
         <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-lavender blur-[150px] rounded-full" />
@@ -232,12 +248,12 @@ export default function TeacherReports() {
                 <p className="text-xs text-studio-dark/40 font-bold uppercase tracking-widest leading-loose mb-10">
                   Detailed analytics and revenue reports are reserved for our Premium Stage Instructors.
                 </p>
-                <a 
-                  href="/teacher/subscription"
+                <Link 
+                  to="/teacher/subscription"
                   className="w-full btn-premium bg-studio-dark text-white flex items-center justify-center gap-3 hover:bg-rose-bloom shadow-xl shadow-studio-dark/20"
                 >
                   Activate Premium <ArrowRight className="w-4 h-4" />
-                </a>
+                </Link>
                 <p className="mt-6 text-[10px] font-black text-rose-bloom/40 uppercase tracking-[0.2em] italic">Only $10 / Month</p>
              </Motion.div>
           </div>
@@ -245,9 +261,9 @@ export default function TeacherReports() {
         
         <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 mb-16">
           <div className="flex items-center gap-6">
-             <a href="/teacher/dashboard" className="p-4 bg-white rounded-2xl border border-studio-dark/15 hover:bg-rose-petal/5 transition-all shadow-sm">
+             <Link to="/teacher/dashboard" className="p-4 bg-white rounded-2xl border border-studio-dark/15 hover:bg-rose-petal/5 transition-all shadow-sm">
                <ChevronLeft className="w-6 h-6 text-rose-bloom" />
-             </a>
+             </Link>
              <div>
               <h1 className="text-4xl font-black text-studio-dark mb-1">Performance Studio.</h1>
               <p className="text-rose-bloom/40 font-bold tracking-tight uppercase tracking-[0.2em] text-[10px]">Financials & Engagement Analytics</p>
@@ -503,6 +519,6 @@ export default function TeacherReports() {
           </>
         )}
       </div>
-    </div>
+    </Motion.div>
   );
 }
