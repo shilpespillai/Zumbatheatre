@@ -57,20 +57,35 @@ export default function TeacherSubscription() {
     toast.loading('Preparing your secure stage activation...');
 
     try {
-      // Real Implementation
-      const stripe = await getStripe(); // Uses Owner's Public Key from ENV
+      // 1. Initialize Stripe (using Owner's Public Key from ENV)
+      const stripe = await getStripe();
+      if (!stripe) {
+        throw new Error('Stripe is not configured on this stage. Please contact support.');
+      }
+
+      // 2. Create Checkout Session
       const session = await createCheckoutSession([{ 
         name: plan.name, 
         price: plan.price,
         priceId: plan.priceId // Standard Stripe Price ID for recurring billing
       }], { 
-        isSubscription: true 
+        isSubscription: true,
+        successUrl: `${window.location.origin}/teacher/dashboard?subscription=success`,
+        cancelUrl: `${window.location.origin}/teacher/dashboard?subscription=cancel`
       });
-      await stripe.redirectToCheckout({ sessionId: session.id });
+
+      if (!session?.id) {
+        throw new Error('Failed to create a secure checkout session. Please try again.');
+      }
+
+      // 3. Redirect to Stripe
+      const { error } = await stripe.redirectToCheckout({ sessionId: session.id });
+      if (error) throw error;
 
     } catch (error) {
-      console.error('Subscription error:', error);
-      toast.error('Failed to initiate subscription.');
+      console.error('[Subscription] Error:', error);
+      toast.dismiss(); // Remove the loading toast
+      toast.error(error.message || 'Failed to initiate subscription.');
     } finally {
       setLoading(false);
     }
