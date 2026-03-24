@@ -102,8 +102,9 @@ export default function Onboarding() {
         .from('profiles')
         .upsert({
           id: user.id,
-          full_name: formData.full_name || user.user_metadata?.full_name || user.email.split('@')[0],
+          full_name: formData.full_name || user.user_metadata?.full_name || user.email?.split('@')[0],
           role: role?.toUpperCase(),
+          phone: formData.phone,
           bio: formData.bio,
           linked_teacher_id: linkedTeacherId,
           avatar_url: user.user_metadata?.avatar_url || ''
@@ -116,12 +117,12 @@ export default function Onboarding() {
       const { error: dbError } = await Promise.race([dbRequest, timeoutPromise]);
 
       // 4. Mirror to Auth Metadata (The "Unblockable" Fallback)
-      // This ensures that even if the database is blocked by Chrome's Tracking Protection,
-      // the app still knows the user's role and code from the secure session.
       console.log('[Onboarding] Syncing to Auth Metadata...');
       const { error: authError } = await supabase.auth.updateUser({
         data: {
           full_name: formData.full_name || user.user_metadata?.full_name,
+          phone: formData.phone,
+          bio: formData.bio,
           role: role?.toUpperCase(),
           stage_code: formData.stage_code || null
         }

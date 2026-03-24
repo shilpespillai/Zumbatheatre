@@ -77,12 +77,23 @@ export default function UserSettings() {
     try {
       if (!profile) throw new Error('No active profile found.');
       
+      const isTeacher = profile?.role?.toUpperCase() === 'TEACHER';
+      
       const updates = {
-        ...formData,
-        payment_settings: profile?.role === 'TEACHER' ? paymentSettings : null,
-        loyalty_settings: profile?.role === 'TEACHER' ? loyaltySettings : null,
+        full_name: formData.full_name,
+        avatar_url: formData.avatar_url,
+        phone: formData.phone,
+        bio: formData.bio,
         updated_at: new Date().toISOString()
       };
+
+      // Only include teacher-specific settings if the user is a teacher
+      if (isTeacher) {
+        updates.payment_settings = paymentSettings;
+        updates.loyalty_settings = loyaltySettings;
+      }
+
+      console.log('[Settings] Saving updates:', updates);
 
       const { error } = await supabase
         .from('profiles')
@@ -90,7 +101,13 @@ export default function UserSettings() {
         .eq('id', profile.id);
 
       if (error) {
-        console.warn('[Settings] Database update restricted, attempting metadata sync fallback...');
+        console.error('[Settings] Database update failed:', error);
+        // If it's a "column not found" error, it means migrations haven't run yet
+        if (error.code === '42703') {
+          toast.error('Database schema out of sync. Please run the latest migrations.');
+          return;
+        }
+        throw error;
       }
 
       // SYNC TO AUTH METADATA (Unblockable path for resilience)
@@ -98,18 +115,21 @@ export default function UserSettings() {
         data: {
           full_name: formData.full_name,
           phone: formData.phone,
+          bio: formData.bio,
           role: profile?.role,
           avatar_url: formData.avatar_url
         }
       });
 
-      if (metaError && error) throw new Error('Both database and metadata updates failed.');
+      if (metaError) {
+        console.warn('[Settings] Metadata sync failed:', metaError);
+      }
       
       await fetchProfile();
       toast.success('Settings updated successfully!');
     } catch (err) {
       console.error('[Settings] Update error:', err);
-      toast.error('Failed to update settings');
+      toast.error(err.message || 'Failed to update settings');
     } finally {
       setLoading(false);
     }

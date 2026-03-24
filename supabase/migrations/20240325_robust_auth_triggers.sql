@@ -2,16 +2,20 @@
 CREATE OR REPLACE FUNCTION public.sync_profile_from_metadata() 
 RETURNS TRIGGER AS $$
 BEGIN
-    INSERT INTO public.profiles (id, full_name, role, stage_code)
+    INSERT INTO public.profiles (id, full_name, role, stage_code, phone, bio)
     VALUES (
         NEW.id,
         COALESCE(NEW.raw_user_meta_data->>'full_name', 'Artist'),
         COALESCE(UPPER(NEW.raw_user_meta_data->>'role'), 'STUDENT'),
-        NEW.raw_user_meta_data->>'stage_code'
+        NEW.raw_user_meta_data->>'stage_code',
+        NEW.raw_user_meta_data->>'phone',
+        NEW.raw_user_meta_data->>'bio'
     )
     ON CONFLICT (id) DO UPDATE SET
         full_name = EXCLUDED.full_name,
         role = EXCLUDED.role,
+        phone = COALESCE(EXCLUDED.phone, profiles.phone),
+        bio = COALESCE(EXCLUDED.bio, profiles.bio),
         stage_code = COALESCE(profiles.stage_code, EXCLUDED.stage_code),
         updated_at = NOW();
     RETURN NEW;
