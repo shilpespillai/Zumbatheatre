@@ -355,6 +355,37 @@ export default function TeacherDashboard() {
     }
   };
 
+  const handleMarkAttendance = async (bookingId, currentStatus) => {
+    try {
+      const { error } = await supabase
+        .from('bookings')
+        .update({ attended: !currentStatus })
+        .eq('id', bookingId);
+      
+      if (error) throw error;
+      
+      const statusMsg = !currentStatus ? 'Checked in!' : 'Check-in removed';
+      toast.success(statusMsg);
+      
+      // Update local state
+      const updatedBookings = bookings.map(b => 
+        b.id === bookingId ? { ...b, attended: !currentStatus } : b
+      );
+      setBookings(updatedBookings);
+      
+      if (selectedSessionForAttendance) {
+        setSelectedSessionForAttendance({
+          ...selectedSessionForAttendance,
+          bookings: selectedSessionForAttendance.bookings.map(b => 
+            b.id === bookingId ? { ...b, attended: !currentStatus } : b
+          )
+        });
+      }
+    } catch (error) {
+      toast.error('Failed to update attendance');
+    }
+  };
+
   const handleCancelSchedule = async (scheduleId) => {
     const sessionToCancel = schedules.find(s => s.id === scheduleId);
     if (sessionToCancel && new Date(sessionToCancel.start_time) < new Date()) {
@@ -1083,16 +1114,28 @@ export default function TeacherDashboard() {
                                booking.payment_status === 'PAID' ? (booking.payment_method === 'CREDITS' ? 'Paid (Credits)' : 'Paid') : booking.payment_status
                              )}
                            </div>
-                           {booking.payment_status === 'PENDING' && (
+                             {booking.payment_status === 'PENDING' && (
+                               <button 
+                                 onClick={() => handleMarkAsPaid(booking.id)}
+                                 className="p-2 bg-emerald-500/10 hover:bg-emerald-500 text-emerald-500 hover:text-white rounded-xl transition-all flex items-center gap-2 group/btn"
+                                 title="Confirm Cash Payment"
+                               >
+                                  <span className="text-[8px] font-black uppercase tracking-widest hidden group-hover/btn:block">Mark Paid</span>
+                                  <Plus className="w-4 h-4" />
+                               </button>
+                             )}
                              <button 
-                               onClick={() => handleMarkAsPaid(booking.id)}
-                               className="p-2 bg-emerald-500/10 hover:bg-emerald-500 text-emerald-500 hover:text-white rounded-xl transition-all flex items-center gap-2 group/btn"
-                               title="Confirm Cash Payment"
+                               onClick={() => handleMarkAttendance(booking.id, booking.attended)}
+                               className={`p-2 rounded-xl transition-all flex items-center gap-2 group/btn ${
+                                 booking.attended ? 'bg-rose-bloom text-white shadow-lg shadow-rose-bloom/20' : 'bg-studio-dark/5 text-studio-dark/20 hover:text-rose-bloom'
+                               }`}
+                               title={booking.attended ? 'Click to uncheck' : 'Mark Attended'}
                              >
-                                <span className="text-[8px] font-black uppercase tracking-widest hidden group-hover/btn:block">Mark Paid</span>
-                                <Plus className="w-4 h-4" />
+                                <span className={`text-[8px] font-black uppercase tracking-widest ${booking.attended ? 'block' : 'hidden group-hover/btn:block'}`}>
+                                  {booking.attended ? 'Checked In' : 'Check In'}
+                                </span>
+                                <CheckCircle2 className="w-4 h-4" />
                              </button>
-                           )}
                            <button className="p-2 opacity-0 group-hover:opacity-100 transition-all text-studio-dark/20 hover:text-studio-dark">
                               <ArrowRight className="w-4 h-4" />
                            </button>
