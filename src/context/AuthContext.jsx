@@ -65,10 +65,10 @@ export const AuthProvider = ({ children }) => {
     const activeUser = currentUserObj || user;
     if (!id) return;
     
-    // Deduplication: Don't refetch if we just fetched this ID and it's stable
-    // (We allow manual overrides by passing userId explicitly)
-    if (id === lastFetchedId && !userId) {
-      console.log(`[AuthContext] Skipping redundant fetch for ${id}`);
+    // Deduplication: Only skip if it's an automatic background refresh AND we already have a stable ID
+    // If userId is explicitly passed, or if we don't have a profile yet, we MUST fetch.
+    if (id === lastFetchedId && !userId && profile) {
+      console.log(`[AuthContext] Skipping redundant background fetch for ${id}`);
       return;
     }
 

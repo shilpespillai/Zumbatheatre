@@ -93,16 +93,31 @@ export default function StudentDashboard() {
       const teacher = data;
 
       if (teacher) {
+        // ONLY Proceed if we have a valid student profile ID to link to
         if (profile?.id) {
-          await supabase.from('profiles').update({ linked_teacher_id: teacher.id }).eq('id', profile.id);
+          const { error: updateError } = await supabase
+            .from('profiles')
+            .update({ linked_teacher_id: teacher.id })
+            .eq('id', profile.id);
+          
+          if (updateError) {
+            console.error('[Dashboard] Failed to link teacher:', updateError);
+            toast.error('Failed to link to instructor. Retrying...');
+            return; // Don't clear storage or fetch profile if update failed
+          }
+
+          localStorage.removeItem('pending_teacher_code');
+          await fetchProfile(profile.id);
+          
+          if (teacher.id !== profile?.linked_teacher_id) {
+            toast.success(`Connected to instructor: ${teacher.full_name}`);
+          }
+        } else {
+          // If profile ID isn't ready yet, the useEffect dependency on profile.id 
+          // will trigger this again once it arrives. Don't clear storage yet.
+          return;
         }
-        
-        localStorage.removeItem('pending_teacher_code');
-        await fetchProfile();
-        
-        if (teacher.id !== profile?.linked_teacher_id) {
-          toast.success(`Connected to instructor: ${teacher.full_name}`);
-        }
+
         await fetchTeacherProfile(teacher.id);
         await fetchAllAvailableSchedules(teacher.id);
 
