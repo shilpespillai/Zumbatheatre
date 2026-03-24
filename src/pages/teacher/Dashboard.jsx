@@ -381,6 +381,17 @@ export default function TeacherDashboard() {
 
   const handleReactivateSchedule = async (scheduleId) => {
     try {
+      // 1. Flush out all previous bookings (Cancelled bookings from the earlier drop)
+      const { error: deleteError } = await supabase
+        .from('bookings')
+        .delete()
+        .eq('schedule_id', scheduleId);
+      
+      if (deleteError) {
+        console.warn('[Dashboard] Booking flush failed (Policy might be missing):', deleteError);
+      }
+
+      // 2. Restore Schedule Status
       const { error } = await supabase
         .from('schedules')
         .update({ status: 'SCHEDULED' })
@@ -388,7 +399,7 @@ export default function TeacherDashboard() {
       
       if (error) throw error;
       
-      toast.success('Session re-activated! Students can now re-book.');
+      toast.success('Session re-activated! Bookings have been cleared for a fresh start.');
       fetchAllSchedules();
     } catch (error) {
       toast.error('Failed to re-activate session');
