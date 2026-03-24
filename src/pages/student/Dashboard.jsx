@@ -234,7 +234,7 @@ export default function StudentDashboard() {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('full_name, avatar_url, loyalty_settings')
+        .select('full_name, avatar_url, loyalty_settings, payment_settings')
         .eq('id', teacherId)
         .single();
       
@@ -381,7 +381,11 @@ export default function StudentDashboard() {
     }).reduce((sum, b) => sum + (Number(b.amount) || 0), 0);
 
     // Loyalty Progress (Specific to active teacher)
-    const activeTeacherBookings = paidBookings.filter(b => b.teacher_id === profile?.linked_teacher_id);
+    const activeTeacherBookings = bookings.filter(b => 
+      b.teacher_id === profile?.linked_teacher_id && 
+      ['PAID', 'PENDING'].includes(b.payment_status) &&
+      b.payment_method !== 'LOYALTY_REWARD'
+    );
     const loyaltySettings = teacherProfile?.loyalty_settings || { required_sessions: 10, enabled: true };
     const loyaltyCount = activeTeacherBookings.length % (loyaltySettings.required_sessions + 1);
     const sessionsRemaining = loyaltySettings.required_sessions - loyaltyCount;
@@ -575,10 +579,28 @@ export default function StudentDashboard() {
 
                                    if (myBooking) {
                                      const isPaid = myBooking.payment_status === 'PAID';
+                                     const paySettings = teacherProfile?.payment_settings || {};
+                                     const paypalUrl = paySettings.config?.paypal_url;
+                                     const hasPaypal = paySettings.enabledMethods?.includes('paypal') && paypalUrl;
+                                     
                                      return (
-                                       <div className={`w-full py-4 rounded-2xl font-black uppercase text-[9px] tracking-widest flex items-center justify-center gap-2 border-2 ${isPaid ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-rose-bloom/10 text-rose-bloom border-rose-bloom/20'}`}>
-                                         {isPaid ? <CheckCircle2 className="w-4 h-4" /> : <Sparkles className="w-4 h-4" />}
-                                         {isPaid ? 'PAID & READY' : 'RESERVED'}
+                                       <div className="flex flex-col gap-2 w-full">
+                                         <div className={`w-full py-4 rounded-2xl font-black uppercase text-[9px] tracking-widest flex items-center justify-center gap-2 border-2 ${isPaid ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-rose-bloom/10 text-rose-bloom border-rose-bloom/20'}`}>
+                                           {isPaid ? <CheckCircle2 className="w-4 h-4" /> : <Sparkles className="w-4 h-4" />}
+                                           {isPaid ? 'PAID & READY' : 'RESERVED'}
+                                         </div>
+                                         {!isPaid && hasPaypal && (
+                                           <button
+                                             onClick={(e) => {
+                                               e.stopPropagation();
+                                               const finalUrl = paypalUrl.startsWith('http') ? paypalUrl : `https://${paypalUrl}`;
+                                               window.open(finalUrl, '_blank');
+                                             }}
+                                             className="w-full py-3 bg-studio-dark text-white rounded-2xl font-black uppercase text-[9px] tracking-widest flex items-center justify-center gap-2 hover:bg-rose-bloom transition-all shadow-lg"
+                                           >
+                                             Complete Payment <ArrowRight className="w-3 h-3" />
+                                           </button>
+                                         )}
                                        </div>
                                      );
                                    }

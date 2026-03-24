@@ -379,6 +379,22 @@ export default function TeacherDashboard() {
     }
   };
 
+  const handleReactivateSchedule = async (scheduleId) => {
+    try {
+      const { error } = await supabase
+        .from('schedules')
+        .update({ status: 'SCHEDULED' })
+        .eq('id', scheduleId);
+      
+      if (error) throw error;
+      
+      toast.success('Session re-activated! Students can now re-book.');
+      fetchAllSchedules();
+    } catch (error) {
+      toast.error('Failed to re-activate session');
+    }
+  };
+
   useEffect(() => {
     if (user) {
         setLoading(true);
@@ -541,8 +557,22 @@ export default function TeacherDashboard() {
                               <MapPin className="w-3 h-3" /> {slot.location}
                             </div>
                             {slot.status === 'CANCELLED' ? (
-                              <div className="text-[10px] font-black text-rose-bloom uppercase tracking-tighter bg-rose-bloom/5 px-3 py-1 rounded-lg">
-                                Cancelled
+                              <div className="flex items-center gap-2">
+                                <div className="text-[10px] font-black text-rose-bloom uppercase tracking-tighter bg-rose-bloom/5 px-3 py-1 rounded-lg">
+                                  Cancelled
+                                </div>
+                                {!isPast && (
+                                  <button 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleReactivateSchedule(slot.id);
+                                    }}
+                                    className="p-1 px-2 bg-rose-bloom text-white text-[8px] font-black uppercase rounded-lg hover:bg-rose-petal transition-all"
+                                    title="Re-activate Session"
+                                  >
+                                    Re-activate
+                                  </button>
+                                )}
                               </div>
                             ) : isPast ? (
                               <div className="text-[10px] font-black text-zinc-400 uppercase tracking-tighter bg-zinc-100 px-3 py-1 rounded-lg">
@@ -897,9 +927,14 @@ export default function TeacherDashboard() {
                         </div>
                         <div className="flex items-center gap-3">
                            <div className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest border ${
+                             booking.status === 'CANCELLED' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
                              booking.payment_status === 'PAID' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-rose-bloom/10 text-rose-bloom border-rose-bloom/20'
                            }`}>
-                             {booking.payment_status === 'PAID' ? (booking.payment_method === 'CREDITS' ? 'Paid (Credits)' : 'Paid') : booking.payment_status}
+                             {booking.status === 'CANCELLED' ? (
+                               booking.payment_status === 'REFUNDED' ? 'Cancelled - Credit Refunded' : 'Cancelled'
+                             ) : (
+                               booking.payment_status === 'PAID' ? (booking.payment_method === 'CREDITS' ? 'Paid (Credits)' : 'Paid') : booking.payment_status
+                             )}
                            </div>
                            {booking.payment_status === 'PENDING' && (
                              <button 

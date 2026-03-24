@@ -213,6 +213,17 @@ export default function UserSettings() {
     ...(!isGuest ? [{ id: 'security', label: 'Security & Privacy', icon: Shield }] : []),
   ];
 
+  if (!profile && !isGuest) {
+    return (
+      <div className="min-h-screen bg-bloom-white flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-rose-bloom/20 border-t-rose-bloom rounded-full animate-spin" />
+          <p className="text-[10px] font-black uppercase tracking-widest text-studio-dark/40">Syncing with Stage...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-bloom-white text-studio-dark p-6 sm:p-10">
       <div className="max-w-6xl mx-auto">

@@ -3,7 +3,7 @@ import { supabase } from '../../api/supabaseClient';
 import { useAuth } from '../../context/AuthContext';
 import { 
   Calendar, Clock, MapPin, ChevronLeft, 
-  Ticket, AlertCircle, CheckCircle2, XCircle, Sparkles, X, Octagon
+  Ticket, AlertCircle, CheckCircle2, XCircle, Sparkles, X, Octagon, ArrowRight
 } from 'lucide-react';
 import { format, parseISO, isAfter, isSameDay, addDays, subDays, startOfDay } from 'date-fns';
 import { motion as Motion, AnimatePresence } from 'framer-motion';
@@ -42,7 +42,7 @@ export default function MyBookings() {
           schedules:schedule_id (
             *,
             routines:routine_id (name, duration_minutes),
-            teacher:teacher_id (full_name, avatar_url)
+            teacher:teacher_id (full_name, avatar_url, payment_settings)
           )
         `)
         .eq('student_id', profile.id)
@@ -243,12 +243,27 @@ export default function MyBookings() {
                     <div className="w-full md:w-auto flex gap-3">
                        <button className="flex-1 md:flex-none px-8 py-5 bg-bloom-white rounded-2xl hover:bg-rose-petal/10 transition-colors text-[10px] font-black uppercase tracking-widest text-studio-dark">Details</button>
                        {canCancel && booking.status !== 'CANCELLED' && (
-                         <button 
-                          onClick={() => { setBookingToCancel(booking); setIsCancelModalOpen(true); }}
-                          className="flex-1 md:flex-none px-8 py-5 bg-rose-bloom text-white rounded-2xl hover:scale-105 transition-all text-[10px] font-black uppercase tracking-widest shadow-lg shadow-rose-bloom/20"
-                         >
-                           Cancel Session
-                         </button>
+                         <div className="flex flex-col gap-2 flex-1 md:flex-none">
+                           <button 
+                            onClick={() => { setBookingToCancel(booking); setIsCancelModalOpen(true); }}
+                            className="w-full px-8 py-5 bg-rose-bloom text-white rounded-2xl hover:scale-105 transition-all text-[10px] font-black uppercase tracking-widest shadow-lg shadow-rose-bloom/20"
+                           >
+                             Cancel Session
+                           </button>
+                           {booking.payment_status === 'PENDING' && booking.schedules?.teacher?.payment_settings?.enabledMethods?.includes('paypal') && booking.schedules?.teacher?.payment_settings?.config?.paypal_url && (
+                             <button
+                               onClick={(e) => {
+                                 e.stopPropagation();
+                                 const paypalUrl = booking.schedules.teacher.payment_settings.config.paypal_url;
+                                 const finalUrl = paypalUrl.startsWith('http') ? paypalUrl : `https://${paypalUrl}`;
+                                 window.open(finalUrl, '_blank');
+                               }}
+                               className="w-full py-4 bg-studio-dark text-white rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 hover:bg-rose-bloom transition-all shadow-lg"
+                             >
+                               Pay via PayPal <ArrowRight className="w-3 h-3" />
+                             </button>
+                           )}
+                         </div>
                        )}
                        {isPast && (
                          <div className="px-8 py-5 bg-zinc-100 text-zinc-400 rounded-2xl text-[10px] font-black uppercase tracking-widest border border-zinc-200">

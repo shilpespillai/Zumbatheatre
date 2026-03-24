@@ -152,7 +152,11 @@ export default function StudentBooking() {
         // Calculate Loyalty Eligibility
         const teacherLoyalty = teacher?.loyalty_settings || { required_sessions: 10, enabled: true };
         if (teacherLoyalty.enabled !== false) {
-          const teacherBookings = (data || []).filter(b => b.teacher_id === teacherId && b.payment_status === 'PAID');
+          const teacherBookings = (data || []).filter(b => 
+            b.teacher_id === teacherId && 
+            ['PAID', 'PENDING'].includes(b.payment_status) && 
+            b.payment_method !== 'LOYALTY_REWARD'
+          );
           const required = teacherLoyalty.required_sessions || 10;
           const progress = teacherBookings.length % (required + 1);
           setLoyaltyEligible(progress === required);
@@ -325,7 +329,8 @@ export default function StudentBooking() {
         if (paymentMethod === 'paypal') {
           toast.success('Redirecting to PayPal...', { id: toastId });
           setTimeout(() => {
-            window.location.href = paymentConfig.paypal_url;
+            const paypalUrl = paymentConfig.paypal_url;
+            window.location.href = paypalUrl.startsWith('http') ? paypalUrl : `https://${paypalUrl}`;
           }, 1000);
         } else {
           toast.success('Spot reserved! Manual payment instructions shown.', { id: toastId });
