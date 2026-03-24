@@ -54,24 +54,37 @@ export default function StudentDashboard() {
 
 
   useEffect(() => {
-    const pendingCode = localStorage.getItem('pending_teacher_code');
-    const currentCode = profile?.stage_code;
-    
-    if (profile?.visited_stages) {
-      setVisitedStages(profile.visited_stages);
-    }
-    
-    if (pendingCode) {
-      syncTeacherLink(pendingCode);
-    } else if (profile?.linked_teacher_id) {
-      fetchTeacherProfile(profile.linked_teacher_id);
-      fetchAllAvailableSchedules(profile.linked_teacher_id);
-    } else if (currentCode && !profile?.linked_teacher_id) {
-      syncTeacherLink(currentCode);
-    } else {
-      setLoading(false);
-    }
-  }, [profile?.linked_teacher_id, profile?.role, profile?.id, profile?.stage_code]);
+    const initDashboard = async () => {
+      const pendingCode = localStorage.getItem('pending_teacher_code');
+      const currentCode = profile?.stage_code;
+      
+      if (profile?.visited_stages) {
+        setVisitedStages(profile.visited_stages);
+      }
+      
+      if (pendingCode) {
+        syncTeacherLink(pendingCode);
+      } else if (profile?.linked_teacher_id) {
+        // Parallelizing everything to avoid waterfall
+        try {
+          await Promise.allSettled([
+            fetchTeacherProfile(profile.linked_teacher_id),
+            fetchAllAvailableSchedules(profile.linked_teacher_id),
+            fetchMyBookings(),
+            fetchStudentCredits()
+          ]);
+        } finally {
+          setLoading(false);
+        }
+      } else if (currentCode && !profile?.linked_teacher_id) {
+        syncTeacherLink(currentCode);
+      } else {
+        setLoading(false);
+      }
+    };
+
+    if (profile?.id) initDashboard();
+  }, [profile?.linked_teacher_id, profile?.id, profile?.stage_code]);
 
   const syncTeacherLink = async (code) => {
     if (!code || linking || syncLockRef.current) return;
@@ -411,28 +424,19 @@ export default function StudentDashboard() {
   };
 
   useEffect(() => {
-    if (profile?.id && profile?.linked_teacher_id) {
-      fetchMyBookings();
-    } else {
-      setMyBookings([]);
-      setStudentStats({
-        totalSessions: 0, routineVariety: [], routineCategoryMix: [], attendanceTrend: [], energyBurn: 0, consistency: [],
-        totalSpent: 0, monthlySpent: 0, quarterlySpent: 0, ytdSpent: 0, spendingTrend: []
-      });
-    }
-  }, [profile?.id, profile?.linked_teacher_id, fetchMyBookings]);
-
-  useEffect(() => {
-    if (myBookings.length > 0 && allSchedules.length > 0) {
+    // Only calculate metrics if the user is looking at the performance tab
+    // This saves CPU/Memory during initial load of Studio Mode
+    if (activeTab === 'performance' && myBookings.length > 0 && allSchedules.length > 0) {
       calculateStudentMetrics(myBookings, allSchedules);
     }
-  }, [myBookings, allSchedules, calculateStudentMetrics]);
+  }, [myBookings, allSchedules, activeTab, calculateStudentMetrics]);
 
+  // Combined fetch for performance data when switching tabs if needed
   useEffect(() => {
-    if (profile?.id && profile?.linked_teacher_id) {
-      fetchStudentCredits();
+    if (activeTab === 'performance' && profile?.id && profile?.linked_teacher_id) {
+      fetchMyBookings();
     }
-  }, [profile?.id, profile?.linked_teacher_id, fetchStudentCredits]);
+  }, [activeTab, profile?.id, profile?.linked_teacher_id, fetchMyBookings]);
 
   return (
     <div className="min-h-screen bg-bloom-white text-studio-dark p-6 sm:p-10">
