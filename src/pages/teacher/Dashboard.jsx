@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../api/supabaseClient';
-import { Calendar as CalendarIcon, Users, TrendingUp, Plus, LogOut, Settings as SettingsIcon, Package, Sparkles, X, Save, Clock, MapPin, Trash2, ShieldCheck, ArrowRight, RefreshCw, Copy, Lock, AlertTriangle } from 'lucide-react';
+import { Calendar as CalendarIcon, Users, TrendingUp, Plus, LogOut, Settings as SettingsIcon, Package, Sparkles, X, Save, Clock, MapPin, Trash2, ShieldCheck, ArrowRight, RefreshCw, Copy, Lock, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import CalendarContainer from '../../components/CalendarContainer';
 import { toast } from 'sonner';
 import { motion as Motion, AnimatePresence } from 'framer-motion';
