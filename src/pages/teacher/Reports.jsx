@@ -14,6 +14,7 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, Cell, PieChart as RePieChart, Pie, Sector
 } from 'recharts';
+import StudioAI from '../../components/common/StudioAI';
 
 export default function TeacherReports() {
   const { user, profile } = useAuth();
@@ -454,6 +455,7 @@ export default function TeacherReports() {
           ))}
         </div>
       </div>
+      <StudioAI studioMetrics={reportData} userRole="Teacher" />
     </Motion.div>
   );
 }
