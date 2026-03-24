@@ -6,7 +6,7 @@ import {
   Plus, Calendar as CalendarIcon, Clock, MapPin, 
   Sparkles, Search, SlidersHorizontal, Heart, Ticket, Eye, Lock, ArrowRight, X,
   LogOut, Settings as SettingsIcon, CheckCircle2, Activity, PieChart, BarChart3,
-  DollarSign, TrendingUp
+  DollarSign, TrendingUp, XCircle
 } from 'lucide-react';
 import { isSameDay, format, parseISO, subDays, eachDayOfInterval, subMonths, isSameMonth } from 'date-fns';
 import { 
@@ -216,7 +216,7 @@ export default function StudentDashboard() {
           )
         `)
         .eq('teacher_id', teacherId)
-        .eq('status', 'SCHEDULED')
+        .in('status', ['SCHEDULED', 'CANCELLED'])
         .order('start_time', { ascending: true });
       
       if (error) throw error;
@@ -254,7 +254,7 @@ export default function StudentDashboard() {
           routines (name, duration_minutes),
           profiles (full_name)
         `)
-        .eq('status', 'SCHEDULED')
+        .in('status', ['SCHEDULED', 'CANCELLED'])
         .limit(20);
       if (error) throw error;
       setGlobalSchedules(data || []);
@@ -551,10 +551,28 @@ export default function StudentDashboard() {
                                 
                                 <h5 className="text-sm font-black text-studio-dark mb-6 group-hover/card:text-rose-bloom transition-colors">{session.routines?.name}</h5>
                                 
-                                 {(() => {
+                                  {(() => {
                                    const myBooking = myBookings.find(b => b.schedule_id === session.id);
                                    const isFull = (session.seats_taken || 0) >= (session.max_seats || 20);
+                                   const isCancelled = session.status === 'CANCELLED';
+                                   const isPastSession = new Date(session.start_time) < new Date();
                                    
+                                   if (isCancelled) {
+                                     return (
+                                       <div className="w-full py-4 bg-red-500/10 text-red-500 rounded-2xl font-black uppercase text-[9px] tracking-widest flex items-center justify-center gap-2 border-2 border-red-500/20">
+                                         <XCircle className="w-4 h-4" /> SESSION CANCELLED
+                                       </div>
+                                     );
+                                   }
+
+                                   if (isPastSession) {
+                                     return (
+                                       <div className="w-full py-4 bg-zinc-100 text-zinc-400 rounded-2xl font-black uppercase text-[9px] tracking-widest flex items-center justify-center gap-2 border border-zinc-200 cursor-not-allowed">
+                                         <Clock className="w-4 h-4" /> SESSION EXPIRED
+                                       </div>
+                                     );
+                                   }
+
                                    if (myBooking) {
                                      const isPaid = myBooking.payment_status === 'PAID';
                                      return (
