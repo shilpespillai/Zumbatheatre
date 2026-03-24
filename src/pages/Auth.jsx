@@ -55,18 +55,25 @@ export default function Auth() {
   // Redirect if already logged in (Teachers/Admins)
   useEffect(() => {
     // ONLY redirect if we have a definitive profile/role state
+    // AND the current UI tab matches that role.
     if (user && !authLoading && !loading) {
       if (profile) {
         const uRole = profile.role?.toUpperCase();
-        if (uRole === 'ADMIN') navigate('/admin/dashboard');
-        else if (uRole === 'TEACHER') navigate('/teacher/dashboard');
+        const selectedRole = role?.toUpperCase();
+        
+        // Only redirect if the user is visiting the matching login/join tab
+        if (selectedRole === uRole || (uRole === 'ADMIN')) {
+          if (uRole === 'ADMIN') navigate('/admin/dashboard');
+          else if (uRole === 'TEACHER') navigate('/teacher/dashboard');
+          else if (uRole === 'STUDENT') navigate('/student/dashboard');
+        }
       } else {
         // Authenticated user with no profile record -> move to onboarding
         console.log('[Auth] User logged in but no profile found, redirecting to onboarding...');
         navigate('/onboarding');
       }
     }
-  }, [user, profile, authLoading, loading, navigate]);
+  }, [user, profile, authLoading, loading, role, navigate]);
 
   const handleGuestEntrance = async () => {
     if (!formData.fullName || !formData.stageCode) {
