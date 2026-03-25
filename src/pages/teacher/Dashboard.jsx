@@ -1104,6 +1104,12 @@ export default function TeacherDashboard() {
                           </div>
                         </div>
                         <div className="flex items-center gap-3">
+                           {booking.payment_confirmed_by_student && booking.payment_status === 'PENDING' && (
+                             <div className="flex items-center gap-1.5 px-3 py-1 bg-amber-500/10 border border-amber-500/20 rounded-full text-amber-600 animate-in fade-in zoom-in duration-300">
+                               <Sparkles className="w-3 h-3" />
+                               <span className="text-[8px] font-black uppercase tracking-widest">Submitted</span>
+                             </div>
+                           )}
                            <div className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest border ${
                              booking.status === 'CANCELLED' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
                              booking.payment_status === 'PAID' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-rose-bloom/10 text-rose-bloom border-rose-bloom/20'

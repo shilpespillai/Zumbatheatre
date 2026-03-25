@@ -6,7 +6,7 @@ import {
   Plus, Calendar as CalendarIcon, Clock, MapPin, 
   Sparkles, Search, SlidersHorizontal, Heart, Ticket, Eye, Lock, ArrowRight, X,
   LogOut, Settings as SettingsIcon, CheckCircle2, Activity, PieChart, BarChart3,
-  DollarSign, TrendingUp, XCircle, ChevronLeft, ChevronDown
+  DollarSign, TrendingUp, XCircle, ChevronLeft, ChevronDown, ShieldCheck, Landmark, Check, ExternalLink
 } from 'lucide-react';
 import { isSameDay, format, parseISO, subDays, eachDayOfInterval, subMonths, isSameMonth } from 'date-fns';
 import { 
@@ -49,6 +49,8 @@ export default function StudentDashboard() {
   const [timeRange, setTimeRange] = useState('30days');
   const [activeIndex, setActiveIndex] = useState(0);
   const [conflicts, setConflicts] = useState(new Set());
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedBookingForPayment, setSelectedBookingForPayment] = useState(null);
 
   const onPieEnter = (_, index) => {
     setActiveIndex(index);
@@ -366,6 +368,26 @@ export default function StudentDashboard() {
       console.error('[Dashboard] Fetch bookings error:', err);
     }
   }, [profile?.id]);
+
+  const handleConfirmPayment = async (bookingId) => {
+    try {
+      const { error } = await supabase
+        .from('bookings')
+        .update({ 
+          payment_confirmed_by_student: true,
+          payment_confirmed_at: new Date().toISOString()
+        })
+        .eq('id', bookingId);
+      
+      if (error) throw error;
+      toast.success("Payment notified! We'll verify the funds soon.");
+      fetchMyBookings();
+      setShowPaymentModal(false);
+    } catch (err) {
+      console.error('[Dashboard] Confirm payment error:', err);
+      toast.error("Failed to notify payment.");
+    }
+  };
 
   const calculateStudentMetrics = useCallback((bookings, schedules) => {
     let startDate;
@@ -728,17 +750,44 @@ export default function StudentDashboard() {
                                             {isPaid ? <CheckCircle2 className="w-3 h-3" /> : <Sparkles className="w-3 h-3" />}
                                             {isPaid ? 'PAID & READY' : 'RESERVED'}
                                           </div>
-                                          {!isPaid && hasPaypal && (
-                                            <button
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                const finalUrl = paypalUrl.startsWith('http') ? paypalUrl : `https://${paypalUrl}`;
-                                                window.open(finalUrl, '_blank');
-                                              }}
-                                              className="w-full py-3 bg-studio-dark text-white rounded-xl font-black uppercase text-[8px] tracking-widest flex items-center justify-center gap-2 hover:bg-rose-bloom transition-all shadow-lg shadow-studio-dark/5"
-                                            >
-                                              Complete Payment <ArrowRight className="w-3 h-3" />
-                                            </button>
+                                          {!isPaid && (
+                                            myBooking.payment_method === 'PAYPAL' ? (
+                                              hasPaypal && (
+                                                <button
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    const finalUrl = paypalUrl.startsWith('http') ? paypalUrl : `https://${paypalUrl}`;
+                                                    window.open(finalUrl, '_blank');
+                                                  }}
+                                                  className="w-full py-3 bg-studio-dark text-white rounded-xl font-black uppercase text-[8px] tracking-widest flex items-center justify-center gap-2 hover:bg-rose-bloom transition-all shadow-lg shadow-studio-dark/5"
+                                                >
+                                                  Complete Payment <ArrowRight className="w-3 h-3" />
+                                                </button>
+                                              )
+                                            ) : (
+                                              <button
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  setSelectedBookingForPayment(myBooking);
+                                                  setShowPaymentModal(true);
+                                                }}
+                                                className={`w-full py-3 rounded-xl font-black uppercase text-[8px] tracking-widest flex items-center justify-center gap-2 transition-all shadow-lg ${
+                                                  myBooking.payment_confirmed_by_student 
+                                                  ? 'bg-amber-500/10 text-amber-600 border border-amber-500/20' 
+                                                  : 'bg-studio-dark text-white hover:bg-rose-bloom shadow-studio-dark/5'
+                                                }`}
+                                              >
+                                                {myBooking.payment_confirmed_by_student ? (
+                                                  <>
+                                                    <Check className="w-3 h-3" /> Payment Submitted
+                                                  </>
+                                                ) : (
+                                                  <>
+                                                    Payment Instructions <ArrowRight className="w-3 h-3" />
+                                                  </>
+                                                )}
+                                              </button>
+                                            )
                                           )}
                                         </div>
                                       );
@@ -964,7 +1013,106 @@ export default function StudentDashboard() {
             </div>
           </div>
         )}
+        <ManualPaymentModal 
+          isOpen={showPaymentModal}
+          onClose={() => setShowPaymentModal(false)}
+          booking={selectedBookingForPayment}
+          teacherProfile={teacherProfile}
+          onConfirm={() => handleConfirmPayment(selectedBookingForPayment.id)}
+        />
       </div>
     </div>
+  );
+}
+
+function ManualPaymentModal({ isOpen, onClose, booking, teacherProfile, onConfirm }) {
+  if (!isOpen || !booking) return null;
+
+  const bankInstructions = teacherProfile?.payment_settings?.config?.bank_instructions;
+
+  return (
+    <AnimatePresence>
+      <Motion.div 
+        initial={{ opacity: 0 }} 
+        animate={{ opacity: 1 }} 
+        exit={{ opacity: 0 }} 
+        onClick={onClose} 
+        className="fixed inset-0 z-[100] bg-studio-dark/60 backdrop-blur-md flex items-center justify-center p-6"
+      >
+        <Motion.div 
+          initial={{ opacity: 0, scale: 0.9, y: 20 }} 
+          animate={{ opacity: 1, scale: 1, y: 0 }} 
+          exit={{ opacity: 0, scale: 0.9, y: 20 }} 
+          onClick={e => e.stopPropagation()}
+          className="bg-white w-full max-w-xl rounded-[3rem] overflow-hidden shadow-2xl border border-apricot/30"
+        >
+          <div className="p-10 border-b border-apricot/10 flex justify-between items-center bg-apricot/5">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-rose-bloom/10 rounded-2xl">
+                <Landmark className="w-6 h-6 text-rose-bloom" />
+              </div>
+              <h3 className="text-2xl font-black text-studio-dark italic">Payment Instructions</h3>
+            </div>
+            <button onClick={onClose} className="p-2 hover:bg-rose-bloom/10 rounded-xl transition-all text-studio-dark/20 hover:text-rose-bloom">
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+
+          <div className="p-10 space-y-8">
+            {/* Bank Transfer Section */}
+            {bankInstructions ? (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-studio-dark/40">
+                  <ShieldCheck className="w-4 h-4" /> Bank Transfer Details
+                </div>
+                <div className="p-6 bg-bloom-white border-2 border-apricot/10 rounded-2xl font-mono text-xs text-studio-dark whitespace-pre-wrap leading-relaxed">
+                  {bankInstructions}
+                </div>
+              </div>
+            ) : (
+              <div className="p-6 bg-amber-500/5 border border-amber-500/20 rounded-2xl text-[10px] font-black uppercase tracking-widest text-amber-600 leading-relaxed">
+                Bank details haven't been configured by the instructor yet. Please contact them directly or pay in person.
+              </div>
+            )}
+
+            {/* Cash Section */}
+            <div className="p-6 bg-emerald-500/5 border border-emerald-500/20 rounded-2xl flex items-start gap-4">
+              <div className="p-2 bg-emerald-500/10 rounded-lg">
+                <DollarSign className="w-4 h-4 text-emerald-600" />
+              </div>
+              <div className="space-y-1">
+                <h4 className="text-xs font-black uppercase tracking-widest text-emerald-700 italic">Pay in Person</h4>
+                <p className="text-[10px] font-bold text-emerald-600/60 uppercase tracking-tight">You can also pay in cash at the studio upon arrival.</p>
+              </div>
+            </div>
+
+            <div className="pt-6 border-t border-apricot/10">
+              <button
+                disabled={booking.payment_confirmed_by_student}
+                onClick={onConfirm}
+                className={`w-full py-5 rounded-2xl font-black uppercase tracking-widest text-xs flex items-center justify-center gap-3 shadow-xl transition-all ${
+                  booking.payment_confirmed_by_student 
+                  ? 'bg-emerald-500 text-white cursor-default' 
+                  : 'bg-studio-dark text-white hover:bg-rose-bloom shadow-studio-dark/20'
+                }`}
+              >
+                {booking.payment_confirmed_by_student ? (
+                  <>
+                    <Check className="w-4 h-4" /> Transfer Notified
+                  </>
+                ) : (
+                  <>
+                    I've Sent the Transfer <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
+              </button>
+              <p className="text-[8px] font-bold text-studio-dark/30 uppercase tracking-[0.2em] text-center mt-4">
+                Click only after completing the bank transfer.
+              </p>
+            </div>
+          </div>
+        </Motion.div>
+      </Motion.div>
+    </AnimatePresence>
   );
 }
