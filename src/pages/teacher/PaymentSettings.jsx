@@ -84,7 +84,8 @@ export default function TeacherPaymentSettings() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
              {[
                { id: 'paypal', label: 'PayPal', icon: ExternalLink },
-               { id: 'manual', label: 'Manual/Bank', icon: Banknote }
+               { id: 'cash', label: 'Cash / In-Person', icon: Banknote },
+               { id: 'bank', label: 'Bank Transfer', icon: Landmark }
              ].map((method) => (
                <button
                  key={method.id}
@@ -126,12 +127,12 @@ export default function TeacherPaymentSettings() {
               </div>
             )}
 
-            {/* Manual Section */}
-            {enabledMethods.includes('manual') && (
+            {/* Bank Section */}
+            {enabledMethods.includes('bank') && (
               <div className="space-y-6 pt-6 border-t border-apricot/10 animate-in fade-in slide-in-from-top-4">
                 <div className="flex items-center gap-3 mb-4">
                   <Landmark className="w-5 h-5 text-rose-bloom" />
-                  <h3 className="text-lg font-black tracking-tight">Bank Instructions</h3>
+                  <h3 className="text-lg font-black tracking-tight">Bank Transfer Instructions</h3>
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase tracking-widest text-studio-dark/40 ml-2">Transfer details</label>

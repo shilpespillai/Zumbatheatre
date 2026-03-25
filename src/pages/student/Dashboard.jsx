@@ -746,9 +746,13 @@ export default function StudentDashboard() {
                                       
                                       return (
                                         <div className="flex flex-col gap-2 w-full">
-                                          <div className={`w-full py-3 rounded-xl font-black uppercase text-[8px] tracking-widest flex items-center justify-center gap-2 border ${isPaid ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-rose-bloom/10 text-rose-bloom border-rose-bloom/20'}`}>
-                                            {isPaid ? <CheckCircle2 className="w-3 h-3" /> : <Sparkles className="w-3 h-3" />}
-                                            {isPaid ? 'PAID & READY' : 'RESERVED'}
+                                          <div className={`w-full py-3 rounded-xl font-black uppercase text-[8px] tracking-widest flex items-center justify-center gap-2 border shadow-sm ${
+                                            isPaid ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 
+                                            myBooking.payment_confirmed_by_student ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' :
+                                            'bg-rose-bloom/10 text-rose-bloom border-rose-bloom/20'
+                                          }`}>
+                                            {isPaid ? <CheckCircle2 className="w-3 h-3" /> : (myBooking.payment_confirmed_by_student ? <Clock className="w-3 h-3" /> : <Sparkles className="w-3 h-3" />)}
+                                            {isPaid ? 'PAID & READY' : (myBooking.payment_confirmed_by_student ? 'PENDING VERIFICATION' : 'RESERVED')}
                                           </div>
                                           {!isPaid && (
                                             myBooking.payment_method === 'PAYPAL' ? (
@@ -1087,28 +1091,39 @@ function ManualPaymentModal({ isOpen, onClose, booking, teacherProfile, onConfir
             </div>
 
             <div className="pt-6 border-t border-apricot/10">
-              <button
-                disabled={booking.payment_confirmed_by_student}
-                onClick={onConfirm}
-                className={`w-full py-5 rounded-2xl font-black uppercase tracking-widest text-xs flex items-center justify-center gap-3 shadow-xl transition-all ${
-                  booking.payment_confirmed_by_student 
-                  ? 'bg-emerald-500 text-white cursor-default' 
-                  : 'bg-studio-dark text-white hover:bg-rose-bloom shadow-studio-dark/20'
-                }`}
-              >
-                {booking.payment_confirmed_by_student ? (
-                  <>
-                    <Check className="w-4 h-4" /> Transfer Notified
-                  </>
-                ) : (
-                  <>
-                    I've Sent the Transfer <ArrowRight className="w-4 h-4" />
-                  </>
-                )}
-              </button>
-              <p className="text-[8px] font-bold text-studio-dark/30 uppercase tracking-[0.2em] text-center mt-4">
-                Click only after completing the bank transfer.
-              </p>
+              {booking.payment_method === 'BANK' ? (
+                <button
+                  disabled={booking.payment_confirmed_by_student}
+                  onClick={onConfirm}
+                  className={`w-full py-5 rounded-2xl font-black uppercase tracking-widest text-xs flex items-center justify-center gap-3 shadow-xl transition-all ${
+                    booking.payment_confirmed_by_student 
+                    ? 'bg-emerald-500 text-white cursor-default' 
+                    : 'bg-studio-dark text-white hover:bg-rose-bloom shadow-studio-dark/20'
+                  }`}
+                >
+                  {booking.payment_confirmed_by_student ? (
+                    <>
+                      <Check className="w-4 h-4" /> Transfer Notified
+                    </>
+                  ) : (
+                    <>
+                      PAY and confirm <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
+                </button>
+              ) : (
+                <button
+                  onClick={onClose}
+                  className="w-full py-5 bg-studio-dark text-white hover:bg-rose-bloom rounded-2xl font-black uppercase tracking-widest text-xs flex items-center justify-center gap-3 shadow-xl shadow-studio-dark/20 transition-all"
+                >
+                  Got it! <ArrowRight className="w-4 h-4" />
+                </button>
+              )}
+              {booking.payment_method === 'BANK' && (
+                <p className="text-[8px] font-bold text-studio-dark/30 uppercase tracking-[0.2em] text-center mt-4">
+                  Click only after completing the bank transfer.
+                </p>
+              )}
             </div>
           </div>
         </Motion.div>

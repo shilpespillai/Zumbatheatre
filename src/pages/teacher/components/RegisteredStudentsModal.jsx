@@ -1,5 +1,5 @@
 import React from 'react';
-import { Users, X, Plus, ArrowRight, Sparkles } from 'lucide-react';
+import { Users, X, Plus, ArrowRight, Sparkles, Banknote, Landmark } from 'lucide-react';
 import { motion as Motion, AnimatePresence } from 'framer-motion';
 import { format, parseISO } from 'date-fns';
 
@@ -79,13 +79,19 @@ export default function RegisteredStudentsModal({ session, onClose, onMarkAsPaid
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                     {booking.payment_confirmed_by_student && booking.payment_status === 'PENDING' && (
-                       <div className="flex items-center gap-1.5 px-3 py-1 bg-amber-500/10 border border-amber-500/20 rounded-full text-amber-600 animate-in fade-in zoom-in duration-300">
-                         <Sparkles className="w-3 h-3" />
-                         <span className="text-[8px] font-black uppercase tracking-widest">Submitted</span>
-                       </div>
-                     )}
+                     <div className="flex items-center gap-3">
+                        {booking.payment_method === 'CASH' && booking.payment_status === 'PENDING' && (
+                          <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-emerald-600 animate-in fade-in zoom-in duration-300">
+                            <Banknote className="w-3 h-3" />
+                            <span className="text-[8px] font-black uppercase tracking-widest">Cash Pay</span>
+                          </div>
+                        )}
+                        {booking.payment_method === 'BANK' && booking.payment_confirmed_by_student && booking.payment_status === 'PENDING' && (
+                          <div className="flex items-center gap-1.5 px-3 py-1 bg-amber-500/10 border border-amber-500/20 rounded-full text-amber-600 animate-in fade-in zoom-in duration-300">
+                            <Landmark className="w-3 h-3" />
+                            <span className="text-[8px] font-black uppercase tracking-widest">Bank Transfer</span>
+                          </div>
+                        )}
                      <div className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest border ${
                        booking.payment_status === 'PAID' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-rose-bloom/10 text-rose-bloom border-rose-bloom/20'
                      }`}>

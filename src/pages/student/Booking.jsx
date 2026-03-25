@@ -498,13 +498,15 @@ export default function StudentBooking() {
                                 const isAvailable = (id) => {
                                   let isConfigured = false;
                                   if (id === 'paypal') isConfigured = !!config.paypal_url;
-                                  if (id === 'manual') isConfigured = !!config.bank_instructions;
+                                  if (id === 'cash') isConfigured = true; // Cash is always "configured" if enabled
+                                  if (id === 'bank') isConfigured = !!config.bank_instructions;
 
-                                  // If legacy (no enabledMethods array), use config check
+                                  // Support legacy (if manual was used, treat as bank for backward compat in settings)
+                                  if (id === 'bank' && !isConfigured && !!config.bank_instructions) isConfigured = true;
+
                                   if (!enabledMethods || enabledMethods.length === 0) {
-                                    return isConfigured;
+                                    return id === 'paypal' ? isConfigured : (id === 'bank' && isConfigured);
                                   }
-                                  // If modern, must be in enabledMethods array AND configured
                                   return enabledMethods.includes(id) && isConfigured;
                                 };
 
@@ -524,18 +526,32 @@ export default function StudentBooking() {
                                         <ExternalLink className={`w-4 h-4 ${selectedMethod === 'paypal' ? 'text-rose-bloom' : 'text-white/20'}`} />
                                       </button>
                                     )}
-                                    {isAvailable('manual') && (
+                                    {isAvailable('cash') && (
                                       <button 
-                                        onClick={() => setSelectedMethod('manual')}
-                                        className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${selectedMethod === 'manual' ? 'bg-rose-bloom/10 border-rose-bloom text-rose-bloom shadow-lg shadow-rose-bloom/10' : 'bg-white/5 border-white/10 text-white/40 hover:border-white/20'}`}
+                                        onClick={() => setSelectedMethod('cash')}
+                                        className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${selectedMethod === 'cash' ? 'bg-rose-bloom/10 border-rose-bloom text-rose-bloom shadow-lg shadow-rose-bloom/10' : 'bg-white/5 border-white/10 text-white/40 hover:border-white/20'}`}
                                       >
                                         <div className="flex items-center gap-3">
-                                          <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all ${selectedMethod === 'manual' ? 'border-rose-bloom shadow-[0_0_8px_rgba(255,107,129,0.3)]' : 'border-white/10'}`}>
-                                            {selectedMethod === 'manual' && <div className="w-1.5 h-1.5 bg-rose-bloom rounded-full" />}
+                                          <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all ${selectedMethod === 'cash' ? 'border-rose-bloom shadow-[0_0_8px_rgba(255,107,129,0.3)]' : 'border-white/10'}`}>
+                                            {selectedMethod === 'cash' && <div className="w-1.5 h-1.5 bg-rose-bloom rounded-full" />}
+                                          </div>
+                                          <span className="text-[10px] font-black uppercase tracking-widest">Cash at Studio</span>
+                                        </div>
+                                        <Banknote className={`w-4 h-4 ${selectedMethod === 'cash' ? 'text-rose-bloom' : 'text-white/20'}`} />
+                                      </button>
+                                    )}
+                                    {isAvailable('bank') && (
+                                      <button 
+                                        onClick={() => setSelectedMethod('bank')}
+                                        className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${selectedMethod === 'bank' ? 'bg-rose-bloom/10 border-rose-bloom text-rose-bloom shadow-lg shadow-rose-bloom/10' : 'bg-white/5 border-white/10 text-white/40 hover:border-white/20'}`}
+                                      >
+                                        <div className="flex items-center gap-3">
+                                          <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all ${selectedMethod === 'bank' ? 'border-rose-bloom shadow-[0_0_8px_rgba(255,107,129,0.3)]' : 'border-white/10'}`}>
+                                            {selectedMethod === 'bank' && <div className="w-1.5 h-1.5 bg-rose-bloom rounded-full" />}
                                           </div>
                                           <span className="text-[10px] font-black uppercase tracking-widest">Bank Transfer</span>
                                         </div>
-                                        <Banknote className={`w-4 h-4 ${selectedMethod === 'manual' ? 'text-rose-bloom' : 'text-white/20'}`} />
+                                        <Landmark className={`w-4 h-4 ${selectedMethod === 'bank' ? 'text-rose-bloom' : 'text-white/20'}`} />
                                       </button>
                                     )}
                                   </>
@@ -631,16 +647,16 @@ export default function StudentBooking() {
                                 <>
                                   {selectedMethod === 'paypal' ? <ExternalLink className="w-5 h-5" /> : 
                                    <ShieldCheck className="w-5 h-5" />}
-                                  {selectedMethod === 'manual' ? 'Reserve My Spot' : 'Online Payment'}
+                                  {selectedMethod === 'paypal' ? 'Online Payment' : 'Reserve Now'}
                                 </>
                               )}
                             </button>
                           </>
                         );
                       })()}
-                      <p className="text-center text-[10px] font-bold opacity-40 uppercase tracking-widest">
-                        {selectedMethod === 'manual' ? 'Manual Confirmation' : 'Instant Confirmation'}
-                      </p>
+                        <p className="text-center text-[10px] font-bold opacity-40 uppercase tracking-widest">
+                          {selectedMethod === 'paypal' ? 'Instant Confirmation' : 'Reservation Only'}
+                        </p>
                     </Motion.div>
                   ) : (
                     <Motion.div 
