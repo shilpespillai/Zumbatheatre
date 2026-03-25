@@ -332,8 +332,8 @@ export default function StudentBooking() {
       const paymentMethod = selectedMethod || 'manual';
       const paymentConfig = teacher?.payment_settings?.config || {};
 
-      if (paymentMethod === 'paypal' || paymentMethod === 'manual') {
-        // PayPal & Manual Flow Insertion in Supabase
+      if (['paypal', 'cash', 'bank', 'manual'].includes(paymentMethod)) {
+        // PayPal, Cash & Bank Flow Insertion in Supabase
         const { error: bookingError } = await supabase
           .from('bookings')
           .insert({
@@ -350,10 +350,12 @@ export default function StudentBooking() {
           toast.success('Redirecting to PayPal...', { id: toastId });
           setTimeout(() => {
             const paypalUrl = paymentConfig.paypal_url;
-            window.location.href = paypalUrl.startsWith('http') ? paypalUrl : `https://${paypalUrl}`;
+            const finalUrl = paypalUrl.startsWith('http') ? paypalUrl : `https://${paypalUrl}`;
+            window.open(finalUrl, '_blank');
+            navigate('/student/dashboard');
           }, 1000);
         } else {
-          toast.success('Spot reserved! Manual payment instructions shown.', { id: toastId });
+          toast.success('Spot reserved! Follow instructions on your dashboard.', { id: toastId });
           navigate('/student/dashboard');
         }
       }
@@ -560,14 +562,15 @@ export default function StudentBooking() {
                            </div>
                         </div>
 
-                        {selectedMethod === 'manual' && teacher?.payment_settings?.config?.bank_instructions && (
-                          <div className="p-4 bg-white/5 rounded-xl border border-white/10 mb-4">
-                            <div className="text-[8px] font-black text-rose-petal uppercase tracking-[0.2em] mb-2 items-center flex gap-2">
-                              <Landmark className="w-3 h-3" /> Payment Instructions
+                        {(selectedMethod === 'bank' || selectedMethod === 'manual') && teacher?.payment_settings?.config?.bank_instructions && (
+                          <div className="p-6 bg-rose-bloom/5 rounded-[2rem] border border-rose-bloom/20 mb-6 animate-in fade-in slide-in-from-top-2">
+                            <div className="text-[10px] font-black text-rose-bloom uppercase tracking-[0.2em] mb-3 flex items-center gap-2">
+                              <Landmark className="w-4 h-4" /> Transfer Instructions
                             </div>
-                            <p className="text-[10px] text-white/60 font-medium leading-relaxed italic">
-                              "{teacher.payment_settings.config.bank_instructions}"
-                            </p>
+                            <div className="p-4 bg-white rounded-xl border border-rose-bloom/10 text-[11px] text-studio-dark font-mono leading-relaxed break-words whitespace-pre-wrap">
+                              {teacher.payment_settings.config.bank_instructions}
+                            </div>
+                            <p className="text-[8px] font-bold text-rose-bloom/40 uppercase tracking-widest mt-3 text-center">Please use your name as the reference.</p>
                           </div>
                         )}
 
