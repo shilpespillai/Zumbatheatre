@@ -658,98 +658,110 @@ export default function StudentDashboard() {
                       <div className="space-y-4">
                         {(isGlobalMode ? globalSchedules : allSchedules)
                           .filter(s => isSameDay(parseISO(s.start_time), selectedDate))
+                          .sort((a, b) => new Date(a.start_time) - new Date(b.start_time))
                           .length > 0 ? (
                           (isGlobalMode ? globalSchedules : allSchedules)
                             .filter(s => isSameDay(parseISO(s.start_time), selectedDate))
+                            .sort((a, b) => new Date(a.start_time) - new Date(b.start_time))
                             .map((session, idx) => (
-                              <div key={idx} className={`flex items-center justify-between p-6 bg-white/60 rounded-2xl border transition-all ${conflicts.has(session.id) ? 'border-red-500/50 bg-red-500/5 shadow-lg shadow-red-500/10 animate-pulse' : 'border-rose-petal/10 hover:border-rose-petal/30'}`}>
-                          <div className="flex items-center gap-4">
-                             <div className={`p-3 rounded-xl ${conflicts.has(session.id) ? 'bg-red-500/20' : 'bg-rose-petal/10'}`}>
-                                <Clock className={`w-4 h-4 ${conflicts.has(session.id) ? 'text-red-600' : 'text-rose-bloom'}`} />
-                             </div>
-                             <div>
-                                <div className="text-xs font-black text-studio-dark tracking-tight flex items-center gap-2">
-                                  {format(parseISO(session.start_time), 'hh:mm a')}
-                                  {conflicts.has(session.id) && (
-                                    <span className="text-[8px] bg-red-600 text-white px-2 py-0.5 rounded-full uppercase tracking-widest">Conflict</span>
+                              <div key={idx} className={`flex flex-col gap-4 p-6 bg-white/60 rounded-[2rem] border transition-all ${conflicts.has(session.id) ? 'border-red-500/50 bg-red-500/5 shadow-lg shadow-red-500/10 animate-pulse' : 'border-rose-petal/10 hover:border-rose-petal/30'}`}>
+                                {/* Row 1: Time & Metadata */}
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-2">
+                                    <div className={`p-2 rounded-lg ${conflicts.has(session.id) ? 'bg-red-500/20' : 'bg-rose-petal/10'}`}>
+                                      <Clock className={`w-3 h-3 ${conflicts.has(session.id) ? 'text-red-600' : 'text-rose-bloom'}`} />
+                                    </div>
+                                    <div className="text-xs font-black text-studio-dark tracking-tight flex items-center gap-2">
+                                      {format(parseISO(session.start_time), 'hh:mm a')}
+                                      {conflicts.has(session.id) && (
+                                        <span className="text-[7px] bg-red-600 text-white px-2 py-0.5 rounded-full uppercase tracking-widest font-black">Conflict</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                  {isGlobalMode && session.profiles?.full_name && (
+                                    <div className="text-[7px] font-black text-rose-bloom/60 uppercase tracking-tighter bg-white/40 px-2 py-1 rounded-lg">
+                                      Instructor: {session.profiles.full_name}
+                                    </div>
                                   )}
                                 </div>
-                                <div className="text-[10px] font-bold text-[#4A3B3E]/40 uppercase tracking-widest">{session.routines?.name}</div>
-                                {isGlobalMode && session.profiles?.full_name && (
-                                  <div className="text-[8px] font-black text-rose-bloom/60 uppercase tracking-tighter">Instructor: {session.profiles.full_name}</div>
-                                )}
-                             </div>
-                          </div>
+
+                                {/* Row 2: Routine Name */}
+                                <div>
+                                   <div className="text-lg font-black text-studio-dark italic tracking-tight leading-tight">
+                                     {session.routines?.name || 'Standard Session'}
+                                   </div>
+                                </div>
                                 
-                                <h5 className="text-sm font-black text-studio-dark mb-6 group-hover/card:text-rose-bloom transition-colors">{session.routines?.name}</h5>
-                                
+                                {/* Row 3: Action Button */}
+                                <div>
                                   {(() => {
-                                   const myBooking = myBookings.find(b => b.schedule_id === session.id);
-                                   const isFull = (session.seats_taken || 0) >= (session.max_seats || 20);
-                                   const isCancelled = session.status === 'CANCELLED';
-                                   const isPastSession = new Date(session.start_time) < new Date();
-                                   
-                                   if (isCancelled) {
-                                     return (
-                                       <div className="w-full py-4 bg-red-500/10 text-red-500 rounded-2xl font-black uppercase text-[9px] tracking-widest flex items-center justify-center gap-2 border-2 border-red-500/20">
-                                         <XCircle className="w-4 h-4" /> SESSION CANCELLED
-                                       </div>
-                                     );
-                                   }
+                                    const myBooking = myBookings.find(b => b.schedule_id === session.id);
+                                    const isFull = (session.seats_taken || 0) >= (session.max_seats || 20);
+                                    const isCancelled = session.status === 'CANCELLED';
+                                    const isPastSession = new Date(session.start_time) < new Date();
+                                    
+                                    if (isCancelled) {
+                                      return (
+                                        <div className="w-full py-3 bg-red-500/10 text-red-500 rounded-xl font-black uppercase text-[8px] tracking-widest flex items-center justify-center gap-2 border border-red-500/20">
+                                          <XCircle className="w-3 h-3" /> SESSION CANCELLED
+                                        </div>
+                                      );
+                                    }
 
-                                   if (isPastSession) {
-                                     return (
-                                       <div className="w-full py-4 bg-zinc-100 text-zinc-400 rounded-2xl font-black uppercase text-[9px] tracking-widest flex items-center justify-center gap-2 border border-zinc-200 cursor-not-allowed">
-                                         <Clock className="w-4 h-4" /> SESSION EXPIRED
-                                       </div>
-                                     );
-                                   }
+                                    if (isPastSession) {
+                                      return (
+                                        <div className="w-full py-3 bg-zinc-100/50 text-zinc-400 rounded-xl font-black uppercase text-[8px] tracking-widest flex items-center justify-center gap-2 border border-zinc-200 cursor-not-allowed">
+                                          <Clock className="w-3 h-3" /> SESSION EXPIRED
+                                        </div>
+                                      );
+                                    }
 
-                                   if (myBooking) {
-                                     const isPaid = myBooking.payment_status === 'PAID';
-                                     const paySettings = teacherProfile?.payment_settings || {};
-                                     const paypalUrl = paySettings.config?.paypal_url;
-                                     const hasPaypal = paySettings.enabledMethods?.includes('paypal') && paypalUrl;
-                                     
-                                     return (
-                                       <div className="flex flex-col gap-2 w-full">
-                                         <div className={`w-full py-4 rounded-2xl font-black uppercase text-[9px] tracking-widest flex items-center justify-center gap-2 border-2 ${isPaid ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-rose-bloom/10 text-rose-bloom border-rose-bloom/20'}`}>
-                                           {isPaid ? <CheckCircle2 className="w-4 h-4" /> : <Sparkles className="w-4 h-4" />}
-                                           {isPaid ? 'PAID & READY' : 'RESERVED'}
-                                         </div>
-                                         {!isPaid && hasPaypal && (
-                                           <button
-                                             onClick={(e) => {
-                                               e.stopPropagation();
-                                               const finalUrl = paypalUrl.startsWith('http') ? paypalUrl : `https://${paypalUrl}`;
-                                               window.open(finalUrl, '_blank');
-                                             }}
-                                             className="w-full py-3 bg-studio-dark text-white rounded-2xl font-black uppercase text-[9px] tracking-widest flex items-center justify-center gap-2 hover:bg-rose-bloom transition-all shadow-lg"
-                                           >
-                                             Complete Payment <ArrowRight className="w-3 h-3" />
-                                           </button>
-                                         )}
-                                       </div>
-                                     );
-                                   }
+                                    if (myBooking) {
+                                      const isPaid = myBooking.payment_status === 'PAID';
+                                      const paySettings = teacherProfile?.payment_settings || {};
+                                      const paypalUrl = paySettings.config?.paypal_url;
+                                      const hasPaypal = paySettings.enabledMethods?.includes('paypal') && paypalUrl;
+                                      
+                                      return (
+                                        <div className="flex flex-col gap-2 w-full">
+                                          <div className={`w-full py-3 rounded-xl font-black uppercase text-[8px] tracking-widest flex items-center justify-center gap-2 border ${isPaid ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-rose-bloom/10 text-rose-bloom border-rose-bloom/20'}`}>
+                                            {isPaid ? <CheckCircle2 className="w-3 h-3" /> : <Sparkles className="w-3 h-3" />}
+                                            {isPaid ? 'PAID & READY' : 'RESERVED'}
+                                          </div>
+                                          {!isPaid && hasPaypal && (
+                                            <button
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                const finalUrl = paypalUrl.startsWith('http') ? paypalUrl : `https://${paypalUrl}`;
+                                                window.open(finalUrl, '_blank');
+                                              }}
+                                              className="w-full py-3 bg-studio-dark text-white rounded-xl font-black uppercase text-[8px] tracking-widest flex items-center justify-center gap-2 hover:bg-rose-bloom transition-all shadow-lg shadow-studio-dark/5"
+                                            >
+                                              Complete Payment <ArrowRight className="w-3 h-3" />
+                                            </button>
+                                          )}
+                                        </div>
+                                      );
+                                    }
 
-                                   if (isFull) {
-                                     return (
-                                       <div className="w-full py-4 bg-studio-dark/10 text-studio-dark/40 rounded-2xl font-black uppercase text-[9px] tracking-widest flex items-center justify-center gap-2 cursor-not-allowed">
-                                         <X className="w-4 h-4" /> SOLD OUT
-                                       </div>
-                                     );
-                                   }
+                                    if (isFull) {
+                                      return (
+                                        <div className="w-full py-3 bg-studio-dark/10 text-studio-dark/40 rounded-xl font-black uppercase text-[8px] tracking-widest flex items-center justify-center gap-2 cursor-not-allowed border border-studio-dark/5">
+                                          <X className="w-3 h-3" /> SOLD OUT
+                                        </div>
+                                      );
+                                    }
 
-                                   return (
-                                     <button
-                                       onClick={() => navigate(`/student/book/${session.teacher_id}${isGlobalMode ? '' : `?sessionId=${session.id}`}`)}
-                                       className="w-full py-4 bg-studio-dark text-white rounded-2xl font-black uppercase text-[9px] tracking-widest flex items-center justify-center gap-2 hover:bg-rose-bloom transition-all shadow-lg shadow-studio-dark/10"
-                                     >
-                                       Book Routine <ArrowRight className="w-4 h-4" />
-                                     </button>
-                                   );
-                                 })()}
+                                    return (
+                                      <button
+                                        onClick={() => navigate(`/student/book/${session.teacher_id}${isGlobalMode ? '' : `?sessionId=${session.id}`}`)}
+                                        className="w-full py-3 bg-studio-dark text-white rounded-xl font-black uppercase text-[8px] tracking-widest flex items-center justify-center gap-2 hover:bg-rose-bloom transition-all shadow-lg shadow-studio-dark/10"
+                                      >
+                                        Book Routine <ArrowRight className="w-3 h-3" />
+                                      </button>
+                                    );
+                                  })()}
+                                </div>
                               </div>
                             ))
                         ) : (
