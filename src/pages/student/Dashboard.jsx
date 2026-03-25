@@ -790,12 +790,12 @@ export default function StudentDashboard() {
                               : 'bg-white/5 border-white/20'
                             }`}>
                               {i < (studentStats.loyaltyProgress?.current || 0) && (
-                                <Heart className="w-3 h-3 text-rose-bloom fill-rose-bloom" />
+                                <Heart className="w-3 h-3 text-amber-500 fill-amber-500" />
                               )}
                             </div>
                           ))}
                           <div className={`aspect-square rounded-xl flex items-center justify-center border-2 border-dashed ${
-                             studentStats.loyaltyProgress?.isUnlocked ? 'bg-apricot border-white animate-bounce' : 'bg-white/5 border-white/20 opacity-50'
+                             studentStats.loyaltyProgress?.isUnlocked ? 'bg-amber-500 border-white animate-bounce shadow-lg shadow-amber-500/40' : 'bg-white/5 border-white/20 opacity-50'
                           }`}>
                             <Ticket className={`w-4 h-4 ${studentStats.loyaltyProgress?.isUnlocked ? 'text-white' : 'text-white/20'}`} />
                           </div>
