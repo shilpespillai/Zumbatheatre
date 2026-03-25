@@ -30,20 +30,8 @@
 }
 
 @layer components {
-  .glass-premium {
-    @apply bg-white/70 backdrop-blur-[40px] border border-white/40 shadow-2xl relative overflow-hidden;
-  }
-
-  .glass-premium::before {
-    content: '';
-    @apply absolute inset-0 bg-gradient-to-br from-white/20 via-transparent to-rose-bloom/5 pointer-events-none;
-  }
-
-  .iridescent-border {
-    @apply border border-transparent bg-origin-border bg-clip-content;
-    background-image: linear-gradient(white, white), linear-gradient(135deg, #FF6B95, #FFB38A, #00FF9D, #00E0FF);
-    background-origin: border-box;
-    background-clip: padding-box, border-box;
+  .glass {
+    @apply bg-bloom-white/80 backdrop-blur-xl border border-[#2D2424]/15 shadow-xl shadow-rose-bloom/5;
   }
   
   .btn-premium {

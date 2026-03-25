@@ -664,41 +664,36 @@ export default function StudentDashboard() {
                             .filter(s => isSameDay(parseISO(s.start_time), selectedDate))
                             .sort((a, b) => new Date(a.start_time) - new Date(b.start_time))
                             .map((session, idx) => (
-                              <div key={idx} className={`flex flex-col gap-6 p-8 glass-premium iridescent-border transition-all duration-500 hover:scale-[1.02] group/card ${conflicts.has(session.id) ? 'animate-pulse ring-2 ring-red-500/50' : ''}`}>
-                                {/* Row 1: Time & Premium Pill */}
+                              <div key={idx} className={`flex flex-col gap-4 p-6 bg-white/60 rounded-[2rem] border transition-all ${conflicts.has(session.id) ? 'border-red-500 bg-red-500/5 shadow-lg shadow-red-500/10 animate-pulse' : 'border-rose-petal/30 hover:border-rose-petal/50'}`}>
+                                {/* Row 1: Time & Metadata */}
                                 <div className="flex items-center justify-between">
-                                  <div className="flex items-center gap-3">
-                                    <div className="px-4 py-1.5 bg-studio-dark rounded-full shadow-lg shadow-studio-dark/20 flex items-center gap-2">
-                                      <Clock className="w-3 h-3 text-studio-lime" />
-                                      <span className="text-[10px] font-black text-white uppercase tracking-widest">
-                                        {format(parseISO(session.start_time), 'hh:mm a')}
-                                      </span>
+                                  <div className="flex items-center gap-2">
+                                    <div className={`p-2 rounded-lg ${conflicts.has(session.id) ? 'bg-red-500/20' : 'bg-rose-petal/10'}`}>
+                                      <Clock className={`w-3 h-3 ${conflicts.has(session.id) ? 'text-red-600' : 'text-rose-bloom'}`} />
                                     </div>
-                                    {conflicts.has(session.id) && (
-                                      <div className="px-3 py-1 bg-red-600 text-white rounded-full text-[8px] font-black uppercase tracking-widest animate-bounce">
-                                        Conflict
-                                      </div>
-                                    )}
+                                    <div className="text-xs font-black text-studio-dark tracking-tight flex items-center gap-2">
+                                      {format(parseISO(session.start_time), 'hh:mm a')}
+                                      {conflicts.has(session.id) && (
+                                        <span className="text-[7px] bg-red-600 text-white px-2 py-0.5 rounded-full uppercase tracking-widest font-black">Conflict</span>
+                                      )}
+                                    </div>
                                   </div>
                                   {isGlobalMode && session.profiles?.full_name && (
-                                    <div className="flex items-center gap-2 px-3 py-1 bg-white/40 backdrop-blur-md rounded-full border border-white/20">
-                                      <div className="w-4 h-4 rounded-full bg-gradient-to-tr from-rose-bloom to-apricot shadow-sm" />
-                                      <span className="text-[8px] font-black text-studio-dark/60 uppercase tracking-tighter">
-                                        {session.profiles.full_name}
-                                      </span>
+                                    <div className="text-[7px] font-black text-rose-bloom/60 uppercase tracking-tighter bg-white/40 px-2 py-1 rounded-lg">
+                                      Instructor: {session.profiles.full_name}
                                     </div>
                                   )}
                                 </div>
 
-                                {/* Row 2: Headline Routine */}
-                                <div className="min-h-[3rem] flex items-center">
-                                   <h3 className="text-2xl font-black text-gradient-rose italic leading-[1.1] tracking-tight group-hover/card:tracking-normal transition-all duration-500">
+                                {/* Row 2: Routine Name */}
+                                <div>
+                                   <div className="text-lg font-black text-studio-dark italic tracking-tight leading-tight">
                                      {session.routines?.name || 'Standard Session'}
-                                   </h3>
+                                   </div>
                                 </div>
                                 
-                                {/* Row 3: High-Gloss Actions */}
-                                <div className="mt-auto pt-2">
+                                {/* Row 3: Action Button */}
+                                <div>
                                   {(() => {
                                     const myBooking = myBookings.find(b => b.schedule_id === session.id);
                                     const isFull = (session.seats_taken || 0) >= (session.max_seats || 20);
@@ -707,16 +702,16 @@ export default function StudentDashboard() {
                                     
                                     if (isCancelled) {
                                       return (
-                                        <div className="w-full py-4 bg-red-100/50 text-red-600 rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 border border-red-200">
-                                          <XCircle className="w-4 h-4" /> SESSION DISRUPTED
+                                        <div className="w-full py-3 bg-red-500/10 text-red-500 rounded-xl font-black uppercase text-[8px] tracking-widest flex items-center justify-center gap-2 border border-red-500/20">
+                                          <XCircle className="w-3 h-3" /> SESSION CANCELLED
                                         </div>
                                       );
                                     }
 
                                     if (isPastSession) {
                                       return (
-                                        <div className="w-full py-4 bg-zinc-100 text-zinc-400 rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 opacity-50 grayscale">
-                                          <Clock className="w-4 h-4" /> STAGE CLOSED
+                                        <div className="w-full py-3 bg-zinc-100/50 text-zinc-400 rounded-xl font-black uppercase text-[8px] tracking-widest flex items-center justify-center gap-2 border border-zinc-200 cursor-not-allowed">
+                                          <Clock className="w-3 h-3" /> SESSION EXPIRED
                                         </div>
                                       );
                                     }
@@ -728,9 +723,9 @@ export default function StudentDashboard() {
                                       const hasPaypal = paySettings.enabledMethods?.includes('paypal') && paypalUrl;
                                       
                                       return (
-                                        <div className="flex flex-col gap-3 w-full">
-                                          <div className={`w-full py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 border-2 ${isPaid ? 'bg-emerald-500/5 text-emerald-600 border-emerald-500/20' : 'bg-amber-500/5 text-amber-600 border-amber-500/20 shadow-lg shadow-amber-500/5'}`}>
-                                            {isPaid ? <CheckCircle2 className="w-4 h-4" /> : <Heart className="w-4 h-4 fill-amber-500" />}
+                                        <div className="flex flex-col gap-2 w-full">
+                                          <div className={`w-full py-3 rounded-xl font-black uppercase text-[8px] tracking-widest flex items-center justify-center gap-2 border ${isPaid ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-rose-bloom/10 text-rose-bloom border-rose-bloom/20'}`}>
+                                            {isPaid ? <CheckCircle2 className="w-3 h-3" /> : <Sparkles className="w-3 h-3" />}
                                             {isPaid ? 'PAID & READY' : 'RESERVED'}
                                           </div>
                                           {!isPaid && hasPaypal && (
@@ -740,9 +735,9 @@ export default function StudentDashboard() {
                                                 const finalUrl = paypalUrl.startsWith('http') ? paypalUrl : `https://${paypalUrl}`;
                                                 window.open(finalUrl, '_blank');
                                               }}
-                                              className="w-full py-5 bg-studio-dark text-white rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-3 hover:bg-rose-bloom hover:scale-[1.02] transition-all shadow-[0_20px_40px_-15px_rgba(45,36,36,0.3)] group/btn"
+                                              className="w-full py-3 bg-studio-dark text-white rounded-xl font-black uppercase text-[8px] tracking-widest flex items-center justify-center gap-2 hover:bg-rose-bloom transition-all shadow-lg shadow-studio-dark/5"
                                             >
-                                              Complete Payment <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />
+                                              Complete Payment <ArrowRight className="w-3 h-3" />
                                             </button>
                                           )}
                                         </div>
@@ -751,8 +746,8 @@ export default function StudentDashboard() {
 
                                     if (isFull) {
                                       return (
-                                        <div className="w-full py-4 bg-studio-dark/5 text-studio-dark/30 rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 border border-studio-dark/10">
-                                          <X className="w-4 h-4" /> FULL CAPACITY
+                                        <div className="w-full py-3 bg-studio-dark/10 text-studio-dark/40 rounded-xl font-black uppercase text-[8px] tracking-widest flex items-center justify-center gap-2 cursor-not-allowed border border-studio-dark/5">
+                                          <X className="w-3 h-3" /> SOLD OUT
                                         </div>
                                       );
                                     }
@@ -760,9 +755,9 @@ export default function StudentDashboard() {
                                     return (
                                       <button
                                         onClick={() => navigate(`/student/book/${session.teacher_id}${isGlobalMode ? '' : `?sessionId=${session.id}`}`)}
-                                        className="w-full py-5 bg-studio-dark text-white rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-3 hover:bg-rose-bloom hover:scale-[1.02] transition-all shadow-[0_20px_40px_-15px_rgba(45,36,36,0.3)] group/btn"
+                                        className="w-full py-3 bg-studio-dark text-white rounded-xl font-black uppercase text-[8px] tracking-widest flex items-center justify-center gap-2 hover:bg-rose-bloom transition-all shadow-lg shadow-studio-dark/10"
                                       >
-                                        Book Routine <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />
+                                        Book Routine <ArrowRight className="w-3 h-3" />
                                       </button>
                                     );
                                   })()}
