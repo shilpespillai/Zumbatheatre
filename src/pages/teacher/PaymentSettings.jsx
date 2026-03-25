@@ -3,8 +3,7 @@ import { supabase } from '../../api/supabaseClient';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { 
-  ShieldCheck, ArrowLeft, CreditCard, CheckCircle2, Save, Lock, 
-  AlertCircle, X, ExternalLink, Banknote, Landmark, ToggleLeft as Toggle 
+  ShieldCheck, ArrowLeft, Save, ExternalLink, Banknote, Landmark 
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -13,12 +12,6 @@ export default function TeacherPaymentSettings() {
   const { profile, fetchProfile } = useAuth();
   const [loading, setLoading] = useState(false);
   
-  // Stripe Secret (Sensitive - Edge Function)
-  const [stripeSecretKey, setStripeSecretKey] = useState('');
-  const [showSecret, setShowSecret] = useState(false);
-
-  // Profile Settings (Non-sensitive - Direct Update)
-  const [stripePublicKey, setStripePublicKey] = useState('');
   const [paypalUrl, setPaypalUrl] = useState('');
   const [bankInstructions, setBankInstructions] = useState('');
   const [enabledMethods, setEnabledMethods] = useState([]);
@@ -26,7 +19,6 @@ export default function TeacherPaymentSettings() {
   useEffect(() => {
     if (profile?.payment_settings) {
       const config = profile.payment_settings.config || {};
-      setStripePublicKey(config.stripe_public_key || '');
       setPaypalUrl(config.paypal_url || '');
       setBankInstructions(config.bank_instructions || '');
       setEnabledMethods(profile.payment_settings.enabledMethods || []);
@@ -45,31 +37,11 @@ export default function TeacherPaymentSettings() {
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-
-      // 1. Save Stripe Secret via Edge Function (if provided)
-      if (stripeSecretKey) {
-        if (!stripeSecretKey.startsWith('sk_')) {
-          throw new Error('Invalid Stripe Secret Key format.');
-        }
-        const secretResponse = await fetch(`${supabaseUrl}/functions/v1/save-instructor-key`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session?.access_token}`
-          },
-          body: JSON.stringify({ stripeSecretKey })
-        });
-        const secretResult = await secretResponse.json();
-        if (secretResult.error) throw new Error(`Stripe Secret Error: ${secretResult.error}`);
-        setStripeSecretKey('');
-      }
 
       // 2. Save Public Config to Profile
       const payment_settings = {
         enabledMethods,
         config: {
-          stripe_public_key: stripePublicKey,
           paypal_url: paypalUrl,
           bank_instructions: bankInstructions
         }
@@ -111,7 +83,6 @@ export default function TeacherPaymentSettings() {
           {/* Method Toggles */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
              {[
-               { id: 'stripe', label: 'Stripe', icon: CreditCard },
                { id: 'paypal', label: 'PayPal', icon: ExternalLink },
                { id: 'manual', label: 'Manual/Bank', icon: Banknote }
              ].map((method) => (
@@ -133,44 +104,6 @@ export default function TeacherPaymentSettings() {
 
           <div className="bg-white p-10 rounded-[2.5rem] border border-apricot/20 shadow-xl space-y-12">
             
-            {/* Stripe Section */}
-            {enabledMethods.includes('stripe') && (
-              <div className="space-y-6 animate-in fade-in slide-in-from-top-4">
-                <div className="flex items-center gap-3 mb-4">
-                  <CreditCard className="w-5 h-5 text-rose-bloom" />
-                  <h3 className="text-lg font-black tracking-tight">Stripe Configuration</h3>
-                </div>
-                
-                <div className="grid grid-cols-1 gap-6">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-studio-dark/40 ml-2">Public Key (pk_...)</label>
-                    <input
-                      type="text"
-                      value={stripePublicKey}
-                      onChange={(e) => setStripePublicKey(e.target.value)}
-                      placeholder="pk_live_..."
-                      className="w-full bg-bloom-white border-2 border-apricot/10 rounded-2xl px-6 py-4 font-mono text-xs focus:border-rose-bloom outline-none"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-studio-dark/40 ml-2">Secret Key (sk_...) <span className="text-rose-bloom italic lowercase font-bold">Only if changing</span></label>
-                    <div className="relative">
-                      <input
-                        type={showSecret ? "text" : "password"}
-                        value={stripeSecretKey}
-                        onChange={(e) => setStripeSecretKey(e.target.value)}
-                        placeholder="••••••••••••••••"
-                        className="w-full bg-bloom-white border-2 border-apricot/10 rounded-2xl px-6 py-4 font-mono text-xs focus:border-rose-bloom outline-none"
-                      />
-                      <button type="button" onClick={() => setShowSecret(!showSecret)} className="absolute right-4 top-1/2 -translate-y-1/2 opacity-20 hover:opacity-100">
-                        {showSecret ? <X className="w-4 h-4" /> : <ShieldCheck className="w-4 h-4" />}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
 
             {/* PayPal Section */}
             {enabledMethods.includes('paypal') && (
