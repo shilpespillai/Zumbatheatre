@@ -353,10 +353,11 @@ export default function UserSettings() {
                             <h3 className="text-xl font-black text-studio-dark mb-2">Payout Method</h3>
                             <p className="text-[10px] font-bold text-rose-bloom uppercase tracking-widest mb-8">How do you want to collect payments from students?</p>
                             
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                {[
                                  { id: 'paypal', label: 'PayPal', icon: ExternalLink },
-                                 { id: 'manual', label: 'Bank/Manual', icon: Banknote },
+                                 { id: 'cash', label: 'Cash / In-Person', icon: Banknote },
+                                 { id: 'bank', label: 'Bank Transfer', icon: Landmark },
                                ].map((m) => {
                                  const isEnabled = paymentSettings.enabledMethods?.includes(m.id);
                                  return (
@@ -364,14 +365,13 @@ export default function UserSettings() {
                                      key={m.id}
                                      type="button"
                                      onClick={() => {
-                                       const current = paymentSettings.enabledMethods || [paymentSettings.method];
+                                       const current = paymentSettings.enabledMethods || [];
                                        const next = isEnabled 
                                          ? current.filter(id => id !== m.id)
                                          : [...current, m.id];
                                        setPaymentSettings({
                                          ...paymentSettings, 
-                                         enabledMethods: next,
-                                         method: next[0] || 'manual' 
+                                         enabledMethods: next
                                        });
                                      }}
                                      className={`p-6 rounded-2xl border-2 transition-all flex flex-col items-center gap-3 relative overflow-hidden ${
@@ -413,21 +413,24 @@ export default function UserSettings() {
                               </motion.div>
                             )}
 
-                            {paymentSettings.enabledMethods?.includes('manual') && (
-                              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-2">
-                                 <label className="text-[10px] font-black uppercase tracking-widest text-studio-dark/30 ml-1">Payment Instructions (Bank Details)</label>
-                                 <textarea
-                                   rows={4}
-                                   value={paymentSettings.config.bank_instructions}
-                                   onChange={(e) => setPaymentSettings({
-                                     ...paymentSettings, 
-                                     config: { ...paymentSettings.config, bank_instructions: e.target.value }
-                                   })}
-                                   className="w-full bg-white border border-apricot/20 rounded-2xl py-4 px-6 text-sm resize-none"
-                                   placeholder="Ex: Bank Transfer to Account XXX-XXXX. Please use your name as reference."
-                                 />
-                              </motion.div>
-                            )}
+                            {paymentSettings.enabledMethods?.includes('bank') && (
+                              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4 pt-6 border-t border-apricot/10">
+                                  <div className="flex items-center gap-2 mb-2">
+                                     <Landmark className="w-4 h-4 text-rose-bloom" />
+                                     <h4 className="text-[10px] font-black uppercase tracking-widest text-studio-dark/60">Bank Transfer Details</h4>
+                                  </div>
+                                  <textarea
+                                    rows={4}
+                                    value={paymentSettings.config.bank_instructions}
+                                    onChange={(e) => setPaymentSettings({
+                                      ...paymentSettings, 
+                                      config: { ...paymentSettings.config, bank_instructions: e.target.value }
+                                    })}
+                                    className="w-full bg-white border border-apricot/20 rounded-2xl py-4 px-6 text-sm resize-none focus:border-rose-bloom focus:outline-none transition-colors"
+                                    placeholder="Ex: Bank Transfer to Account XXX-XXXX. Please use your name as reference."
+                                  />
+                               </motion.div>
+                             )}
                          </div>
 
                          <div className="pt-6 border-t border-apricot/20">
