@@ -75,41 +75,51 @@ export const AuthProvider = ({ children }) => {
     try {
       console.log(`[AuthContext] Fetching profile for ${id}...`);
       setLastFetchedId(id);
+
+      // PRE-EMPTIVE DRAFT: Use metadata immediately to unblock the UI during cold starts
+      if (activeUser?.user_metadata?.role && !profile) {
+        console.log('[AuthContext] Setting pre-emptive draft from metadata');
+        setProfile({ 
+          id, 
+          role: activeUser.user_metadata.role, 
+          full_name: activeUser.user_metadata.full_name || 'User',
+          stage_code: activeUser.user_metadata.stage_code || null,
+          linked_teacher_id: activeUser.user_metadata.linked_teacher_id || null,
+          is_draft: true
+        });
+        setLoading(false); // Unblock UI early
+      }
       
-      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('AuthContext Fetch Timeout')), 8000));
+      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('AuthContext Fetch Timeout')), 8001));
       const fetchPromise = supabase.from('profiles').select('*').eq('id', id).single();
       
       const { data, error } = await Promise.race([fetchPromise, timeoutPromise]);
 
       if (error) {
-        console.warn('[AuthContext] Error fetching profile:', error);
-        // CRITICAL FALLBACK: Use metadata if database is blocked by Chrome Incognito/Tracking Protection
+        console.warn('[AuthContext] DB Fetch Error/Timeout, sticking with metadata fallback');
         if (activeUser?.user_metadata?.role) {
-          console.log('[AuthContext] Bypassing connection block using user_metadata');
           setProfile({ 
             id, 
             role: activeUser.user_metadata.role, 
             full_name: activeUser.user_metadata.full_name || 'User',
-            stage_code: activeUser.user_metadata.stage_code || null
+            stage_code: activeUser.user_metadata.stage_code || null,
+            linked_teacher_id: activeUser.user_metadata.linked_teacher_id || null
           });
-        } else {
-          setProfile(null);
         }
-      } else {
-        console.log('[AuthContext] Profile fetched successfully.');
+      } else if (data) {
+        console.log('[AuthContext] Profile fetched (Stable).');
         setProfile(data);
       }
     } catch (err) {
       console.error('[AuthContext] Profile fetch failed (Network/Timeout):', err);
-      if (activeUser?.user_metadata?.role) {
+      if (activeUser?.user_metadata?.role && !profile) {
         setProfile({ 
           id, 
           role: activeUser.user_metadata.role, 
           full_name: activeUser.user_metadata.full_name || 'User',
-          stage_code: activeUser.user_metadata.stage_code || null
+          stage_code: activeUser.user_metadata.stage_code || null,
+          linked_teacher_id: activeUser.user_metadata.linked_teacher_id || null
         });
-      } else {
-        setProfile(null);
       }
     } finally {
       setLoading(false);

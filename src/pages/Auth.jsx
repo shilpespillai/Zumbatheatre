@@ -71,9 +71,10 @@ export default function Auth() {
           else if (uRole === 'TEACHER') navigate('/teacher/dashboard');
           else if (uRole === 'STUDENT') navigate('/student/dashboard');
         }
-      } else {
-        // Authenticated user with no profile record -> move to onboarding
-        console.log('[Auth] User logged in but no profile found, redirecting to onboarding...');
+      } else if (profile === null) {
+        // Authenticated user with DEFINITELY no profile record -> move to onboarding
+        // We check for profile === null (explicitly not found) vs undefined (still fetching)
+        console.log('[Auth] User logged in and profile definitively not found, redirecting to onboarding...');
         navigate('/onboarding');
       }
     }
@@ -89,6 +90,7 @@ export default function Auth() {
     const targetCode = formData.stageCode.toUpperCase().trim();
     
     try {
+      let currentUser = null;
       // 1. Resolve Teacher ID from Stage Code first
       const { data: teacher, error: teacherError } = await supabase
         .from('profiles')
@@ -117,18 +119,26 @@ export default function Auth() {
       if (authError) {
         // If they already exist, try signing in
         if (authError.message.includes('already registered')) {
-          const { error: loginError } = await supabase.auth.signInWithPassword({
+          const { data: signInData, error: loginError } = await supabase.auth.signInWithPassword({
             email: formData.email,
             password: formData.password
           });
           if (loginError) throw loginError;
+          if (signInData?.user) currentUser = signInData.user;
         } else {
           throw authError;
         }
+      } else {
+        if (authData?.user) currentUser = authData.user;
       }
 
-      const currentUser = authData?.user || (await supabase.auth.getUser()).data.user;
-      if (!currentUser) throw new Error('Authentication failed');
+      // Final fallback: fetch user from session
+      if (!currentUser) {
+        const { data: userData } = await supabase.auth.getUser();
+        currentUser = userData?.user;
+      }
+
+      if (!currentUser) throw new Error('Authentication failed: No user found after login.');
 
       // 4. Ensure Profile exists and is linked
       const { error: profileError } = await supabase

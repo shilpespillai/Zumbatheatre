@@ -405,7 +405,7 @@ export default function StudentDashboard() {
     const dateRange = eachDayOfInterval({ start: subDays(today, 13), end: today });
     const attendanceTrend = dateRange.map(date => ({
       date: format(date, 'MMM d'),
-      count: paidBookings.filter(booking => isSameDay(parseISO(booking.schedules.start_time), date)).length
+      count: paidBookings.filter(booking => booking.schedules?.start_time && isSameDay(parseISO(booking.schedules.start_time), date)).length
     }));
 
     // Energy Burn (Estimated)
@@ -499,7 +499,8 @@ export default function StudentDashboard() {
 
   const detectConflicts = useCallback((schedules) => {
     const conflictSet = new Set();
-    const sorted = [...schedules].sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
+    const validSchedules = (schedules || []).filter(s => s?.start_time);
+    const sorted = [...validSchedules].sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
     
     for (let i = 0; i < sorted.length; i++) {
       for (let j = i + 1; j < sorted.length; j++) {
