@@ -580,16 +580,16 @@ export default function StudentDashboard() {
                </div>
              )}
 
-             <button onClick={() => navigate('/student/bookings')} className="px-8 py-5 bg-white border border-apricot/40 text-rose-bloom rounded-[2rem] font-black uppercase tracking-widest text-xs shadow-sm flex items-center gap-3">
+             <button onClick={() => navigate('/student/bookings')} className="px-8 py-5 bg-white border border-apricot text-rose-bloom rounded-[2rem] font-black uppercase tracking-widest text-xs shadow-sm flex items-center gap-3">
                 <Ticket className="w-5 h-5" /> My Bookings
              </button>
-             <Link to="/student/settings" className="p-5 bg-white rounded-2xl border border-apricot/40 hover:bg-apricot/5 shadow-sm"><SettingsIcon className="w-6 h-6 text-rose-bloom" /></Link>
+             <Link to="/student/settings" className="p-5 bg-white rounded-2xl border border-apricot hover:bg-apricot/5 shadow-sm"><SettingsIcon className="w-6 h-6 text-rose-bloom" /></Link>
              <button onClick={signOut} className="p-5 bg-white rounded-2xl border border-studio-dark/20 hover:bg-rose-petal/5 transition-all shadow-sm"><LogOut className="w-6 h-6 text-rose-bloom" /></button>
           </div>
         </header>
 
         <div className="flex justify-center mb-16">
-          <div className="bg-white/40 backdrop-blur-3xl p-2 rounded-3xl border border-apricot/20 flex gap-2 items-center shadow-xl">
+          <div className="bg-white/40 backdrop-blur-3xl p-2 rounded-3xl border border-apricot/40 flex gap-2 items-center shadow-xl">
             <button onClick={() => setActiveTab('studio')} className={`px-10 py-5 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center gap-3 ${activeTab === 'studio' ? 'bg-studio-dark text-white' : 'text-studio-dark/40'}`}>
               <CalendarIcon className="w-4 h-4" /> Studio Mode
             </button>
@@ -664,7 +664,7 @@ export default function StudentDashboard() {
                             .filter(s => isSameDay(parseISO(s.start_time), selectedDate))
                             .sort((a, b) => new Date(a.start_time) - new Date(b.start_time))
                             .map((session, idx) => (
-                              <div key={idx} className={`flex flex-col gap-4 p-6 bg-white/60 rounded-[2rem] border transition-all ${conflicts.has(session.id) ? 'border-red-500/50 bg-red-500/5 shadow-lg shadow-red-500/10 animate-pulse' : 'border-rose-petal/10 hover:border-rose-petal/30'}`}>
+                              <div key={idx} className={`flex flex-col gap-4 p-6 bg-white/60 rounded-[2rem] border transition-all ${conflicts.has(session.id) ? 'border-red-500 bg-red-500/5 shadow-lg shadow-red-500/10 animate-pulse' : 'border-rose-petal/30 hover:border-rose-petal/50'}`}>
                                 {/* Row 1: Time & Metadata */}
                                 <div className="flex items-center justify-between">
                                   <div className="flex items-center gap-2">
@@ -814,7 +814,7 @@ export default function StudentDashboard() {
                     </div>
                   )}
 
-                  <div className="bg-white/60 p-10 rounded-[3rem] border border-apricot/40 text-center">
+                  <div className="bg-white/60 p-10 rounded-[3rem] border border-apricot/60 text-center">
                      <div className="text-[10px] font-black text-rose-bloom uppercase tracking-widest mb-2">Stage Credits</div>
                     <div className="text-4xl font-black text-studio-dark mb-8">${studentCredits.toFixed(2)}</div>
                     <div className="space-y-4">

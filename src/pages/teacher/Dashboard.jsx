@@ -544,7 +544,7 @@ export default function TeacherDashboard() {
             </div>
           </div>
           <div className="flex gap-4 items-center">
-             <div className="flex items-center gap-2 bg-white/50 border border-apricot/40 px-4 py-2 rounded-2xl shadow-sm group hover:border-rose-bloom transition-all">
+             <div className="flex items-center gap-2 bg-white/50 border border-apricot/60 px-4 py-2 rounded-2xl shadow-sm group hover:border-rose-bloom transition-all">
                 <div className="flex flex-col items-start mr-4">
                   <span className="text-[8px] font-black uppercase tracking-widest text-studio-dark/30 leading-none mb-1">Stage Code</span>
                   <span className="text-xs font-black text-rose-bloom font-mono tracking-wider">{inviteCode || '...'}</span>
@@ -567,7 +567,7 @@ export default function TeacherDashboard() {
                 </div>
              </div>
              
-             <Link to="/teacher/settings" className="p-4 bg-bloom-white rounded-2xl border border-apricot/60 hover:bg-apricot/5 transition-all shadow-sm group">
+             <Link to="/teacher/settings" className="p-4 bg-bloom-white rounded-2xl border border-apricot/80 hover:bg-apricot/5 transition-all shadow-sm group">
                <SettingsIcon className="w-5 h-5 text-rose-bloom group-hover:rotate-45 transition-transform" />
              </Link>
              <button onClick={signOut} className="p-4 bg-white rounded-2xl border border-studio-dark/20 hover:bg-rose-petal/5 transition-all shadow-sm">
@@ -579,7 +579,7 @@ export default function TeacherDashboard() {
         {/* Removed Subscription Banner to allow free access */}
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-16">
-           <div className="bg-white/60 backdrop-blur-3xl p-8 rounded-[3rem] border border-apricot/30 shadow-xl relative overflow-hidden group">
+           <div className="bg-white/60 backdrop-blur-3xl p-8 rounded-[3rem] border border-apricot/60 shadow-xl relative overflow-hidden group">
               <div className="flex justify-between items-start mb-4">
                  <div className="p-3 bg-rose-bloom/10 rounded-2xl"><TrendingUp className="w-5 h-5 text-rose-bloom" /></div>
                  <div className="text-[9px] font-black text-rose-bloom uppercase tracking-widest">+12%</div>
@@ -604,7 +604,7 @@ export default function TeacherDashboard() {
               </div>
            </div>
 
-           <div className="bg-white/60 backdrop-blur-3xl p-8 rounded-[3rem] border border-apricot/30 shadow-xl relative overflow-hidden group">
+           <div className="bg-white/60 backdrop-blur-3xl p-8 rounded-[3rem] border border-apricot/60 shadow-xl relative overflow-hidden group">
               <div className="flex justify-between items-start mb-4">
                  <div className="p-3 bg-studio-dark/10 rounded-2xl"><Users className="w-5 h-5 text-studio-dark" /></div>
                  <div className="text-[9px] font-black text-studio-dark/30 uppercase tracking-widest">Live</div>
@@ -699,7 +699,7 @@ export default function TeacherDashboard() {
                             setIsAttendanceModalOpen(true);
                           }}
                           className={`p-5 rounded-2xl border transition-all cursor-pointer relative overflow-hidden ${
-                            isPast ? 'bg-zinc-50 border-zinc-200 opacity-60' : 'bg-bloom-white/60 border-apricot/40 group hover:border-rose-bloom'
+                            isPast ? 'bg-zinc-50 border-zinc-200 opacity-60' : 'bg-bloom-white/60 border-apricot/60 group hover:border-rose-bloom'
                           }`}
                         >
                           <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
@@ -851,7 +851,7 @@ export default function TeacherDashboard() {
                                 type="number" 
                                 value={newRoutineData.duration_minutes}
                                 onChange={e => setNewRoutineData({...newRoutineData, duration_minutes: parseInt(e.target.value)})}
-                                className="w-full bg-white border border-apricot/40 rounded-xl py-3 px-4 text-sm font-bold focus:border-rose-bloom outline-none transition-all"
+                                className="w-full bg-white border border-apricot/60 rounded-xl py-3 px-4 text-sm font-bold focus:border-rose-bloom outline-none transition-all"
                                />
                              </div>
                              <div className="space-y-1">
@@ -861,7 +861,7 @@ export default function TeacherDashboard() {
                                 step="0.01"
                                 value={newRoutineData.default_price}
                                 onChange={e => setNewRoutineData({...newRoutineData, default_price: parseFloat(e.target.value)})}
-                                className="w-full bg-white border border-apricot/40 rounded-xl py-3 px-4 text-sm font-bold focus:border-rose-bloom outline-none transition-all"
+                                className="w-full bg-white border border-apricot/60 rounded-xl py-3 px-4 text-sm font-bold focus:border-rose-bloom outline-none transition-all"
                                />
                              </div>
                            </div>
@@ -896,7 +896,7 @@ export default function TeacherDashboard() {
                                     price: selected ? selected.default_price : ''
                                   });
                                 }}
-                                className="w-full bg-white/60 border border-apricot/40 rounded-2xl py-5 pl-14 pr-12 focus:outline-none focus:border-rose-bloom transition-all font-bold text-studio-dark appearance-none cursor-pointer"
+                                className="w-full bg-white/60 border border-apricot/60 rounded-2xl py-5 pl-14 pr-12 focus:outline-none focus:border-rose-bloom transition-all font-bold text-studio-dark appearance-none cursor-pointer"
                               >
                                 <option value="">Choose a Signature Routine...</option>
                                 {routines.map(r => (
@@ -934,7 +934,7 @@ export default function TeacherDashboard() {
                         required
                         value={formData.start_time}
                         onChange={(e) => setFormData({...formData, start_time: e.target.value})}
-                        className="w-full bg-white/60 border border-apricot/40 rounded-2xl py-5 px-6 focus:outline-none focus:border-rose-bloom transition-all font-bold text-studio-dark"
+                        className="w-full bg-white/60 border border-apricot/60 rounded-2xl py-5 px-6 focus:outline-none focus:border-rose-bloom transition-all font-bold text-studio-dark"
                       />
                     </div>
                     <div className="space-y-2">
@@ -945,7 +945,7 @@ export default function TeacherDashboard() {
                         placeholder="Default"
                         value={formData.price}
                         onChange={(e) => setFormData({...formData, price: e.target.value})}
-                        className="w-full bg-white/60 border border-apricot/40 rounded-2xl py-5 px-6 focus:outline-none focus:border-rose-bloom transition-all font-bold text-studio-dark"
+                        className="w-full bg-white/60 border border-apricot/60 rounded-2xl py-5 px-6 focus:outline-none focus:border-rose-bloom transition-all font-bold text-studio-dark"
                       />
                     </div>
                   </div>
@@ -1056,19 +1056,19 @@ export default function TeacherDashboard() {
                 </div>
 
                 <div className="grid grid-cols-3 gap-4">
-                   <div className="bg-bloom-white p-4 rounded-2xl border border-apricot/30 text-center">
+                   <div className="bg-bloom-white p-4 rounded-2xl border border-apricot/60 text-center">
                       <div className="text-[8px] font-black uppercase text-studio-dark/30 mb-1">Total Booked</div>
                       <div className="text-xl font-black text-studio-dark">
                         {(selectedSessionForAttendance.bookings || []).filter(b => selectedSessionForAttendance.status === 'CANCELLED' || b.status !== 'CANCELLED').length}
                       </div>
                    </div>
-                   <div className="bg-bloom-white p-4 rounded-2xl border border-apricot/30 text-center">
+                   <div className="bg-bloom-white p-4 rounded-2xl border border-apricot/60 text-center">
                       <div className="text-[8px] font-black uppercase text-studio-dark/30 mb-1">Remaining</div>
                       <div className="text-xl font-black text-rose-bloom">
                         {(selectedSessionForAttendance.max_seats || 0) - (selectedSessionForAttendance.bookings || []).filter(b => selectedSessionForAttendance.status === 'CANCELLED' || b.status !== 'CANCELLED').length}
                       </div>
                    </div>
-                   <div className="bg-bloom-white p-4 rounded-2xl border border-apricot/30 text-center">
+                   <div className="bg-bloom-white p-4 rounded-2xl border border-apricot/60 text-center">
                       <div className="text-[8px] font-black uppercase text-studio-dark/30 mb-1">Capacity</div>
                       <div className="text-xl font-black text-studio-dark/40">{selectedSessionForAttendance.max_seats}</div>
                    </div>
@@ -1154,7 +1154,7 @@ export default function TeacherDashboard() {
               </div>
 
               <div className="p-10 border-t border-apricot/20 bg-apricot/5 shrink-0">
-                 <button className="w-full py-5 bg-white border border-apricot/30 rounded-2xl text-[10px] font-black uppercase tracking-widest text-studio-dark hover:bg-white/80 transition-all flex items-center justify-center gap-2">
+                 <button className="w-full py-5 bg-white border border-apricot/60 rounded-2xl text-[10px] font-black uppercase tracking-widest text-studio-dark hover:bg-white/80 transition-all flex items-center justify-center gap-2">
                     Export Attendance List
                  </button>
               </div>
