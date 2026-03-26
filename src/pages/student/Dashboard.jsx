@@ -718,7 +718,13 @@ export default function StudentDashboard() {
                                 {/* Row 3: Action Button */}
                                 <div>
                                   {(() => {
-                                    const myBooking = myBookings.find(b => b.schedule_id === session.id);
+                                     // Find active booking, prioritizing PAID/PENDING over VOID
+                                     const myBooking = myBookings
+                                       .filter(b => b.schedule_id === session.id)
+                                       .sort((a, b) => {
+                                         const priority = { 'PAID': 0, 'PENDING': 1, 'VOID': 2 };
+                                         return (priority[a.payment_status] || 9) - (priority[b.payment_status] || 9);
+                                       })[0];
                                     const isFull = (session.seats_taken || 0) >= (session.max_seats || 20);
                                     const isCancelled = session.status === 'CANCELLED';
                                     const isPastSession = new Date(session.start_time) < new Date();

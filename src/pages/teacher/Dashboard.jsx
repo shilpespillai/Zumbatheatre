@@ -18,6 +18,7 @@ export default function TeacherDashboard() {
   const [bookings, setBookings] = useState([]);
   const [recentBookings, setRecentBookings] = useState([]);
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [lastRefreshedAt, setLastRefreshedAt] = useState(0); // For flickering guard
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false);
@@ -67,6 +68,10 @@ export default function TeacherDashboard() {
   const ensureInviteCode = useCallback(async () => {
     if (!user?.id) return;
     
+    // GUARD: If we recently refreshed manually, ignore background sync for 2 seconds 
+    // to allow Supabase metadata to propagate.
+    if (Date.now() - lastRefreshedAt < 2000) return;
+
     // PRIORITY 1: Secure Auth Metadata (Unblockable path)
     if (user?.user_metadata?.stage_code) {
       setInviteCode(user.user_metadata.stage_code);
@@ -122,6 +127,7 @@ export default function TeacherDashboard() {
       }
       
       setInviteCode(newCode);
+      setLastRefreshedAt(Date.now());
       toast.success('Stage code refreshed!', { id: toastId });
     } catch (error) {
       console.error('[Dashboard] Code refresh failed:', error);
