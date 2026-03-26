@@ -57,6 +57,20 @@ export const AuthProvider = ({ children }) => {
         // Re-fetch on sign-in, session initialization, or if IDs change
         // Added USER_UPDATED: If metadata changes (like linked_teacher_id), we want to pull the fresh profile
         if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || event === 'USER_UPDATED' || !profile || profile.id !== currentUser.id) {
+          // [PHASE 35] TEACHER PATTERN: If metadata has a link, unblock UI INSTANTLY
+          if (currentUser.user_metadata?.linked_teacher_id && !profile) {
+            console.log('[AuthContext] Instant metadata unblock for student link:', currentUser.user_metadata.linked_teacher_id);
+            setProfile({
+              id: currentUser.id,
+              role: currentUser.user_metadata.role || 'STUDENT',
+              full_name: currentUser.user_metadata.full_name || 'User',
+              stage_code: currentUser.user_metadata.stage_code || null,
+              linked_teacher_id: currentUser.user_metadata.linked_teacher_id,
+              is_draft: true
+            });
+            setLoading(false);
+          }
+          
           await fetchProfile(currentUser.id, currentUser);
         }
       } else {

@@ -665,11 +665,11 @@ export default function StudentDashboard() {
         </div>
 
         {activeTab === 'studio' ? (
-          loading || profile?.is_cached || (profile?.is_draft && !profile?.linked_teacher_id) ? (
+          (!profile?.linked_teacher_id && !localStorage.getItem('active_stage_context') && loading) ? (
             <div className="flex flex-col items-center justify-center py-32 bg-white/40 backdrop-blur-xl rounded-[4rem] border-2 border-dashed border-apricot/50">
                <div className="w-12 h-12 border-4 border-rose-bloom/20 border-t-rose-bloom rounded-full animate-spin mb-6" />
                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-rose-bloom/40">Synchronizing Stage...</p>
-               <p className="text-[8px] font-bold text-studio-dark/20 uppercase tracking-widest mt-2 px-10 text-center">Recalling your private stage settings...</p>
+               <p className="text-[8px] font-bold text-studio-dark/20 uppercase tracking-widest mt-2 px-10 text-center">Identifying your stage connection...</p>
             </div>
           ) : (!profile?.linked_teacher_id && !localStorage.getItem('active_stage_context')) ? (
             <div className="flex flex-col items-center justify-center py-32 bg-white/40 backdrop-blur-xl rounded-[4rem] border-2 border-dashed border-apricot/50">
