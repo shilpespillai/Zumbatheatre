@@ -336,7 +336,7 @@ export default function TeacherDashboard() {
         .update({ 
           payment_status: 'PAID', 
           payment_method: 'MANUAL',
-          status: 'BOOKED'
+          status: 'CONFIRMED'
         })
         .eq('id', bookingId);
       if (error) throw error;
