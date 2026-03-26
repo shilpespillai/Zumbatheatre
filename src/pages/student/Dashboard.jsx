@@ -360,7 +360,8 @@ export default function StudentDashboard() {
         .from('bookings')
         .select('*, schedules(id, start_time, teacher_id, routines(name))')
         .eq('student_id', profile.id)
-        .in('payment_status', ['PAID', 'PENDING', 'VOID']);
+        .in('payment_status', ['PAID', 'PENDING', 'VOID'])
+        .order('created_at', { ascending: false });
       
       if (error) throw error;
       setMyBookings(data || []);
@@ -755,41 +756,16 @@ export default function StudentDashboard() {
                                             {isPaid ? 'PAID & READY' : (myBooking.payment_confirmed_by_student ? 'PENDING VERIFICATION' : 'RESERVED')}
                                           </div>
                                           {!isPaid && (
-                                            myBooking.payment_method === 'PAYPAL' ? (
-                                              hasPaypal && (
-                                                <button
-                                                  onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    const finalUrl = paypalUrl.startsWith('http') ? paypalUrl : `https://${paypalUrl}`;
-                                                    window.open(finalUrl, '_blank');
-                                                  }}
-                                                  className="w-full py-3 bg-studio-dark text-white rounded-xl font-black uppercase text-[8px] tracking-widest flex items-center justify-center gap-2 hover:bg-rose-bloom transition-all shadow-lg shadow-studio-dark/5"
-                                                >
-                                                  Complete Payment <ArrowRight className="w-3 h-3" />
-                                                </button>
-                                              )
-                                            ) : (
+                                            myBooking.payment_method === 'PAYPAL' && hasPaypal && (
                                               <button
                                                 onClick={(e) => {
                                                   e.stopPropagation();
-                                                  setSelectedBookingForPayment(myBooking);
-                                                  setShowPaymentModal(true);
+                                                  const finalUrl = paypalUrl.startsWith('http') ? paypalUrl : `https://${paypalUrl}`;
+                                                  window.open(finalUrl, '_blank');
                                                 }}
-                                                className={`w-full py-3 rounded-xl font-black uppercase text-[8px] tracking-widest flex items-center justify-center gap-2 transition-all shadow-lg ${
-                                                  myBooking.payment_confirmed_by_student 
-                                                  ? 'bg-amber-500/10 text-amber-600 border border-amber-500/20' 
-                                                  : 'bg-studio-dark text-white hover:bg-rose-bloom shadow-studio-dark/5'
-                                                }`}
+                                                className="w-full py-3 bg-studio-dark text-white rounded-xl font-black uppercase text-[8px] tracking-widest flex items-center justify-center gap-2 hover:bg-rose-bloom transition-all shadow-lg shadow-studio-dark/5"
                                               >
-                                                {myBooking.payment_confirmed_by_student ? (
-                                                  <>
-                                                    <Check className="w-3 h-3" /> Payment Submitted
-                                                  </>
-                                                ) : (
-                                                  <>
-                                                    Payment Instructions <ArrowRight className="w-3 h-3" />
-                                                  </>
-                                                )}
+                                                Complete Payment <ArrowRight className="w-3 h-3" />
                                               </button>
                                             )
                                           )}
