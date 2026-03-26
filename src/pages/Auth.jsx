@@ -57,6 +57,13 @@ export default function Auth() {
   useEffect(() => {
     // 1. SUPPRESS auto-redirect if we JUST logged out (prevents loops)
     const loggedOut = searchParams.get('loggedout') === 'true';
+    
+    // [PHASE 38] Capture stage code immediately even if already logged in
+    if (initialCode) {
+      console.log('[Auth] Persisting stage code from URL:', initialCode);
+      localStorage.setItem('pending_teacher_code', initialCode.toUpperCase().trim());
+    }
+
     if (loggedOut) return;
 
     // 2. ONLY redirect if we have a definitive profile/role state

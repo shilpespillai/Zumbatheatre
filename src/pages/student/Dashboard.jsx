@@ -145,6 +145,28 @@ export default function StudentDashboard() {
         } finally {
           setLoading(false);
         }
+      } else if (profile?.id) {
+        // [PHASE 38] SELF-HEALING RECOVERY
+        // If we have no teacher link, look at bookings history as a Tier-3 backup
+        try {
+          console.log('[Dashboard] Identity Gap detected. Attempting Self-Healing recovery...');
+          const bookings = await fetchMyBookings();
+          if (bookings && bookings.length > 0) {
+            const recoveredTid = bookings[0].teacher_id;
+            console.log('[Dashboard] Self-Healing: Recovered Teacher ID from history:', recoveredTid);
+            await Promise.allSettled([
+              fetchTeacherProfile(recoveredTid),
+              fetchAllAvailableSchedules(recoveredTid),
+              fetchStudentCredits()
+            ]);
+            // Optional: Silent repair of profile link
+            persistStageLocally({ linked_teacher_id: recoveredTid });
+          }
+        } catch (err) {
+          console.error('[Dashboard] Self-healing failed:', err);
+        } finally {
+          setLoading(false);
+        }
       } else if (profile?.visited_stages?.length > 0 && !profile?.linked_teacher_id) {
         // [PHASE 32] SOFT RECOVERY: If primary link is missing, auto-reconnect to most recent stage from history
         const latestStage = profile.visited_stages[profile.visited_stages.length - 1];
