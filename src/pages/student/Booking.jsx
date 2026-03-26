@@ -156,8 +156,12 @@ export default function StudentBooking() {
             b.payment_method !== 'LOYALTY_REWARD'
           );
           const required = teacherLoyalty.required_sessions || 10;
-          const progress = teacherBookings.length % (required + 1);
-          setLoyaltyEligible(progress === required);
+          const paidCount = teacherBookings.length;
+          const rewardCount = (data || []).filter(b => b.payment_method === 'LOYALTY_REWARD').length;
+          
+          // Eligible if earned rewards > redeemed rewards
+          const eligibility = Math.floor(paidCount / required) > rewardCount;
+          setLoyaltyEligible(eligibility);
         }
       }
     } catch (err) {

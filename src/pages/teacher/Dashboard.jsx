@@ -1129,7 +1129,10 @@ export default function TeacherDashboard() {
                            }`}>
                              {booking.status === 'STUDENT CANCELLED' ? 'Student Cancelled' :
                               booking.status === 'CANCELLED' ? (booking.payment_status === 'REFUNDED' ? 'Cancelled - Credited' : 'Cancelled') :
-                              (booking.payment_status === 'PAID' ? (booking.payment_method === 'CREDITS' ? 'PAID (Credits)' : 'PAID') : 'RESERVED')
+                              (booking.payment_status === 'PAID' ? 
+                                (booking.payment_method === 'CREDITS' ? 'PAID (Credits)' : 
+                                 booking.payment_method === 'LOYALTY_REWARD' ? 'LOYALTY CARD USED' : 'PAID') : 
+                              'RESERVED')
                              }
                            </div>
                              {booking.payment_status === 'PENDING' && (

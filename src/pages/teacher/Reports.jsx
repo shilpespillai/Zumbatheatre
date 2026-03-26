@@ -67,7 +67,7 @@ export default function TeacherReports() {
       // 3. Fetch All Bookings for these schedules
       const { data: bookings, error: bookingsError } = await supabase
         .from('bookings')
-        .select('*, profiles(id, full_name), routines(name)')
+        .select('*, profiles:student_id(id, full_name), schedules!inner(routines(name))')
         .in('schedule_id', scheduleIds);
       if (bookingsError) throw bookingsError;
 
@@ -113,7 +113,7 @@ export default function TeacherReports() {
 
       // 2. Popular Routines
       const routineCounts = filteredBookings.reduce((acc, b) => {
-        const name = b.routines?.name || 'Unknown Routine';
+        const name = b.schedules?.routines?.name || b.routines?.name || 'Unknown Routine';
         acc[name] = (acc[name] || 0) + 1;
         return acc;
       }, {});
@@ -134,9 +134,9 @@ export default function TeacherReports() {
 
       // 4. Engagement Distribution
       const engagement = {
-        reserved: filteredBookings.filter(b => b.payment_status === 'PENDING' && b.status !== 'CANCELLED').length,
-        paid: filteredBookings.filter(b => b.payment_status === 'PAID' && b.status !== 'CANCELLED').length,
-        cancelled: filteredBookings.filter(b => b.status === 'CANCELLED' || b.payment_status === 'REFUNDED').length,
+        reserved: filteredBookings.filter(b => b.payment_status === 'PENDING' && b.status !== 'CANCELLED' && b.status !== 'STUDENT CANCELLED').length,
+        paid: filteredBookings.filter(b => b.payment_status === 'PAID' && b.status !== 'CANCELLED' && b.status !== 'STUDENT CANCELLED').length,
+        cancelled: filteredBookings.filter(b => b.status === 'CANCELLED' || b.status === 'STUDENT CANCELLED' || b.payment_status === 'REFUNDED').length,
         attended: filteredBookings.filter(b => b.attended === true).length
       };
       const engagementDistribution = [
@@ -173,7 +173,7 @@ export default function TeacherReports() {
 
       setReportData({
         totalRevenue,
-        totalBookings: filteredBookings.filter(b => b.status !== 'CANCELLED').length,
+        totalBookings: filteredBookings.filter(b => b.status !== 'CANCELLED' && b.status !== 'STUDENT CANCELLED').length,
         occupanyRate,
         activeRoutines: (routines || []).length,
         revenueTrend: revenueTrend.map(r => ({ ...r, projected: r.amount * 1.2 })),

@@ -759,7 +759,7 @@ export default function StudentDashboard() {
                                             'bg-rose-bloom/10 text-rose-bloom border-rose-bloom/20'
                                           }`}>
                                             {isPaid ? <CheckCircle2 className="w-3 h-3" /> : (myBooking.payment_confirmed_by_student ? <Clock className="w-3 h-3" /> : <Sparkles className="w-3 h-3" />)}
-                                            {isPaid ? 'PAID & READY' : (myBooking.payment_confirmed_by_student ? 'PENDING VERIFICATION' : 'RESERVED')}
+                                            {isPaid ? (myBooking.payment_method === 'LOYALTY_REWARD' ? 'LOYALTY REWARD' : 'PAID & READY') : (myBooking.payment_confirmed_by_student ? 'PENDING VERIFICATION' : 'RESERVED')}
                                           </div>
                                           {!isPaid && (
                                             myBooking.payment_method === 'PAYPAL' && hasPaypal && (
