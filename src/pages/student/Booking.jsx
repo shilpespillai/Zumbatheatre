@@ -238,7 +238,8 @@ export default function StudentBooking() {
         .select('id')
         .eq('student_id', profile.id)
         .eq('schedule_id', selectedSession.id)
-        .not('payment_status', 'in', '("CANCELLED","VOID")');
+        .not('payment_status', 'in', '("CANCELLED","VOID")')
+        .not('status', 'in', '("CANCELLED","STUDENT CANCELLED")');
       
       if (existingBookings && existingBookings.length > 0) {
         toast.error('You have already reserved a spot for this session.', { id: toastId });
