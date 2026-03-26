@@ -69,7 +69,8 @@ export const AuthProvider = ({ children }) => {
     
     // Deduplication: Only skip if it's an automatic background refresh AND we already have a stable ID
     // If userId is explicitly passed, or if we don't have a profile yet, we MUST fetch.
-    if (id === lastFetchedId && !userId && profile) {
+    // [PHASE 32] Optimization: Allow force-refetch by passing a flag or clearing lastFetchedId
+    if (id === lastFetchedId && !userId && profile && !currentUserObj?.force) {
       console.log(`[AuthContext] Skipping redundant background fetch for ${id}`);
       return;
     }
@@ -156,12 +157,20 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const forceRefreshProfile = async () => {
+    if (user?.id) {
+      setLastFetchedId(null); // Clear cache to force a real DB hit
+      await fetchProfile(user.id, { force: true });
+    }
+  };
+
   const value = {
     user,
     profile,
     loading,
     signOut,
     fetchProfile,
+    forceRefreshProfile,
     isTeacher: (profile?.role || user?.user_metadata?.role)?.toUpperCase() === 'TEACHER',
     isStudent: (profile?.role || user?.user_metadata?.role)?.toUpperCase() === 'STUDENT',
     isAdmin: (profile?.role || user?.user_metadata?.role)?.toUpperCase() === 'ADMIN'

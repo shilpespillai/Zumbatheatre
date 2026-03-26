@@ -214,7 +214,9 @@ export default function StudentBooking() {
         
         if (!error) {
           // Re-sync AuthContext so the Dashboard knows which stage we are now in
-          await fetchProfile(profile.id);
+          // Phase 32: Use forceRefreshProfile to bypass deduplication and get the absolute latest DB state
+          const { forceRefreshProfile } = useAuth();
+          await forceRefreshProfile();
         }
       }
     };

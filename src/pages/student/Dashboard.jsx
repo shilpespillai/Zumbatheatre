@@ -142,8 +142,11 @@ export default function StudentDashboard() {
         } finally {
           setLoading(false);
         }
-      } else if (currentCode && !profile?.linked_teacher_id) {
-        syncTeacherLink(currentCode);
+      } else if (profile?.visited_stages?.length > 0 && !profile?.linked_teacher_id) {
+        // [PHASE 32] SOFT RECOVERY: If primary link is missing, auto-reconnect to most recent stage from history
+        const latestStage = profile.visited_stages[profile.visited_stages.length - 1];
+        console.log('[Dashboard] Soft Recovery: Re-linking to most recent stage:', latestStage.stage_code);
+        handleSwitchStage(latestStage);
       } else {
         setLoading(false);
       }
@@ -191,7 +194,8 @@ export default function StudentDashboard() {
           }
 
           localStorage.removeItem('pending_teacher_code');
-          await fetchProfile(profile.id);
+          const { forceRefreshProfile } = useAuth();
+          await forceRefreshProfile(); // Phase 32: Force real sync
           
           if (teacher.id !== profile?.linked_teacher_id) {
             toast.success(`Connected to instructor: ${teacher.full_name}`);
@@ -349,7 +353,8 @@ export default function StudentDashboard() {
       
       // 2. Clear local storage and trigger re-fetch
       localStorage.removeItem('pending_teacher_code');
-      await fetchProfile(profile.id);
+      const { forceRefreshProfile } = useAuth();
+      await forceRefreshProfile(); // Phase 32: Force real sync
       
       // 3. UI Feedback
       toast.success(`Switched to ${stage.full_name}'s Stage`);
