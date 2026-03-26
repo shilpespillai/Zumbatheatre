@@ -215,8 +215,13 @@ export default function StudentBooking() {
         if (!error) {
           // Re-sync AuthContext so the Dashboard knows which stage we are now in
           // Phase 32: Use forceRefreshProfile to bypass deduplication and get the absolute latest DB state
-          const { forceRefreshProfile } = useAuth();
+          const { forceRefreshProfile, persistStageLocally } = useAuth();
           await forceRefreshProfile();
+          
+          // [PHASE 34] Persistent Device Cache
+          // We don't have the full teacher object here easily so we pass the teacherId 
+          // persistStageLocally will handle the formatting
+          persistStageLocally({ linked_teacher_id: teacherId });
         }
       }
     };

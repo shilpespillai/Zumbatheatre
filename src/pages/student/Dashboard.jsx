@@ -131,6 +131,9 @@ export default function StudentDashboard() {
       if (pendingCode) {
         syncTeacherLink(pendingCode);
       } else if (profile?.linked_teacher_id) {
+        // [PHASE 34] Ensure cache is fresh when stable profile arrives
+        persistStageLocally(profile);
+        
         // Parallelizing everything to avoid waterfall
         try {
           await Promise.allSettled([
@@ -196,6 +199,9 @@ export default function StudentDashboard() {
           localStorage.removeItem('pending_teacher_code');
           const { forceRefreshProfile } = useAuth();
           await forceRefreshProfile(); // Phase 32: Force real sync
+          
+          // [PHASE 34] Persistent Device Cache
+          persistStageLocally(teacher);
           
           if (teacher.id !== profile?.linked_teacher_id) {
             toast.success(`Connected to instructor: ${teacher.full_name}`);
@@ -356,7 +362,10 @@ export default function StudentDashboard() {
       const { forceRefreshProfile } = useAuth();
       await forceRefreshProfile(); // Phase 32: Force real sync
       
-      // 3. UI Feedback
+      // 3. Persistent Device Cache (Instant Recall)
+      persistStageLocally(stage);
+      
+      // 4. UI Feedback
       toast.success(`Switched to ${stage.full_name}'s Stage`);
       setActiveTab('studio');
       setIsGlobalMode(false);
@@ -656,13 +665,13 @@ export default function StudentDashboard() {
         </div>
 
         {activeTab === 'studio' ? (
-          loading || (profile?.is_draft && !profile?.linked_teacher_id) ? (
+          loading || profile?.is_cached || (profile?.is_draft && !profile?.linked_teacher_id) ? (
             <div className="flex flex-col items-center justify-center py-32 bg-white/40 backdrop-blur-xl rounded-[4rem] border-2 border-dashed border-apricot/50">
                <div className="w-12 h-12 border-4 border-rose-bloom/20 border-t-rose-bloom rounded-full animate-spin mb-6" />
                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-rose-bloom/40">Synchronizing Stage...</p>
-               <p className="text-[8px] font-bold text-studio-dark/20 uppercase tracking-widest mt-2 px-10 text-center">Your private choreography is being secured. Please wait.</p>
+               <p className="text-[8px] font-bold text-studio-dark/20 uppercase tracking-widest mt-2 px-10 text-center">Recalling your private stage settings...</p>
             </div>
-          ) : !profile?.linked_teacher_id ? (
+          ) : (!profile?.linked_teacher_id && !localStorage.getItem('active_stage_context')) ? (
             <div className="flex flex-col items-center justify-center py-32 bg-white/40 backdrop-blur-xl rounded-[4rem] border-2 border-dashed border-apricot/50">
                <Lock className="w-16 h-16 text-rose-bloom mb-10 opacity-30" />
                <h2 className="text-4xl font-black text-studio-dark mb-4 text-center tracking-tighter">Your private stage is waiting.</h2>

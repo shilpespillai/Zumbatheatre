@@ -11,6 +11,17 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const getInitialSession = async () => {
       try {
+        // [PHASE 34] PRE-HYDRATION: Check for cached stage before database responds
+        const cachedStage = JSON.parse(localStorage.getItem('active_stage_context') || 'null');
+        if (cachedStage && !profile) {
+          console.log('[AuthContext] Pre-hydrating from local storage:', cachedStage.stage_code);
+          setProfile({
+            ...cachedStage,
+            is_cached: true,
+            is_draft: true
+          });
+        }
+
         const { data: { session } } = await supabase.auth.getSession();
         
         if (session?.user) {
@@ -149,6 +160,7 @@ export const AuthProvider = ({ children }) => {
       setLastFetchedId(null);
       localStorage.removeItem('studio_guest_session');
       localStorage.removeItem('pending_teacher_code');
+      localStorage.removeItem('active_stage_context'); // Phase 34 Cache Clear
       localStorage.removeItem('supabase.auth.token');
 
       // 2. Fire network signout in the background (DO NOT AWAIT - prevents 15s lag)
@@ -174,6 +186,18 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const persistStageLocally = (stageData) => {
+    if (stageData) {
+      localStorage.setItem('active_stage_context', JSON.stringify({
+        linked_teacher_id: stageData.teacher_id || stageData.linked_teacher_id,
+        full_name: stageData.full_name,
+        stage_code: stageData.stage_code
+      }));
+    } else {
+      localStorage.removeItem('active_stage_context');
+    }
+  };
+
   const value = {
     user,
     profile,
@@ -181,6 +205,7 @@ export const AuthProvider = ({ children }) => {
     signOut,
     fetchProfile,
     forceRefreshProfile,
+    persistStageLocally,
     isTeacher: (profile?.role || user?.user_metadata?.role)?.toUpperCase() === 'TEACHER',
     isStudent: (profile?.role || user?.user_metadata?.role)?.toUpperCase() === 'STUDENT',
     isAdmin: (profile?.role || user?.user_metadata?.role)?.toUpperCase() === 'ADMIN'
