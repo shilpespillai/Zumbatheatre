@@ -293,11 +293,14 @@ export default function StudentDashboard() {
       
       if (!error && data) {
         setStudentCredits(parseFloat(data.balance));
+      } else if (error && error.code !== 'PGRST116') { // Ignore "not found"
+        throw error;
       } else {
         setStudentCredits(0);
       }
     } catch (err) {
       console.error('[Dashboard] Fetch credits error:', err);
+      toast.error(`Credits Sync Failed: ${err.message}`);
     }
   }, [profile?.id, profile?.linked_teacher_id]);
 
@@ -326,6 +329,7 @@ export default function StudentDashboard() {
       setAllSchedules(data || []);
     } catch (err) {
       console.error('[Dashboard] Fetch schedules error:', err);
+      toast.error(`Routine Fetch Failed: ${err.message}`);
     } finally {
       setLoading(false);
     }
@@ -341,9 +345,11 @@ export default function StudentDashboard() {
         .eq('id', teacherId)
         .single();
       
-      if (!error && data) setTeacherProfile(data);
+      if (error) throw error;
+      setTeacherProfile(data);
     } catch (err) {
       console.error('[Dashboard] Fetch teacher profile error:', err);
+      toast.error(`Instructor Info Failed: ${err.message}`);
     }
   }, [profile?.linked_teacher_id]);
 
@@ -413,6 +419,7 @@ export default function StudentDashboard() {
       setMyBookings(data || []);
     } catch (err) {
       console.error('[Dashboard] Fetch bookings error:', err);
+      toast.error(`Bookings Fetch Failed: ${err.message || 'Unknown error'}`);
     }
   }, [profile?.id]);
 
@@ -630,6 +637,35 @@ export default function StudentDashboard() {
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-studio-dark/80 mt-1">Student Performance Center</p>
           </div>
           <div className="flex flex-wrap items-center gap-4">
+             {/* [PHASE 40] TECHNICAL DIAGNOSTICS OVERLAY */}
+      <div className="fixed bottom-4 right-4 z-[9999] p-4 bg-studio-dark/95 backdrop-blur-xl rounded-[2rem] border border-white/10 text-white font-mono text-[9px] shadow-2xl max-w-[280px] opacity-20 hover:opacity-100 transition-opacity pointer-events-auto">
+        <div className="flex items-center gap-2 mb-2 text-rose-bloom font-black border-b border-white/5 pb-2 uppercase tracking-widest">
+          <ShieldCheck className="w-3 h-3" /> System Diagnostics
+        </div>
+        <div className="space-y-1 overflow-hidden">
+          <div className="flex justify-between gap-4">
+            <span className="opacity-40">STUDENT_ID:</span>
+            <span className="truncate">{profile?.id?.slice(0, 8) || 'NONE'}...</span>
+          </div>
+          <div className="flex justify-between gap-4">
+            <span className="opacity-40">TEACHER_ID:</span>
+            <span className="truncate text-apricot">{profile?.linked_teacher_id?.slice(0, 8) || 'NULL'}...</span>
+          </div>
+          <div className="flex justify-between gap-4">
+            <span className="opacity-40">STAGE_CODE:</span>
+            <span className="font-bold text-rose-bloom">{profile?.stage_code || 'NONE'}</span>
+          </div>
+          <div className="flex justify-between gap-4">
+            <span className="opacity-40">DRAFT_MODE:</span>
+            <span>{profile?.is_draft ? 'YES' : 'NO'}</span>
+          </div>
+          <div className="flex justify-between gap-4">
+            <span className="opacity-40">ROUTINES:</span>
+            <span>{allSchedules.length}</span>
+          </div>
+        </div>
+      </div>
+
              {/* Stage Switcher Dropdown */}
              {visitedStages.length > 1 && (
                <div className="relative group">
