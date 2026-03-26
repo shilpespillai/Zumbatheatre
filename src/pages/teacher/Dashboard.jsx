@@ -16,6 +16,7 @@ export default function TeacherDashboard() {
   const [schedules, setSchedules] = useState([]);
   const [routines, setRoutines] = useState([]);
   const [bookings, setBookings] = useState([]);
+  const [recentBookings, setRecentBookings] = useState([]);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);

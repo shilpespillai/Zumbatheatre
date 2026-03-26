@@ -36,13 +36,14 @@ export default function Auth() {
     // Check connection health to Supabase
     const checkConnection = async () => {
       try {
-        const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 10000));
+        // Increase timeout to 30s to prevent 'disruption' on cold-booting Supabase instances
+        const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 30000));
         await Promise.race([supabase.from('profiles').select('id').limit(1), timeout]);
         setConnectionStatus('ok');
       } catch {
-        console.warn('[Auth] Connection seems blocked or slow. User might be in strict incognito mode.');
+        console.warn('[Auth] Connection health check failed after 30s. Connection might be slow or blocked.');
         setConnectionStatus('blocked');
-        setShowTroubleshooter(true);
+        // We do NOT call setShowTroubleshooter(true) here to prevent idle-state disruption
       }
     };
     checkConnection();

@@ -128,24 +128,25 @@ export const AuthProvider = ({ children }) => {
 
   const signOut = async () => {
     try {
-      // 1. Fire network signout and AWAIT it to ensure cookie/localstorage cleanup
-      await supabase.auth.signOut();
-      
-      // 2. Clear local auth state
+      console.log('[AuthContext] Initiating optimistic sign out...');
+      // 1. Optimistically clear local state and persistence tokens immediately
       setUser(null);
       setProfile(null);
       setLastFetchedId(null);
-      
-      // 3. Clear all potential persistence tokens
       localStorage.removeItem('studio_guest_session');
       localStorage.removeItem('pending_teacher_code');
-      localStorage.removeItem('supabase.auth.token'); // Hard-clear Supabase internal token if present
+      localStorage.removeItem('supabase.auth.token');
+
+      // 2. Fire network signout in the background (DO NOT AWAIT - prevents 15s lag)
+      supabase.auth.signOut()
+        .then(() => console.log('[AuthContext] Network sign out completed in background.'))
+        .catch(err => console.warn('[AuthContext] Background signOut error:', err));
       
-      // 4. Redirect to home with a clean state
-      window.location.href = '/auth?role=teacher';
+      // 3. Force instant redirect to provide immediate feedback (with loggedout flag to prevent loops)
+      window.location.href = '/auth?role=teacher&loggedout=true';
     } catch (err) {
       console.error('[AuthContext] SignOut error:', err);
-      // Fallback: Force clear and redirect even on error
+      // Fallback: Force clear and redirect even on critical error
       setUser(null);
       setProfile(null);
       window.location.href = '/auth';
