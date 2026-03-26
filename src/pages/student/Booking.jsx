@@ -206,6 +206,11 @@ export default function StudentBooking() {
           .from('profiles')
           .update({ linked_teacher_id: teacherId })
           .eq('id', profile.id);
+
+        // Explicitly update Auth Metadata for immediate fallback sync
+        await supabase.auth.updateUser({ 
+          data: { linked_teacher_id: teacherId } 
+        });
         
         if (!error) {
           // Re-sync AuthContext so the Dashboard knows which stage we are now in

@@ -43,7 +43,9 @@ export const AuthProvider = ({ children }) => {
       if (currentUser) {
         // Only fetch if it's a NEW session or the ID changed
         // USER_UPDATED events happen during metadata syncs; we don't want to reset profile to null then
-        if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || !profile || profile.id !== currentUser.id) {
+        // Re-fetch on sign-in, session initialization, or if IDs change
+        // Added USER_UPDATED: If metadata changes (like linked_teacher_id), we want to pull the fresh profile
+        if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || event === 'USER_UPDATED' || !profile || profile.id !== currentUser.id) {
           await fetchProfile(currentUser.id, currentUser);
         }
       } else {
@@ -90,7 +92,8 @@ export const AuthProvider = ({ children }) => {
         setLoading(false); // Unblock UI early
       }
       
-      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('AuthContext Fetch Timeout')), 8001));
+      // Increased timeout to 12s to give Supabase room to cold-start without cutting off the DB fetch too soon
+      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('AuthContext Fetch Timeout')), 12001));
       const fetchPromise = supabase.from('profiles').select('*').eq('id', id).single();
       
       const { data, error } = await Promise.race([fetchPromise, timeoutPromise]);

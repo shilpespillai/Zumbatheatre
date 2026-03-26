@@ -179,6 +179,11 @@ export default function StudentDashboard() {
             .update({ linked_teacher_id: teacher.id })
             .eq('id', profile.id);
           
+          // Explicitly update Auth Metadata for immediate fallback sync
+          await supabase.auth.updateUser({ 
+            data: { linked_teacher_id: teacher.id } 
+          });
+          
           if (updateError) {
             console.error('[Dashboard] Failed to link teacher:', updateError);
             toast.error('Failed to link to instructor. Retrying...');
@@ -336,6 +341,11 @@ export default function StudentDashboard() {
     try {
       // 1. Update active teacher in DB
       await supabase.from('profiles').update({ linked_teacher_id: stage.teacher_id }).eq('id', profile.id);
+      
+      // Explicitly update Auth Metadata for immediate fallback sync
+      await supabase.auth.updateUser({ 
+        data: { linked_teacher_id: stage.teacher_id } 
+      });
       
       // 2. Clear local storage and trigger re-fetch
       localStorage.removeItem('pending_teacher_code');
