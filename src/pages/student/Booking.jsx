@@ -277,9 +277,10 @@ export default function StudentBooking() {
           .insert({
             student_id: profile.id,
             schedule_id: selectedSession.id,
-            amount: selectedSession.price,
+            amount: Number(selectedSession.price),
             payment_method: 'CREDITS',
-            payment_status: 'PAID'
+            payment_status: 'PAID',
+            status: 'CONFIRMED'
           })
           .select()
           .single();
@@ -309,7 +310,8 @@ export default function StudentBooking() {
             schedule_id: selectedSession.id,
             amount: 0,
             payment_method: 'LOYALTY_REWARD',
-            payment_status: 'PAID'
+            payment_status: 'PAID',
+            status: 'CONFIRMED'
           })
           .select()
           .single();
@@ -339,10 +341,12 @@ export default function StudentBooking() {
           .insert({
             student_id: profile.id,
             schedule_id: selectedSession.id,
-            amount: selectedSession.price,
+            amount: Number(selectedSession.price),
             payment_method: paymentMethod.toUpperCase(),
-            payment_status: 'PENDING'
-          });
+            payment_status: 'PENDING',
+            status: 'CONFIRMED'
+          })
+          .select();
 
         if (bookingError) throw bookingError;
 
