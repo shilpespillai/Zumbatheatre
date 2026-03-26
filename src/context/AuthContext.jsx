@@ -26,6 +26,18 @@ export const AuthProvider = ({ children }) => {
         
         if (session?.user) {
           setUser(session.user);
+          
+          // [PHASE 37] FULL IDENTITY HYDRATION: Ensure the cached/draft profile has the student ID instantly
+          if (cachedStage) {
+             setProfile({
+               ...cachedStage,
+               id: session.user.id,
+               role: session.user.user_metadata?.role || 'STUDENT',
+               is_cached: true,
+               is_draft: true
+             });
+          }
+          
           await fetchProfile(session.user.id);
         }
       } catch (error) {
@@ -57,17 +69,19 @@ export const AuthProvider = ({ children }) => {
         // Re-fetch on sign-in, session initialization, or if IDs change
         // Added USER_UPDATED: If metadata changes (like linked_teacher_id), we want to pull the fresh profile
         if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || event === 'USER_UPDATED' || !profile || profile.id !== currentUser.id) {
-          // [PHASE 35] TEACHER PATTERN: If metadata has a link, unblock UI INSTANTLY
-          if (currentUser.user_metadata?.linked_teacher_id && !profile) {
-            console.log('[AuthContext] Instant metadata unblock for student link:', currentUser.user_metadata.linked_teacher_id);
-            setProfile({
+          // [PHASE 35/37] TEACHER PATTERN: If metadata has a link, unblock UI INSTANTLY
+          // [PHASE 37] Fix: Merge with existing profile (to keep is_cached/id if present)
+          if (currentUser.user_metadata?.linked_teacher_id) {
+            console.log('[AuthContext] Merging metadata student link:', currentUser.user_metadata.linked_teacher_id);
+            setProfile(prev => ({
+              ...(prev || {}),
               id: currentUser.id,
               role: currentUser.user_metadata.role || 'STUDENT',
-              full_name: currentUser.user_metadata.full_name || 'User',
-              stage_code: currentUser.user_metadata.stage_code || null,
+              full_name: currentUser.user_metadata.full_name || (prev?.full_name ?? 'User'),
+              stage_code: currentUser.user_metadata.stage_code || (prev?.stage_code ?? null),
               linked_teacher_id: currentUser.user_metadata.linked_teacher_id,
               is_draft: true
-            });
+            }));
             setLoading(false);
           }
           
