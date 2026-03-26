@@ -150,14 +150,18 @@ export default function StudentBooking() {
         // Calculate Loyalty Eligibility
         const teacherLoyalty = teacher?.loyalty_settings || { required_sessions: 10, enabled: true };
         if (teacherLoyalty.enabled !== false) {
-          const teacherBookings = (data || []).filter(b => 
-            (b.teacher_id === teacherId || b.schedules?.teacher_id === teacherId) && 
+          const teacherBookings = (data || []).filter(b => {
+            const b_teacher_id = b.teacher_id || b.schedules?.teacher_id || b.schedules?.[0]?.teacher_id;
+            return b_teacher_id === teacherId && 
             ['PAID', 'PENDING'].includes(b.payment_status) && 
-            b.payment_method !== 'LOYALTY_REWARD'
-          );
+            b.payment_method !== 'LOYALTY_REWARD';
+          });
           const required = teacherLoyalty.required_sessions || 10;
           const paidCount = teacherBookings.length;
-          const rewardCount = (data || []).filter(b => b.payment_method === 'LOYALTY_REWARD').length;
+          const rewardCount = (data || []).filter(b => {
+             const b_teacher_id = b.teacher_id || b.schedules?.teacher_id || b.schedules?.[0]?.teacher_id;
+             return b_teacher_id === teacherId && b.payment_method === 'LOYALTY_REWARD';
+          }).length;
           
           // Eligible if earned rewards > redeemed rewards
           const eligibility = Math.floor(paidCount / required) > rewardCount;

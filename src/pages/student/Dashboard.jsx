@@ -462,22 +462,30 @@ export default function StudentDashboard() {
       return d.getFullYear() === now.getFullYear() && Math.floor(d.getMonth() / 3) === Math.floor(now.getMonth() / 3);
     }).reduce((sum, b) => sum + (Number(b.amount) || 0), 0);
 
-    // Loyalty Progress (Specific to active teacher)
-    const activeTeacherBookings = bookings.filter(b => 
-      (b.schedules?.teacher_id === profile?.linked_teacher_id) && 
+    const activeTeacherBookings = bookings.filter(b => {
+      const b_tid = b.teacher_id || b.schedules?.teacher_id || b.schedules?.[0]?.teacher_id;
+      return b_tid === profile?.linked_teacher_id && 
       ['PAID', 'PENDING'].includes(b.payment_status) &&
-      b.payment_method !== 'LOYALTY_REWARD'
-    );
+      b.payment_method !== 'LOYALTY_REWARD';
+    });
     const loyaltySettings = teacherProfile?.loyalty_settings || { required_sessions: 10, enabled: true };
-    const loyaltyCount = activeTeacherBookings.length % (loyaltySettings.required_sessions + 1);
-    const sessionsRemaining = loyaltySettings.required_sessions - loyaltyCount;
+    const required = loyaltySettings.required_sessions || 10;
+    const paidCount = activeTeacherBookings.length;
+    const rewardCount = bookings.filter(b => {
+      const b_tid = b.teacher_id || b.schedules?.teacher_id || b.schedules?.[0]?.teacher_id;
+      return b_tid === profile?.linked_teacher_id && b.payment_method === 'LOYALTY_REWARD';
+    }).length;
+    
+    const earnedRewards = Math.floor(paidCount / required);
+    const isEligible = earnedRewards > rewardCount;
+    const loyaltyProgressCount = isEligible ? required : (paidCount % required);
 
     setStudentStats({
       totalSessions, routineVariety: routineVarietyWithPerformance, routineCategoryMix, attendanceTrend, energyBurn: Math.round(totalEnergyBurn),
       consistency: dayStats, totalSpent: Math.round(totalSpent), monthlySpent: Math.round(monthlySpent), quarterlySpent: Math.round(quarterlySpent),
       ytdSpent: Math.round(ytdSpent), spendingTrend,
       loyaltyProgress: {
-        current: loyaltyCount,
+        current: loyaltyProgressCount,
         total: loyaltySettings.required_sessions,
         remaining: sessionsRemaining,
         isUnlocked: loyaltyCount === loyaltySettings.required_sessions
@@ -720,7 +728,11 @@ export default function StudentDashboard() {
                                   {(() => {
                                      // Find active booking, prioritizing PAID/PENDING over VOID
                                      const myBooking = myBookings
-                                       .filter(b => b.schedule_id === session.id && b.status !== 'CANCELLED' && b.status !== 'STUDENT CANCELLED')
+                                                                               .filter(b => {
+                                          const b_sid = b.schedule_id || b.schedules?.id || b.schedules?.[0]?.id;
+                                          return b_sid === session.id && b.status !== 'CANCELLED' && b.status !== 'STUDENT CANCELLED';
+                                        })
+
                                        .sort((a, b) => {
                                          const priority = { 'PAID': 0, 'PENDING': 1, 'VOID': 2 };
                                          return (priority[a.payment_status] || 9) - (priority[b.payment_status] || 9);
