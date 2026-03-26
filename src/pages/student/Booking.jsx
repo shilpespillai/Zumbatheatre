@@ -141,7 +141,8 @@ export default function StudentBooking() {
         .from('bookings')
         .select('*, schedules(teacher_id, start_time, routines(name, duration_minutes))')
         .eq('student_id', profile.id)
-        .not('payment_status', 'in', '("CANCELLED","VOID")');
+        .not('payment_status', 'in', '("CANCELLED","VOID")')
+        .not('status', 'in', '("CANCELLED","STUDENT CANCELLED")');
       
       if (!error) {
         setAllStudentBookings(data || []);
