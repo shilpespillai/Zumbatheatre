@@ -156,7 +156,7 @@ export default function StudentDashboard() {
     };
 
     if (profile?.id) initDashboard();
-  }, [profile?.linked_teacher_id, profile?.id, profile?.stage_code]);
+  }, [profile?.linked_teacher_id, profile?.id, profile?.stage_code, profile?.is_draft]);
 
   const syncTeacherLink = async (code) => {
     if (!code || linking || syncLockRef.current) return;
