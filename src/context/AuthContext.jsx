@@ -69,8 +69,8 @@ export const AuthProvider = ({ children }) => {
     
     // Deduplication: Only skip if it's an automatic background refresh AND we already have a stable ID
     // If userId is explicitly passed, or if we don't have a profile yet, we MUST fetch.
-    // [PHASE 32] Optimization: Allow force-refetch by passing a flag or clearing lastFetchedId
-    if (id === lastFetchedId && !userId && profile && !currentUserObj?.force) {
+    // [PHASE 33] Enhanced Guard: Never skip if we are in a "Draft" or "Loading" state
+    if (id === lastFetchedId && !userId && profile && !profile.is_draft && !currentUserObj?.force) {
       console.log(`[AuthContext] Skipping redundant background fetch for ${id}`);
       return;
     }
@@ -98,35 +98,45 @@ export const AuthProvider = ({ children }) => {
       const fetchPromise = supabase.from('profiles').select('*').eq('id', id).single();
       
       const { data, error } = await Promise.race([fetchPromise, timeoutPromise]);
-
+      
       if (error) {
-        console.warn('[AuthContext] DB Fetch Error/Timeout, sticking with metadata fallback');
-        if (activeUser?.user_metadata?.role) {
-          setProfile({ 
-            id, 
-            role: activeUser.user_metadata.role, 
-            full_name: activeUser.user_metadata.full_name || 'User',
-            stage_code: activeUser.user_metadata.stage_code || null,
-            linked_teacher_id: activeUser.user_metadata.linked_teacher_id || null
-          });
+        console.warn(`[AuthContext] Fetch attempt failed for ${id}:`, error.message);
+        
+        // [PHASE 33] Exponential Backoff: Retry twice before falling back to draft
+        const retryCount = currentUserObj?.retry || 0;
+        if (retryCount < 2) {
+          const delay = retryCount === 0 ? 2000 : 5000;
+          console.log(`[AuthContext] Retrying in ${delay}ms... (Attempt ${retryCount + 1})`);
+          setTimeout(() => fetchProfile(id, { ...currentUserObj, retry: retryCount + 1 }), delay);
+          return;
+        }
+
+        // CRITICAL PROTECTION: Never overwrite a Stable Profile with a Draft Profile
+        if (!profile || profile.is_draft) {
+          console.log('[AuthContext] Falling back to metadata failsafe (Identity only).');
+          const activeUser = currentUserObj || user;
+          if (activeUser?.user_metadata) {
+            setProfile({ 
+              id, 
+              role: activeUser.user_metadata.role, 
+              full_name: activeUser.user_metadata.full_name || 'User',
+              stage_code: activeUser.user_metadata.stage_code || null,
+              linked_teacher_id: activeUser.user_metadata.linked_teacher_id || null,
+              is_draft: true
+            });
+          }
         }
       } else if (data) {
         console.log('[AuthContext] Profile fetched (Stable).');
-        setProfile(data);
+        setProfile({ ...data, is_draft: false });
       }
     } catch (err) {
-      console.error('[AuthContext] Profile fetch failed (Network/Timeout):', err);
-      if (activeUser?.user_metadata?.role && !profile) {
-        setProfile({ 
-          id, 
-          role: activeUser.user_metadata.role, 
-          full_name: activeUser.user_metadata.full_name || 'User',
-          stage_code: activeUser.user_metadata.stage_code || null,
-          linked_teacher_id: activeUser.user_metadata.linked_teacher_id || null
-        });
-      }
+      console.error('[AuthContext] Fatal fetch error:', err);
     } finally {
-      setLoading(false);
+      // Only release loading if we have SOMETHING or we've exhausted retries
+      if (profile || (currentUserObj?.retry >= 2)) {
+        setLoading(false);
+      }
     }
   };
 
