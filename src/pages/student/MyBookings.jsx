@@ -66,18 +66,22 @@ export default function MyBookings() {
       const refundAmount = Number(bookingToCancel.schedules?.price) || 0;
       const isPaid = bookingToCancel.payment_status === 'PAID';
 
-      // 1. Update Booking Status in Supabase using valid payment_status values
+      // 1. Update Booking Status in Supabase
       // payment_status must be ('PENDING', 'PAID', 'VOID', 'REFUNDED')
-      const targetStatus = isPaid ? 'REFUNDED' : 'VOID';
+      // status: 'STUDENT CANCELLED' for teacher visibility
+      const targetPaymentStatus = isPaid ? 'REFUNDED' : 'VOID';
       
       const { error: cancelError } = await supabase
         .from('bookings')
-        .update({ payment_status: targetStatus })
+        .update({ 
+          payment_status: targetPaymentStatus,
+          status: 'STUDENT CANCELLED'
+        })
         .eq('id', bookingToCancel.id);
       
       if (cancelError) throw cancelError;
 
-      // 2. Refund if Paid
+      // 2. Refund if Paid (Any PAID session, Confirmed or Not)
       if (isPaid && teacherId && refundAmount > 0) {
         const { data: existingCredit } = await supabase
           .from('credits')
@@ -101,9 +105,9 @@ export default function MyBookings() {
               balance: refundAmount
             }]);
         }
-        toast.success(`Cancellation confirmed. ${refundAmount}$ has been added to your studio credits.`);
+        toast.success(`Spot released. ${refundAmount}$ refunded to your Credits.`);
       } else {
-        toast.success('Your reservation has been cancelled and the spot has been released.');
+        toast.success('Your reservation has been cancelled.');
       }
       
       setIsCancelModalOpen(false);
@@ -115,9 +119,9 @@ export default function MyBookings() {
     }
   };
 
-  const getStatusColor = (status, startTime) => {
+  const getStatusColor = (status, dbStatus, startTime) => {
     const isPast = !isAfter(parseISO(startTime), new Date());
-    if (status === 'REFUNDED' || status === 'CANCELLED') return 'text-studio-dark/40 bg-zinc-100 border-zinc-200';
+    if (status === 'REFUNDED' || status === 'CANCELLED' || dbStatus === 'STUDENT CANCELLED') return 'text-studio-dark/40 bg-zinc-100 border-zinc-200';
     if (isPast) return 'text-studio-dark/40 bg-zinc-100 border-zinc-200 opacity-60';
     
     if (status === 'PAID') return 'text-emerald-600 bg-emerald-500/10 border-emerald-500/20';
@@ -215,9 +219,10 @@ export default function MyBookings() {
                     <div className="flex-1">
                        <div className="flex flex-wrap items-center gap-4 mb-3">
                           <h3 className="text-2xl font-black text-studio-dark tracking-tight">{booking.schedules?.routines?.name}</h3>
-                          <div className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border shadow-sm ${getStatusColor(booking.payment_status, booking.schedules?.start_time)}`}>
+                          <div className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border shadow-sm ${getStatusColor(booking.payment_status, booking.status, booking.schedules?.start_time)}`}>
                             {isSessionCancelled ? 'Session Cancelled' :
-                             booking.status === 'CANCELLED' ? 'Cancelled' : 
+                             booking.status === 'STUDENT CANCELLED' ? 'Student Cancelled' :
+                             booking.status === 'CANCELLED' ? 'Cancelled by Teacher' : 
                              booking.payment_status === 'PAID' ? 'Confirmed' : 
                              booking.payment_status === 'PENDING' ? 'Reserved' : 
                              booking.payment_status}

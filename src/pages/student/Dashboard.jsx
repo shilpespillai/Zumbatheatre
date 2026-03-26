@@ -720,7 +720,7 @@ export default function StudentDashboard() {
                                   {(() => {
                                      // Find active booking, prioritizing PAID/PENDING over VOID
                                      const myBooking = myBookings
-                                       .filter(b => b.schedule_id === session.id)
+                                       .filter(b => b.schedule_id === session.id && b.status !== 'CANCELLED' && b.status !== 'STUDENT CANCELLED')
                                        .sort((a, b) => {
                                          const priority = { 'PAID': 0, 'PENDING': 1, 'VOID': 2 };
                                          return (priority[a.payment_status] || 9) - (priority[b.payment_status] || 9);

@@ -1124,14 +1124,13 @@ export default function TeacherDashboard() {
                              </div>
                            )}
                            <div className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest border ${
-                             booking.status === 'CANCELLED' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
-                             booking.payment_status === 'PAID' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-rose-bloom/10 text-rose-bloom border-rose-bloom/20'
+                             (booking.status === 'CANCELLED' || booking.status === 'STUDENT CANCELLED') ? 'bg-red-500/10 text-red-500 border-red-500/20' :
+                             'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
                            }`}>
-                             {booking.status === 'CANCELLED' ? (
-                               booking.payment_status === 'REFUNDED' ? 'Cancelled - Credit Refunded' : 'Cancelled'
-                             ) : (
-                               booking.payment_status === 'PAID' ? (booking.payment_method === 'CREDITS' ? 'Paid (Credits)' : 'Paid') : booking.payment_status
-                             )}
+                             {booking.status === 'STUDENT CANCELLED' ? 'Student Cancelled' :
+                              booking.status === 'CANCELLED' ? (booking.payment_status === 'REFUNDED' ? 'Cancelled - Credited' : 'Cancelled') :
+                              (booking.payment_status === 'PAID' ? (booking.payment_method === 'CREDITS' ? 'PAID (Credits)' : 'PAID') : 'RESERVED')
+                             }
                            </div>
                              {booking.payment_status === 'PENDING' && (
                                <button 
