@@ -333,6 +333,8 @@ export default function StudentBooking() {
         return;
       }
 
+      const effectiveTeacherId = teacher?.id || teacherId;
+
       if (paymentType === 'credits') {
         if (studentCredits < selectedSession.price) {
           toast.error('Insufficient credits for this stage.', { id: toastId });
@@ -340,26 +342,9 @@ export default function StudentBooking() {
           return;
         }
 
-        // Fetch latest credits to be safe
-        const { data: currentCredits, error: fetchErr } = await supabase
-          .from('credits')
-          .select('balance')
-          .eq('student_id', profile.id)
-          .eq('teacher_id', teacherId)
-          .single();
-
-        if (fetchErr) throw fetchErr;
-
-        // Deduct Credits
-        const { error: creditError } = await supabase
-          .from('credits')
-          .update({ balance: (Number(currentCredits.balance) || 0) - selectedSession.price })
-          .eq('student_id', profile.id)
-          .eq('teacher_id', teacherId);
-        
-        if (creditError) throw creditError;
-
-        // Create booking in Supabase
+        // Create booking in Supabase - We skip manual UPDATE here because 
+        // the tr_deduct_credits_on_payment trigger handles it automatically
+        // when the payment record is inserted below.
         const { data: bookingData, error: bookingError } = await supabase
           .from('bookings')
           .insert({
@@ -375,14 +360,16 @@ export default function StudentBooking() {
         
         if (bookingError) throw bookingError;
 
-        // Log payment record
-        await supabase.from('payments').insert({
+        // Log payment record - THIS TRIGGERS THE CREDIT DEDUCTION IN THE DB
+        const { error: paymentError } = await supabase.from('payments').insert({
           booking_id: bookingData.id,
           student_id: profile.id,
-          teacher_id: teacherId,
+          teacher_id: effectiveTeacherId, // MUST be UUID
           amount: selectedSession.price,
           status: 'SUCCEEDED'
         });
+
+        if (paymentError) throw paymentError;
 
         toast.success('Booked instantly using your credits!', { id: toastId });
         navigate('/student/dashboard');
@@ -409,7 +396,7 @@ export default function StudentBooking() {
         await supabase.from('payments').insert({
           booking_id: bookingData.id,
           student_id: profile.id,
-          teacher_id: teacherId,
+          teacher_id: effectiveTeacherId,
           amount: 0,
           status: 'SUCCEEDED'
         });
