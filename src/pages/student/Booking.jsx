@@ -734,6 +734,7 @@ export default function StudentBooking() {
                       key="empty"
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
                       className="py-12 text-center opacity-30 flex flex-col items-center relative z-10"
                     >
                       <CalendarIcon className="w-12 h-12 mb-4" />
