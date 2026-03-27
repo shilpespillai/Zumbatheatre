@@ -108,6 +108,53 @@ export default function Routines() {
   };
 
   return (
+    <>
+    <AnimatePresence>
+      {(loading && routines.length === 0) && (
+        <Motion.div 
+          initial={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.8, ease: "easeInOut" }}
+          className="fixed inset-0 z-[200] bg-bloom-white flex flex-col items-center justify-center pointer-events-none"
+        >
+          <Motion.div 
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.5 }}
+            className="relative"
+          >
+            <Motion.div 
+              animate={{ 
+                scale: [1, 1.2, 1],
+                opacity: [0.1, 0.2, 0.1] 
+              }}
+              transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+              className="absolute inset-0 bg-rose-bloom rounded-full blur-3xl -z-10"
+            />
+            
+            <div className="w-24 h-24 relative">
+               <Motion.div 
+                 animate={{ rotate: 360 }}
+                 transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+                 className="w-full h-full border-4 border-rose-bloom/10 border-t-rose-bloom rounded-full"
+               />
+               <Package className="absolute inset-0 m-auto w-8 h-8 text-rose-bloom animate-pulse" />
+            </div>
+          </Motion.div>
+          
+          <Motion.div 
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.3 }}
+            className="mt-8 text-center"
+          >
+            <h2 className="text-2xl font-black text-studio-dark italic tracking-tight">Organizing your Stage...</h2>
+            <p className="text-[10px] font-bold text-studio-dark/30 uppercase tracking-[0.4em] mt-2">Signature Routines & Energy</p>
+          </Motion.div>
+        </Motion.div>
+      )}
+    </AnimatePresence>
+
     <div className="min-h-screen bg-bloom-white text-studio-dark p-6 sm:p-10 font-sans">
       <div className="max-w-7xl mx-auto">
         <header className="flex justify-between items-center mb-12">
@@ -133,11 +180,7 @@ export default function Routines() {
           </button>
         </header>
 
-        {loading && routines.length === 0 ? (
-          <div className="flex justify-center py-20">
-            <div className="w-10 h-10 border-4 border-rose-bloom/20 border-t-rose-bloom rounded-full animate-spin" />
-          </div>
-        ) : routines.length === 0 ? (
+        {loading && routines.length === 0 ? null : routines.length === 0 ? (
           <div className="glass p-20 rounded-[4rem] text-center border-dashed border-2 border-apricot/40">
              <Package className="w-20 h-20 text-rose-bloom/10 mx-auto mb-6" />
              <h3 className="text-2xl font-black mb-2 text-studio-dark">No Routines Yet</h3>
@@ -272,5 +315,6 @@ export default function Routines() {
         </AnimatePresence>
       </div>
     </div>
+    </>
   );
 }

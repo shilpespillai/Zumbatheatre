@@ -6,7 +6,7 @@ import {
   Sparkles, Zap, Trophy, Heart
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { motion as Motion } from 'framer-motion';
+import { motion as Motion, AnimatePresence } from 'framer-motion';
 import { getStripe, createCheckoutSession } from '../../api/stripeService';
 import { getSystemConfig } from '../../api/systemConfig';
 
@@ -44,13 +44,7 @@ export default function TeacherSubscription() {
     ]
   }), [price]);
 
-  if (!profile) {
-    return (
-      <div className="min-h-screen bg-bloom-white flex items-center justify-center">
-        <div className="w-10 h-10 border-4 border-rose-bloom/20 border-t-rose-bloom rounded-full animate-spin" />
-      </div>
-    );
-  }
+  if (!profile) return null;
 
   const handleSubscribe = async () => {
     setLoading(true);
@@ -92,6 +86,53 @@ export default function TeacherSubscription() {
   };
 
   return (
+    <>
+    <AnimatePresence>
+      {(!profile || loading) && (
+        <Motion.div 
+          initial={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.8, ease: "easeInOut" }}
+          className="fixed inset-0 z-[200] bg-bloom-white flex flex-col items-center justify-center pointer-events-none"
+        >
+          <Motion.div 
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.5 }}
+            className="relative"
+          >
+            <Motion.div 
+              animate={{ 
+                scale: [1, 1.2, 1],
+                opacity: [0.1, 0.2, 0.1] 
+              }}
+              transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+              className="absolute inset-0 bg-rose-bloom rounded-full blur-3xl -z-10"
+            />
+            
+            <div className="w-24 h-24 relative">
+               <Motion.div 
+                 animate={{ rotate: 360 }}
+                 transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+                 className="w-full h-full border-4 border-rose-bloom/10 border-t-rose-bloom rounded-full"
+               />
+               <Sparkles className="absolute inset-0 m-auto w-8 h-8 text-rose-bloom animate-pulse" />
+            </div>
+          </Motion.div>
+          
+          <Motion.div 
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.3 }}
+            className="mt-8 text-center"
+          >
+            <h2 className="text-2xl font-black text-studio-dark italic tracking-tight">Activating Pro Stage...</h2>
+            <p className="text-[10px] font-bold text-studio-dark/30 uppercase tracking-[0.4em] mt-2">Premium Experience Hub</p>
+          </Motion.div>
+        </Motion.div>
+      )}
+    </AnimatePresence>
+
     <div className="min-h-screen bg-bloom-white text-studio-dark p-6 sm:p-10">
       <div className="max-w-4xl mx-auto">
         <button 
@@ -183,5 +224,6 @@ export default function TeacherSubscription() {
         </div>
       </div>
     </div>
+    </>
   );
 }

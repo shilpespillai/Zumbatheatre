@@ -9,10 +9,11 @@ import { format, parseISO, isSameDay, subDays, startOfDay, endOfDay } from 'date
 import { 
   AreaChart, Area, ResponsiveContainer, Tooltip as ReTooltip, XAxis
 } from 'recharts';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 
 export default function TeacherDashboard() {
-  const { profile, signOut, user } = useAuth();
+  const { profile, signOut, user, forceRefreshProfile } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [schedules, setSchedules] = useState([]);
   const [routines, setRoutines] = useState([]);
   const [bookings, setBookings] = useState([]);
@@ -51,19 +52,71 @@ export default function TeacherDashboard() {
   });
 
 
-  const fetchRoutines = useCallback(async () => {
+  const fetchMasterData = useCallback(async (forcedDate = null) => {
+    if (!user?.id) return;
+    setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('routines')
-        .select('*')
-        .eq('teacher_id', user.id);
-      
+      const { data, error } = await supabase.rpc('get_master_teacher_dashboard', {
+        p_teacher_id: user.id,
+        p_start_date: subDays(new Date(), 90).toISOString() // Fetch last 90 days for both dashboard and recent history
+      });
+
       if (error) throw error;
-      setRoutines(data || []);
+
+      // 1. Distribute Data (With proper mapping for nested objects)
+      const mappedBookings = (data.bookings || []).map(b => ({
+        ...b,
+        student: {
+          full_name: b.student_name || 'Anonymous Dancer',
+          avatar_url: b.student_avatar,
+          email: b.student_email || 'No Email'
+        }
+      }));
+
+      setRoutines(data.routines || []);
+      const mappedSchedules = (data.schedules || []).map(s => ({
+        ...s,
+        routines: { name: s.routine_name }
+      }));
+      setSchedules(mappedSchedules);
+      setBookings(mappedBookings);
+      if (data.profile?.stage_code) setInviteCode(data.profile.stage_code);
+
+      // 2. Process Recent Bookings (Using already mapped bookings)
+      setRecentBookings(mappedBookings.slice(0, 15));
+
+      // 3. Process Snapshot Metrics (Moved logic from individual effects to here)
+      const last7Days = Array.from({ length: 7 }, (_, i) => subDays(new Date(), i)).reverse();
+      const revenueTrend = last7Days.map(day => {
+        const dayPayments = (data.payments || []).filter(p => isSameDay(new Date(p.created_at), day));
+        return {
+          day: format(day, 'EEE'),
+          amount: dayPayments.reduce((sum, p) => sum + Number(p.amount), 0)
+        };
+      });
+
+      const studentTrend = last7Days.map(day => {
+        const dayBookings = (data.bookings || []).filter(b => isSameDay(new Date(b.created_at), day));
+        return {
+          day: format(day, 'EEE'),
+          count: dayBookings.length
+        };
+      });
+
+      setSnapshotData({
+        totalStudents: new Set((data.bookings || []).map(b => b.student_id)).size,
+        weeklyRevenue: revenueTrend.reduce((sum, r) => sum + r.amount, 0),
+        revenueTrend,
+        studentTrend
+      });
+
     } catch (err) {
-      console.error('[Dashboard] Fetch routines error:', err);
+      console.error('[Dashboard] Master fetch error:', err);
+      toast.error('Failed to load dashboard data');
+    } finally {
+      setLoading(false);
     }
-  }, [user.id]);
+  }, [user?.id]);
 
   const ensureInviteCode = useCallback(async () => {
     if (!user?.id) return;
@@ -139,98 +192,12 @@ export default function TeacherDashboard() {
     navigator.clipboard.writeText(text);
     toast.success('Code copied to clipboard!');
   };
-  const fetchBookings = useCallback(async (currentSchedules) => {
-    const activeSchedules = currentSchedules || schedules;
-    if (!activeSchedules || activeSchedules.length === 0) {
-      setBookings([]);
-      setRecentBookings([]); // Also clear recent bookings
-      return;
-    }
-
-    try {
-      const { data, error } = await supabase
-        .from('bookings')
-        .select('*, student:student_id(full_name, avatar_url, email)')
-        .in('schedule_id', activeSchedules.map(s => s.id))
-        .order('created_at', { ascending: false }); // Added order by created_at
-      
-      if (error) throw error;
-      
-      setBookings(data || []); // Keep original setBookings call
-
-      // Filter out any invalid bookings or handle null students for recent bookings
-      const validRecent = (data || []).map(b => ({
-        ...b,
-        student: b.student || { full_name: 'Guest Artist', email: 'Anonymous' }
-      }));
-      setRecentBookings(validRecent);
-    } catch (err) {
-      console.error('[Dashboard] Fetch bookings error:', err);
-    }
-  }, [schedules]);
-
-  const fetchSnapshotMetrics = useCallback(async () => {
-    try {
-      const { data: paymentsData } = await supabase
-        .from('payments')
-        .select('amount, created_at')
-        .eq('teacher_id', user.id);
-      
-      const { data: studentsData } = await supabase
-        .from('bookings')
-        .select('student_id, created_at')
-        .in('schedule_id', schedules.map(s => s.id));
-
-      if (!paymentsData) return;
-
-      const last7Days = Array.from({ length: 7 }, (_, i) => subDays(new Date(), i)).reverse();
-      
-      const revenueTrend = last7Days.map(day => {
-        const dayPayments = paymentsData.filter(p => isSameDay(new Date(p.created_at), day));
-        return {
-          day: format(day, 'EEE'),
-          amount: dayPayments.reduce((sum, p) => sum + Number(p.amount), 0)
-        };
-      });
-
-      const studentTrend = last7Days.map(day => {
-        const dayBookings = (studentsData || []).filter(b => isSameDay(new Date(b.created_at), day));
-        return {
-          day: format(day, 'EEE'),
-          count: dayBookings.length
-        };
-      });
-
-      setSnapshotData({
-        totalStudents: new Set((studentsData || []).map(b => b.student_id)).size,
-        weeklyRevenue: revenueTrend.reduce((sum, r) => sum + r.amount, 0),
-        revenueTrend,
-        studentTrend
-      });
-    } catch (e) {
-      console.error('[Dashboard] Snapshot error:', e);
-    }
-  }, [user.id, schedules]);
-
-  const fetchAllSchedules = useCallback(async () => {
-    setLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('schedules')
-        .select('*, routines(name, duration_minutes)')
-        .eq('teacher_id', user.id);
-      
-      if (error) throw error;
-      const schedulesData = data || [];
-      setSchedules(schedulesData);
-      fetchBookings(schedulesData);
-      fetchSnapshotMetrics();
-    } catch (err) {
-      console.error('[Dashboard] Fetch schedules error:', err);
-    } finally {
-      setLoading(false);
-    }
-  }, [user.id, fetchBookings]);
+  // Individual fetchers are now deprecated in favor of fetchMasterData, 
+  // but we keep their names as aliases if needed for small updates
+  const fetchRoutines = fetchMasterData;
+  const fetchAllSchedules = fetchMasterData;
+  const fetchBookings = fetchMasterData;
+  const fetchSnapshotMetrics = fetchMasterData;
 
   const handleQuickRoutineSubmit = async (e) => {
     e.preventDefault();
@@ -331,6 +298,13 @@ export default function TeacherDashboard() {
 
   const handleMarkAsPaid = async (bookingId) => {
     try {
+      // Find the booking in our local state to get data for the payment record
+      // We look in both general bookings and session-specific attendance bookings
+      const booking = (selectedSessionForAttendance?.bookings || []).find(b => b.id === bookingId) || 
+                      bookings.find(b => b.id === bookingId);
+                      
+      if (!booking) throw new Error('Booking context not found');
+
       const { error } = await supabase
         .from('bookings')
         .update({ 
@@ -340,6 +314,20 @@ export default function TeacherDashboard() {
         })
         .eq('id', bookingId);
       if (error) throw error;
+
+      // [PHASE 42] RECORD REVENUE: Manual payments must be recorded in the payments table 
+      // to show up in the Performance Studio / Revenue Reports.
+      const { error: paymentError } = await supabase.from('payments').insert({
+        booking_id: bookingId,
+        student_id: booking.student_id,
+        teacher_id: user.id,
+        amount: booking.amount || selectedSessionForAttendance?.price || (booking.schedules?.price) || 0,
+        status: 'SUCCEEDED'
+      });
+
+      if (paymentError) {
+        console.warn('[Dashboard] Payment record sync failed (Non-critical for booking):', paymentError);
+      }
       
       toast.success('Payment confirmed!');
       
@@ -358,7 +346,8 @@ export default function TeacherDashboard() {
         });
       }
     } catch (error) {
-      toast.error('Failed to update payment status');
+       console.error('[Dashboard] Payment update failed:', error);
+       toast.error('Failed to update payment status');
     }
   };
 
@@ -523,13 +512,71 @@ export default function TeacherDashboard() {
       setIsAttendanceModalOpen(true);
     };
 
-  }, [user?.id, fetchRoutines, fetchAllSchedules, ensureInviteCode]);
+    // Handle Subscription Success Redirect
+    const subStatus = searchParams.get('subscription');
+    if (subStatus === 'success') {
+      toast.success('Welcome to Pro Stage! Your premium features are now active.');
+      forceRefreshProfile();
+      setSearchParams({}, { replace: true });
+    } else if (subStatus === 'cancel') {
+      toast.error('Subscription activation cancelled.');
+      setSearchParams({}, { replace: true });
+    }
+
+  }, [user?.id, fetchRoutines, fetchAllSchedules, ensureInviteCode, searchParams, forceRefreshProfile, setSearchParams]);
 
   return (
+    <>
+    <AnimatePresence>
+      {loading && (
+        <Motion.div 
+          initial={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.8, ease: "easeInOut" }}
+          className="fixed inset-0 z-[200] bg-bloom-white flex flex-col items-center justify-center pointer-events-none"
+        >
+          <Motion.div 
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.5 }}
+            className="relative"
+          >
+            {/* Elegant pulsing background */}
+            <Motion.div 
+              animate={{ 
+                scale: [1, 1.2, 1],
+                opacity: [0.1, 0.2, 0.1] 
+              }}
+              transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+              className="absolute inset-0 bg-rose-bloom rounded-full blur-3xl -z-10"
+            />
+            
+            <div className="w-24 h-24 relative">
+               <Motion.div 
+                 animate={{ rotate: 360 }}
+                 transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+                 className="w-full h-full border-4 border-rose-bloom/10 border-t-rose-bloom rounded-full"
+               />
+               <Sparkles className="absolute inset-0 m-auto w-8 h-8 text-rose-bloom animate-pulse" />
+            </div>
+          </Motion.div>
+          
+          <Motion.div 
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.3 }}
+            className="mt-8 text-center"
+          >
+            <h2 className="text-2xl font-black text-studio-dark italic tracking-tight">Preparing the Stage...</h2>
+            <p className="text-[10px] font-bold text-studio-dark/30 uppercase tracking-[0.4em] mt-2">Zumbatheatre • Master Studio</p>
+          </Motion.div>
+        </Motion.div>
+      )}
+    </AnimatePresence>
+
     <Motion.div 
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: loading ? 0 : 1, y: loading ? 10 : 0 }}
       transition={{ duration: 0.6 }}
       className="min-h-screen bg-bloom-white text-studio-dark p-6 sm:p-10"
     >
@@ -1211,5 +1258,6 @@ export default function TeacherDashboard() {
         )}
       </AnimatePresence>
     </Motion.div>
+    </>
   );
 }

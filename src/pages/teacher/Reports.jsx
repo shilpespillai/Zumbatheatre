@@ -42,43 +42,7 @@ export default function TeacherReports() {
     if (!user) return;
     setLoading(true);
     try {
-      // 1. Fetch Teacher's Routines
-      const { data: routines, error: routinesError } = await supabase
-        .from('routines')
-        .select('id, name')
-        .eq('teacher_id', user.id);
-      if (routinesError) throw routinesError;
-
-      // 2. Fetch All Schedules for Teacher
-      const { data: schedules, error: schedulesError } = await supabase
-        .from('schedules')
-        .select('id, routine_id, start_time, price, seats_taken, max_seats, status')
-        .eq('teacher_id', user.id);
-      if (schedulesError) throw schedulesError;
-
-      if (!schedules || schedules.length === 0) {
-        setReportData(prev => ({ ...prev, activeRoutines: (routines || []).length }));
-        setLoading(false);
-        return;
-      }
-
-      const scheduleIds = schedules.map(s => s.id);
-
-      // 3. Fetch All Bookings for these schedules
-      const { data: bookings, error: bookingsError } = await supabase
-        .from('bookings')
-        .select('*, profiles:student_id(id, full_name), schedules!inner(routines(name))')
-        .in('schedule_id', scheduleIds);
-      if (bookingsError) throw bookingsError;
-
-      // 4. Fetch All Payments for these bookings
-      const { data: payments, error: paymentsError } = await supabase
-        .from('payments')
-        .select('*, bookings!inner(schedule_id, student_id)')
-        .in('bookings.schedule_id', scheduleIds);
-      if (paymentsError) throw paymentsError;
-
-      // Filter by Time Range
+      // 1. Calculate Start Date based on Time Range
       let startDate;
       const now = new Date();
       if (timeRange === '30days') startDate = subDays(now, 30);
@@ -87,12 +51,28 @@ export default function TeacherReports() {
       else if (timeRange === 'ytd') startDate = new Date(now.getFullYear(), 0, 1);
       else startDate = new Date(0);
 
-      const filteredPayments = (payments || []).filter(p => new Date(p.created_at) >= startDate);
-      const filteredBookings = (bookings || []).filter(b => {
-        const s = schedules.find(sch => sch.id === b.schedule_id);
-        return s && new Date(s.start_time) >= startDate;
+      const startDateISO = startDate.toISOString();
+
+      // 2. Fetch Consolidated Data via Master RPC
+      const { data, error: rpcError } = await supabase.rpc('get_master_teacher_dashboard', {
+        p_teacher_id: user.id,
+        p_start_date: startDateISO
       });
-      const filteredSchedules = (schedules || []).filter(s => new Date(s.start_time) >= startDate);
+
+      if (rpcError) throw rpcError;
+
+      const { routines, schedules, bookings, payments } = data;
+
+      if (!schedules || schedules.length === 0) {
+        setReportData(prev => ({ ...prev, activeRoutines: (routines || []).length }));
+        setLoading(false);
+        return;
+      }
+
+      // Calculations use the consolidated local arrays now
+      const filteredPayments = payments || [];
+      const filteredBookings = bookings || [];
+      const filteredSchedules = schedules || [];
 
       // Calculations
       const totalRevenue = filteredPayments.reduce((sum, p) => sum + Number(p.amount), 0);
@@ -113,7 +93,7 @@ export default function TeacherReports() {
 
       // 2. Popular Routines
       const routineCounts = filteredBookings.reduce((acc, b) => {
-        const name = b.schedules?.routines?.name || b.routines?.name || 'Unknown Routine';
+        const name = b.routine_name || 'Unknown Routine';
         acc[name] = (acc[name] || 0) + 1;
         return acc;
       }, {});
@@ -227,24 +207,95 @@ export default function TeacherReports() {
   };
 
   const renderActiveShape = (props) => {
-    const RADIAN = Math.PI / 180;
-    const { cx, cy, midAngle, innerRadius, outerRadius, startAngle, endAngle, fill, payload, value } = props;
+    const { cx, cy, midAngle, innerRadius, outerRadius, startAngle, endAngle, fill, payload, percent, value } = props;
     return (
       <g>
-        <text x={cx} y={cy} dy={8} textAnchor="middle" fill={fill} className="text-[10px] font-black uppercase tracking-tighter">
+        <text x={cx} y={cy} dy={-10} textAnchor="middle" fill={fill} className="text-[12px] font-black uppercase tracking-tighter">
           {payload.name}
         </text>
-        <Sector cx={cx} cy={cy} innerRadius={innerRadius} outerRadius={outerRadius} startAngle={startAngle} endAngle={endAngle} fill={fill} />
-        <Sector cx={cx} cy={cy} startAngle={startAngle} endAngle={endAngle} innerRadius={outerRadius + 6} outerRadius={outerRadius + 10} fill={fill} />
+        <text x={cx} y={cy} dy={15} textAnchor="middle" fill="#4A3B3E" className="text-[18px] font-black">
+          {value}
+        </text>
+        <Sector cx={cx} cy={cy} innerRadius={innerRadius} outerRadius={outerRadius + 8} startAngle={startAngle} endAngle={endAngle} fill={fill} />
+        <Sector cx={cx} cy={cy} startAngle={startAngle} endAngle={endAngle} innerRadius={outerRadius + 12} outerRadius={outerRadius + 16} fill={fill} />
       </g>
     );
   };
 
-  if (loading && !reportData.historicalRevenue.length) {
-     return <div className="min-h-screen bg-bloom-white flex items-center justify-center"><div className="w-12 h-12 border-4 border-rose-bloom/20 border-t-rose-bloom rounded-full animate-spin" /></div>;
-  }
+  const renderCustomLabel = ({ cx, cy, midAngle, outerRadius, name, percent }) => {
+    const RADIAN = Math.PI / 180;
+    const sin = Math.sin(-RADIAN * midAngle);
+    const cos = Math.cos(-RADIAN * midAngle);
+    const sx = cx + (outerRadius + 10) * cos;
+    const sy = cy + (outerRadius + 10) * sin;
+    const mx = cx + (outerRadius + 20) * cos;
+    const my = cy + (outerRadius + 20) * sin;
+    const ex = mx + (cos >= 0 ? 1 : -1) * 22;
+    const ey = my;
+    const textAnchor = cos >= 0 ? 'start' : 'end';
+
+    return (
+      <g>
+        <path d={`M${sx},${sy}L${mx},${my}L${ex},${ey}`} stroke="#4A3B3E" strokeOpacity={0.2} fill="none" />
+        <circle cx={ex} cy={ey} r={2} fill="#4A3B3E" stroke="none" />
+        <text x={ex + (cos >= 0 ? 1 : -1) * 8} y={ey} textAnchor={textAnchor} fill="#4A3B3E" className="text-[8px] font-black uppercase tracking-widest leading-none">
+          {name}
+        </text>
+        <text x={ex + (cos >= 0 ? 1 : -1) * 8} y={ey} dy={12} textAnchor={textAnchor} fill="#FE7A8A" className="text-[10px] font-black">
+          {`${(percent * 100).toFixed(0)}%`}
+        </text>
+      </g>
+    );
+  };
 
   return (
+    <>
+    <AnimatePresence>
+      {(loading && !reportData.historicalRevenue.length) && (
+        <Motion.div 
+          initial={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.8, ease: "easeInOut" }}
+          className="fixed inset-0 z-[200] bg-bloom-white flex flex-col items-center justify-center pointer-events-none"
+        >
+          <Motion.div 
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.5 }}
+            className="relative"
+          >
+            <Motion.div 
+              animate={{ 
+                scale: [1, 1.2, 1],
+                opacity: [0.1, 0.2, 0.1] 
+              }}
+              transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+              className="absolute inset-0 bg-rose-bloom rounded-full blur-3xl -z-10"
+            />
+            
+            <div className="w-24 h-24 relative">
+               <Motion.div 
+                 animate={{ rotate: 360 }}
+                 transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+                 className="w-full h-full border-4 border-rose-bloom/10 border-t-rose-bloom rounded-full"
+               />
+               <TrendingUp className="absolute inset-0 m-auto w-8 h-8 text-rose-bloom animate-pulse" />
+            </div>
+          </Motion.div>
+          
+          <Motion.div 
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.3 }}
+            className="mt-8 text-center"
+          >
+            <h2 className="text-2xl font-black text-studio-dark italic tracking-tight">Syncing Rhythms...</h2>
+            <p className="text-[10px] font-bold text-studio-dark/30 uppercase tracking-[0.4em] mt-2">Performance Studio Analytics</p>
+          </Motion.div>
+        </Motion.div>
+      )}
+    </AnimatePresence>
+
     <Motion.div 
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
@@ -326,8 +377,8 @@ export default function TeacherReports() {
              <h3 className="text-2xl font-black text-studio-dark mb-1">Rhythm Trends</h3>
              <p className="text-[10px] font-black text-[#4A3B3E]/40 uppercase tracking-widest mb-12">Daily revenue performance</p>
              <div className="h-64 w-full">
-               <ResponsiveContainer width="100%" height="100%">
-                 <AreaChart data={reportData.revenueTrend}>
+                <ResponsiveContainer width="100%" height="100%" minHeight={100}>
+                  <AreaChart data={reportData.revenueTrend}>
                    <defs>
                      <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
                        <stop offset="5%" stopColor="#FE7A8A" stopOpacity={0.6}/>
@@ -339,7 +390,7 @@ export default function TeacherReports() {
                    <Tooltip content={<CustomTooltip />} />
                    <Area type="monotone" dataKey="amount" stroke="#FE7A8A" strokeWidth={6} fill="url(#colorRevenue)" animationDuration={1500} />
                  </AreaChart>
-               </ResponsiveContainer>
+                </ResponsiveContainer>
              </div>
           </div>
 
@@ -347,8 +398,8 @@ export default function TeacherReports() {
               <h3 className="text-xl font-black text-studio-dark mb-1">Peak Energy</h3>
               <p className="text-[10px] font-black text-[#4A3B3E]/40 uppercase tracking-widest mb-10">Engagement by hour</p>
               <div className="h-48 w-full">
-                 <ResponsiveContainer width="100%" height="100%">
-                   <BarChart data={reportData.peakHours}>
+                  <ResponsiveContainer width="100%" height="100%" minHeight={100}>
+                    <BarChart data={reportData.peakHours}>
                      <XAxis dataKey="hour" tickFormatter={(h) => `${h > 12 ? h-12 : h}${h >= 12 ? 'p' : 'a'}`} axisLine={false} tickLine={false} tick={{ fontSize: 9, fontWeight: 900, fill: '#4A3B3E40' }} dy={10} />
                      <Tooltip content={<CustomTooltip />} cursor={{ fill: '#FE7A8A10' }} />
                      <Bar dataKey="count" radius={[10, 10, 10, 10]} barSize={12}>
@@ -373,7 +424,7 @@ export default function TeacherReports() {
                  <Activity className="w-6 h-6 text-rose-bloom opacity-20" />
               </div>
               <div className="h-64 w-full">
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height="100%" minHeight={100}>
                   <RePieChart>
                     <Pie
                       activeIndex={activeIndexEngagement}
@@ -386,6 +437,8 @@ export default function TeacherReports() {
                       dataKey="value"
                       onMouseEnter={(_, index) => setActiveIndexEngagement(index)}
                       animationDuration={1500}
+                      label={renderCustomLabel}
+                      labelLine={false}
                     >
                       {reportData.engagementDistribution.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.color} />
@@ -416,7 +469,7 @@ export default function TeacherReports() {
                  <Sparkles className="w-6 h-6 text-rose-bloom opacity-20" />
               </div>
               <div className="h-64 w-full">
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height="100%" minHeight={100}>
                   <RePieChart>
                     <Pie
                       activeIndex={activeIndex}
@@ -428,6 +481,8 @@ export default function TeacherReports() {
                       outerRadius={85}
                       dataKey="value"
                       onMouseEnter={(_, index) => setActiveIndex(index)}
+                      label={renderCustomLabel}
+                      labelLine={false}
                     >
                       {reportData.popularRoutines.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={['#FE7A8A', '#4A3B3E', '#FFB38A'][index % 3]} />
@@ -455,5 +510,6 @@ export default function TeacherReports() {
         </div>
       </div>
     </Motion.div>
+    </>
   );
 }

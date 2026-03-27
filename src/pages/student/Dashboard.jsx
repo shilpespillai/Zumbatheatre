@@ -551,19 +551,25 @@ export default function StudentDashboard() {
       const b_tid = b.teacher_id || b.schedules?.teacher_id || b.schedules?.[0]?.teacher_id;
       return b_tid === profile?.linked_teacher_id && 
       ['PAID', 'PENDING'].includes(b.payment_status) &&
+      !['CANCELLED', 'STUDENT CANCELLED'].includes(b.status) &&
       b.payment_method !== 'LOYALTY_REWARD';
     });
     const loyaltySettings = teacherProfile?.loyalty_settings || { required_sessions: 10, enabled: true };
     const required = loyaltySettings.required_sessions || 10;
     const paidCount = activeTeacherBookings.length;
+    
+    // Count ONLY non-cancelled loyalty rewards
     const rewardCount = bookings.filter(b => {
       const b_tid = b.teacher_id || b.schedules?.teacher_id || b.schedules?.[0]?.teacher_id;
-      return b_tid === profile?.linked_teacher_id && b.payment_method === 'LOYALTY_REWARD';
+      return b_tid === profile?.linked_teacher_id && 
+             b.payment_method === 'LOYALTY_REWARD' &&
+             !['CANCELLED', 'STUDENT CANCELLED'].includes(b.status);
     }).length;
     
     const earnedRewards = Math.floor(paidCount / required);
     const isEligible = earnedRewards > rewardCount;
-    const loyaltyProgressCount = isEligible ? required : (paidCount % required);
+    // CRITICAL: Always show actual progress towards the NEXT card, don't force to 10 if eligible
+    const loyaltyProgressCount = paidCount % required;
 
     const stats = {
       totalSessions, routineVariety: routineVarietyWithPerformance, routineCategoryMix, attendanceTrend, energyBurn: Math.round(totalEnergyBurn),
@@ -573,7 +579,8 @@ export default function StudentDashboard() {
         current: loyaltyProgressCount,
         total: required,
         remaining: Math.max(0, required - loyaltyProgressCount),
-        isUnlocked: isEligible
+        isUnlocked: isEligible,
+        unlockedCount: Math.max(0, earnedRewards - rewardCount)
       }
     };
     setStudentStats(stats);

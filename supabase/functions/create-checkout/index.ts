@@ -4,7 +4,7 @@ import Stripe from "https://esm.sh/stripe@12.1.1?target=deno"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-user-id',
 }
 
 // Function to decrypt data using AES-GCM

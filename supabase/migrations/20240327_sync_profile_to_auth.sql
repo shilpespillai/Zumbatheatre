@@ -13,7 +13,8 @@ BEGIN
             'full_name', NEW.full_name,
             'role', NEW.role,
             'stage_code', NEW.stage_code,
-            'linked_teacher_id', NEW.linked_teacher_id
+            'linked_teacher_id', NEW.linked_teacher_id,
+            'is_subscribed', NEW.is_subscribed
         )
     WHERE id = NEW.id;
     
@@ -24,7 +25,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- Trigger on public.profiles
 DROP TRIGGER IF EXISTS on_profile_updated_sync_auth ON public.profiles;
 CREATE TRIGGER on_profile_updated_sync_auth
-    AFTER UPDATE OF full_name, role, stage_code, linked_teacher_id ON public.profiles
+    AFTER UPDATE OF full_name, role, stage_code, linked_teacher_id, is_subscribed ON public.profiles
     FOR EACH ROW EXECUTE FUNCTION public.sync_metadata_from_profile();
 
 -- Initial sync for existing data
@@ -40,7 +41,8 @@ BEGIN
                 'full_name', p.full_name,
                 'role', p.role,
                 'stage_code', p.stage_code,
-                'linked_teacher_id', p.linked_teacher_id
+                'linked_teacher_id', p.linked_teacher_id,
+                'is_subscribed', p.is_subscribed
             )
         WHERE id = p.id;
     END LOOP;
