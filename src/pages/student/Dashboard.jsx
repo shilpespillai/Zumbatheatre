@@ -314,7 +314,7 @@ export default function StudentDashboard() {
     setLastFetchError(null);
     try {
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Request timed out (10s)')), 10000)
+        setTimeout(() => reject(new Error('Database is taking a while to wake up... (30s)')), 30000)
       );
       
       const fetchPromise = supabase

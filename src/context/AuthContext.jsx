@@ -132,8 +132,8 @@ export const AuthProvider = ({ children }) => {
         setLoading(false); // Unblock UI early
       }
       
-      // Increased timeout to 12s to give Supabase room to cold-start without cutting off the DB fetch too soon
-      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('AuthContext Fetch Timeout')), 12001));
+      // Increased timeout to 30s to give Supabase room to cold-start without cutting off the DB fetch too soon
+      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('AuthContext Fetch Timeout (30s)')), 30001));
       const fetchPromise = supabase.from('profiles').select('*').eq('id', id).single();
       
       const { data, error } = await Promise.race([fetchPromise, timeoutPromise]);
