@@ -336,7 +336,10 @@ export default function StudentDashboard() {
       
       const fetchPromise = supabase
         .from('schedules')
-        .select('*')
+        .select(`
+          *,
+          routines (name, duration_minutes, default_price)
+        `)
         .eq('teacher_id', teacherId);
       
       const { data, error } = await Promise.race([fetchPromise, timeoutPromise]);
@@ -798,11 +801,14 @@ export default function StudentDashboard() {
                                       )}
                                     </div>
                                   </div>
-                                  {isGlobalMode && session.profiles?.full_name && (
-                                    <div className="text-[7px] font-black text-rose-bloom/60 uppercase tracking-tighter bg-white/40 px-2 py-1 rounded-lg">
-                                      Instructor: {session.profiles.full_name}
-                                    </div>
-                                  )}
+                                  <div className="flex flex-col items-end">
+                                    <div className="text-[9px] font-black text-rose-bloom tracking-tight">${session.price || session.routines?.default_price || '0.00'}</div>
+                                    {isGlobalMode && session.profiles?.full_name && (
+                                      <div className="text-[7px] font-black text-rose-bloom/60 uppercase tracking-tighter bg-white/40 px-2 py-1 rounded-lg">
+                                        Instructor: {session.profiles.full_name}
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
 
                                 {/* Row 2: Routine Name */}
