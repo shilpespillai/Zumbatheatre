@@ -967,9 +967,10 @@ export default function StudentDashboard() {
                     </div>
                   )}
 
-                  <div className="bg-white/60 p-10 rounded-[3rem] border border-apricot/60 text-center">
-                     <div className="text-[10px] font-black text-rose-bloom uppercase tracking-widest mb-2">Stage Credits</div>
-                    <div className="text-4xl font-black text-studio-dark mb-8">${studentCredits.toFixed(2)}</div>
+                  <div className="bg-white/80 backdrop-blur-md p-10 rounded-[3rem] border border-rose-bloom/10 text-center relative overflow-hidden group shadow-sm hover:shadow-xl transition-all">
+                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-apricot via-rose-bloom to-apricot opacity-20 group-hover:opacity-100 transition-opacity" />
+                    <div className="text-[10px] font-black text-rose-bloom/40 uppercase tracking-[0.2em] mb-3">Stage Credits</div>
+                    <div className="text-5xl font-black text-studio-dark mb-8 tracking-tighter group-hover:scale-110 transition-transform duration-500">${studentCredits.toFixed(2)}</div>
                     <div className="space-y-4">
                       {visitedStages.length > 1 && (
                         <div className="pt-6 border-t border-apricot/20">
