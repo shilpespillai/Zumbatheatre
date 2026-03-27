@@ -787,24 +787,34 @@ export default function StudentDashboard() {
                             .filter(s => isSameDay(parseISO(s.start_time), selectedDate))
                             .sort((a, b) => new Date(a.start_time) - new Date(b.start_time))
                             .map((session, idx) => (
-                              <div key={idx} className={`flex flex-col gap-4 p-6 bg-white/60 rounded-[2rem] border transition-all ${conflicts.has(session.id) ? 'border-red-500 bg-red-500/5 shadow-lg shadow-red-500/10 animate-pulse' : 'border-rose-petal/30 hover:border-rose-petal/50'}`}>
-                                {/* Row 1: Time & Metadata */}
-                                <div className="flex items-center justify-between">
-                                  <div className="flex items-center gap-2">
-                                    <div className={`p-2 rounded-lg ${conflicts.has(session.id) ? 'bg-red-500/20' : 'bg-rose-petal/10'}`}>
-                                      <Clock className={`w-3 h-3 ${conflicts.has(session.id) ? 'text-red-600' : 'text-rose-bloom'}`} />
+                              <div key={idx} className={`flex flex-col gap-4 p-7 bg-white/80 backdrop-blur-md rounded-[2.5rem] border transition-all relative overflow-hidden group/card shadow-sm hover:shadow-xl hover:-translate-y-1 ${conflicts.has(session.id) ? 'border-red-500 bg-red-500/5 shadow-lg shadow-red-500/10 animate-pulse' : 'border-rose-bloom/10 hover:border-rose-bloom/30'}`}>
+                                {/* Iridescent Accent */}
+                                <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-rose-bloom/5 to-apricot/5 blur-3xl rounded-full -mr-10 -mt-10" />
+                                
+                                {/* Row 1: Time & Price Badge */}
+                                <div className="flex items-center justify-between relative z-10">
+                                  <div className="flex items-center gap-3">
+                                    <div className={`p-2.5 rounded-xl ${conflicts.has(session.id) ? 'bg-red-500/20' : 'bg-rose-bloom/10 shadow-inner'}`}>
+                                      <Clock className={`w-3.5 h-3.5 ${conflicts.has(session.id) ? 'text-red-600' : 'text-rose-bloom'}`} />
                                     </div>
-                                    <div className="text-xs font-black text-studio-dark tracking-tight flex items-center gap-2">
-                                      {format(parseISO(session.start_time), 'hh:mm a')}
-                                      {conflicts.has(session.id) && (
-                                        <span className="text-[7px] bg-red-600 text-white px-2 py-0.5 rounded-full uppercase tracking-widest font-black">Conflict</span>
-                                      )}
+                                    <div className="flex flex-col">
+                                      <div className="text-[8px] font-black text-rose-bloom/40 uppercase tracking-[0.2em] mb-0.5 leading-none">Stage Time</div>
+                                      <div className="text-[13px] font-black text-studio-dark tracking-tighter leading-none">
+                                        {format(parseISO(session.start_time), 'hh:mm a')}
+                                      </div>
                                     </div>
+                                    {conflicts.has(session.id) && (
+                                      <span className="text-[7px] bg-red-600 text-white px-2 py-0.5 rounded-full uppercase tracking-widest font-black absolute -top-2 left-2 shadow-lg">Conflict</span>
+                                    )}
                                   </div>
+
                                   <div className="flex flex-col items-end">
-                                    <div className="text-[9px] font-black text-rose-bloom tracking-tight">${session.price || session.routines?.default_price || '0.00'}</div>
+                                    <div className="bg-gradient-to-br from-amber-400 to-amber-600 px-3 py-1.5 rounded-xl shadow-lg shadow-amber-500/20 border border-white/20 transform group-hover/card:scale-110 transition-transform">
+                                      <div className="text-[7px] font-black text-white/60 uppercase tracking-tighter leading-none mb-0.5">Energy</div>
+                                      <div className="text-xs font-black text-white tracking-tight leading-none">${session.price || session.routines?.default_price || '0.00'}</div>
+                                    </div>
                                     {isGlobalMode && session.profiles?.full_name && (
-                                      <div className="text-[7px] font-black text-rose-bloom/60 uppercase tracking-tighter bg-white/40 px-2 py-1 rounded-lg">
+                                      <div className="text-[7px] font-black text-rose-bloom/40 uppercase tracking-tighter mt-2 bg-rose-bloom/5 px-2 py-1 rounded-lg">
                                         Instructor: {session.profiles.full_name}
                                       </div>
                                     )}
@@ -812,10 +822,11 @@ export default function StudentDashboard() {
                                 </div>
 
                                 {/* Row 2: Routine Name */}
-                                <div>
-                                   <div className="text-lg font-black text-studio-dark italic tracking-tight leading-tight">
+                                <div className="relative z-10 mt-1">
+                                   <div className="text-xl font-black text-studio-dark italic tracking-tighter leading-none mb-1 group-hover/card:text-rose-bloom transition-colors">
                                      {session.routines?.name || 'Standard Session'}
                                    </div>
+                                   <div className="w-8 h-1 bg-rose-bloom/20 rounded-full group-hover/card:w-16 transition-all duration-500" />
                                 </div>
                                 
                                 {/* Row 3: Action Button */}
