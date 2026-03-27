@@ -52,22 +52,45 @@ export default function StudentBooking() {
   }, [allStudentBookings]);
 
   const fetchTeacher = useCallback(async () => {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', teacherId)
-      .single();
-    if (error) {
-      console.error('[Booking] Fetch teacher error:', error);
-      return;
-    }
-    const teacherData = data;
-    setTeacher(data);
-    
-    // Update Cache
-    localStorage.setItem(`cache_teacher_profile_${teacherId}`, JSON.stringify(data));
+    try {
+      // 1. First try UUID (direct) - wrap in try/catch or use simple eq if valid UUID
+      let data, error;
+      
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(teacherId);
+      
+      if (isUUID) {
+        const result = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', teacherId)
+          .maybeSingle();
+        data = result.data;
+        error = result.error;
+      }
 
-    if (teacherData) {
+      // 2. If no data or not UUID, try stage code
+      if (!data) {
+        const result = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('stage_code', teacherId)
+          .maybeSingle();
+        data = result.data;
+        error = result.error;
+      }
+
+      if (error) throw error;
+      if (!data) {
+        console.warn('[Booking] Teacher not found:', teacherId);
+        return;
+      }
+
+      const teacherData = data;
+      setTeacher(data);
+      
+      // Update Cache using the ID (not the URL param if it was a code)
+      localStorage.setItem(`cache_teacher_profile_${data.id}`, JSON.stringify(data));
+
       const settings = teacherData.payment_settings || {};
       const config = settings.config || {};
       const enabledMethods = settings.enabledMethods || [];
@@ -76,18 +99,19 @@ export default function StudentBooking() {
       if (enabledMethods.length > 0) {
         available = enabledMethods;
       } else {
-        // Fallback for legacy data
         if (config.paypal_url) available.push('paypal');
         if (config.bank_instructions) available.push('manual');
       }
       
-      // ONLY set default if not already selected to avoid resetting on re-fetches
       setSelectedMethod(current => current || settings.method || (available.length > 0 ? available[0] : null));
+    } catch (err) {
+      console.error('[Booking] Fetch teacher error:', err);
     }
   }, [teacherId]);
 
   // [PERSISTENCE PHASE] Load cached data immediately on mount
   useEffect(() => {
+    // We try to load by both teacherId (URL) and also check if teacher state updates later
     const cachedTeacher = localStorage.getItem(`cache_teacher_profile_${teacherId}`);
     const cachedSchedules = localStorage.getItem(`cache_booking_schedules_${teacherId}`);
     const cachedCredits = localStorage.getItem(`cache_credits_${profile?.linked_teacher_id}`);
@@ -98,13 +122,17 @@ export default function StudentBooking() {
     if (cachedCredits) setStudentCredits(JSON.parse(cachedCredits));
     if (cachedLoyaltyEligible) setLoyaltyEligible(JSON.parse(cachedLoyaltyEligible));
     
-    // If we have any cached data, stop the skeleton/empty state immediately
     if (cachedTeacher || cachedSchedules) {
       setLoading(false);
     }
   }, [teacherId, profile?.linked_teacher_id]);
 
   const fetchSchedules = useCallback(async () => {
+    // We MUST use the teacher's UUID (teacher?.id) if fetchTeacher already resolved it!
+    // But for initial load, teacherId (params) might be all we have.
+    const effectiveTeacherId = teacher?.id || teacherId;
+    if (!effectiveTeacherId) return;
+
     const firstDay = startOfMonth(currentMonth);
     const lastDay = endOfMonth(currentMonth);
     const searchParams = new URLSearchParams(window.location.search);
@@ -113,7 +141,7 @@ export default function StudentBooking() {
     const { data, error } = await supabase
       .from('schedules')
       .select('*, routines(name, description, duration_minutes)')
-      .eq('teacher_id', teacherId)
+      .eq('teacher_id', effectiveTeacherId)
       .eq('status', 'SCHEDULED')
       .gte('start_time', firstDay.toISOString())
       .lte('start_time', lastDay.toISOString());
@@ -126,7 +154,7 @@ export default function StudentBooking() {
 
     const schedulesData = data || [];
     setSchedules(schedulesData);
-    localStorage.setItem(`cache_booking_schedules_${teacherId}`, JSON.stringify(schedulesData));
+    localStorage.setItem(`cache_booking_schedules_${effectiveTeacherId}`, JSON.stringify(schedulesData));
 
     if (sessionId) {
       const session = schedulesData.find(s => s.id === sessionId);
@@ -137,17 +165,18 @@ export default function StudentBooking() {
     }
 
     setLoading(false);
-  }, [teacherId, currentMonth]);
+  }, [teacher?.id, teacherId, currentMonth]);
 
   const fetchCredits = useCallback(async () => {
-    if (!profile?.id || !teacherId) return;
+    const effectiveTeacherId = teacher?.id || teacherId;
+    if (!profile?.id || !effectiveTeacherId) return;
     try {
       const { data, error } = await supabase
         .from('credits')
         .select('balance')
         .eq('student_id', profile.id)
-        .eq('teacher_id', teacherId)
-        .single();
+        .eq('teacher_id', effectiveTeacherId)
+        .maybeSingle();
       
       if (!error && data) {
         setStudentCredits(parseFloat(data.balance));
@@ -159,57 +188,60 @@ export default function StudentBooking() {
     } catch (err) {
       console.error('[Booking] Fetch credits error:', err);
     }
-  }, [profile?.id, teacherId, profile?.linked_teacher_id]);
+  }, [profile?.id, teacher?.id, teacherId, profile?.linked_teacher_id]);
 
   const fetchAllStudentBookings = useCallback(async () => {
-    if (!profile?.id) return;
+    const effectiveTeacherId = teacher?.id || teacherId;
+    if (!profile?.id || !effectiveTeacherId) return;
     try {
       const { data, error } = await supabase
         .from('bookings')
         .select('*, schedules(teacher_id, start_time, routines(name, duration_minutes))')
         .eq('student_id', profile.id)
-        .not('payment_status', 'in', '("CANCELLED","VOID")')
-        .not('status', 'in', '("CANCELLED","STUDENT CANCELLED")');
-      
+        .not('status', 'in', '("STUDENT CANCELLED","CANCELLED")');
+
       if (!error) {
         setAllStudentBookings(data || []);
         
         // Calculate Loyalty Eligibility
         const teacherLoyalty = teacher?.loyalty_settings || { required_sessions: 10, enabled: true };
         if (teacherLoyalty.enabled !== false) {
-          const teacherBookings = (data || []).filter(b => {
-          const b_tid = String(b.teacher_id || b.schedules?.teacher_id || b.schedules?.[0]?.teacher_id || '').toLowerCase();
-          const targetTid = String(teacherId).toLowerCase();
-          return b_tid === targetTid && 
-          ['PAID', 'PENDING'].includes(b.payment_status) && 
-          b.payment_method !== 'LOYALTY_REWARD';
-        });
-
-        const required = teacherLoyalty.required_sessions || 10;
-        const paidCount = teacherBookings.length;
-        
-        const redeemedRewardsBookings = (data || []).filter(b => {
-           const b_tid = String(b.teacher_id || b.schedules?.teacher_id || b.schedules?.[0]?.teacher_id || '').toLowerCase();
-           const targetTid = String(teacherId).toLowerCase();
-           return b_tid === targetTid && b.payment_method === 'LOYALTY_REWARD';
-        });
-        const rewardCount = redeemedRewardsBookings.length;
-        
-        // Final Eligibility Check
-        const earnedRewards = Math.floor(paidCount / required);
-        const eligibility = earnedRewards > rewardCount;
-        
-        console.log('[Booking] Loyalty Audit:', { paidCount, required, earnedRewards, rewardCount, eligibility });
-        setLoyaltyEligible(eligibility);
+          const targetUuid = String(effectiveTeacherId).toLowerCase();
           
-          // Cache this for the next visit
-          localStorage.setItem(`cache_loyalty_eligible_${teacherId}`, JSON.stringify(eligibility));
+          const teacherBookings = (data || []).filter(b => {
+            const b_tid = String(b.teacher_id || b.schedules?.teacher_id || b.schedules?.[0]?.teacher_id || '').toLowerCase();
+            return b_tid === targetUuid && 
+                   ['PAID', 'PENDING'].includes(b.payment_status) && 
+                   b.payment_method !== 'LOYALTY_REWARD';
+          });
+
+          const required = teacherLoyalty.required_sessions || 10;
+          const paidCount = teacherBookings.length;
+          
+          const redeemedRewardsBookings = (data || []).filter(b => {
+             const b_tid = String(b.teacher_id || b.schedules?.teacher_id || b.schedules?.[0]?.teacher_id || '').toLowerCase();
+             return b_tid === targetUuid && b.payment_method === 'LOYALTY_REWARD';
+          });
+          const rewardCount = redeemedRewardsBookings.length;
+          
+          const earnedRewards = Math.floor(paidCount / required);
+          const eligibility = earnedRewards > rewardCount;
+          
+          console.log('[Booking] Loyalty Audit (Resolved):', { 
+            teacherId: targetUuid,
+            paidCount, 
+            rewardCount, 
+            eligibility 
+          });
+          
+          setLoyaltyEligible(eligibility);
+          localStorage.setItem(`cache_loyalty_eligible_${effectiveTeacherId}`, JSON.stringify(eligibility));
         }
       }
     } catch (err) {
       console.error('[Booking] Fetch all bookings error:', err);
     }
-  }, [profile?.id, teacherId, teacher?.loyalty_settings]);
+  }, [profile?.id, teacher?.id, teacherId, teacher?.loyalty_settings]);
 
   // 1. Fetch Teacher Profile (Once per teacherId)
   useEffect(() => {
