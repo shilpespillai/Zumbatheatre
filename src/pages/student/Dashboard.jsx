@@ -335,7 +335,10 @@ export default function StudentDashboard() {
       setAllSchedules(data || []);
     } catch (err) {
       console.error('[Dashboard] Fetch schedules error:', err);
-      toast.error(`Routine Fetch Failed: ${err.message}`);
+      // Silence the toast if it's just a cold-start/wake-up message to avoid scaring the user
+      if (!err.message.includes('wake up')) {
+        toast.error(`Routine Fetch Failed: ${err.message}`);
+      }
     } finally {
       setLoading(false);
     }
