@@ -638,23 +638,28 @@ export default function StudentBooking() {
                         const isExpired = selectedSession && new Date(selectedSession.start_time) < new Date();
                         return (
                           <>
-                            {studentCredits >= selectedSession.price && !loyaltyEligible && (
+                            {/* 1. Loyalty Reward (Always visible, conditionally enabled) */}
+                            <button 
+                              onClick={() => handleBooking('loyalty')}
+                              disabled={booking || isExpired || !loyaltyEligible}
+                              className={`w-full py-6 rounded-[2.5rem] flex items-center justify-center gap-3 transition-all font-black uppercase tracking-widest text-xs mb-4 shadow-xl ${
+                                loyaltyEligible 
+                                ? 'bg-gradient-to-r from-apricot to-rose-bloom text-white shadow-apricot/30 animate-bounce hover:opacity-90' 
+                                : 'bg-studio-dark/5 text-studio-dark/40 border border-studio-dark/10 opacity-50 cursor-not-allowed'
+                              } disabled:cursor-not-allowed`}
+                            >
+                              <Ticket className={`w-6 h-6 ${loyaltyEligible ? 'text-white' : 'text-studio-dark/20'}`} /> 
+                              {loyaltyEligible ? 'Claim Free Loyalty Session!' : 'Loyalty Reward Locked'}
+                            </button>
+
+                            {/* 2. Credits Option */}
+                            {studentCredits >= selectedSession.price && (
                               <button 
                                 onClick={() => handleBooking('credits')}
                                 disabled={booking || isExpired}
-                                className="w-full py-5 bg-rose-bloom text-white border border-rose-bloom/30 text-rose-bloom rounded-[2.5rem] flex items-center justify-center gap-3 hover:bg-rose-bloom/80 transition-all font-black uppercase tracking-widest text-xs mb-2 shadow-lg shadow-rose-bloom/20 disabled:opacity-30 disabled:cursor-not-allowed"
+                                className="w-full py-5 bg-rose-bloom text-white border border-rose-bloom/30 rounded-[2.5rem] flex items-center justify-center gap-3 hover:bg-rose-bloom/80 transition-all font-black uppercase tracking-widest text-xs mb-2 shadow-lg shadow-rose-bloom/20 disabled:opacity-30 disabled:cursor-not-allowed"
                               >
                                 <Sparkles className="w-5 h-5 text-white" /> Use ${selectedSession.price} Credits
-                              </button>
-                            )}
-
-                            {loyaltyEligible && (
-                              <button 
-                                onClick={() => handleBooking('loyalty')}
-                                disabled={booking || isExpired}
-                                className="w-full py-6 bg-gradient-to-r from-apricot to-rose-bloom text-white rounded-[2.5rem] flex items-center justify-center gap-3 hover:opacity-90 transition-all font-black uppercase tracking-widest text-xs mb-6 shadow-xl shadow-apricot/30 disabled:opacity-30 animate-bounce"
-                              >
-                                <Ticket className="w-6 h-6" /> Claim Free Loyalty Session!
                               </button>
                             )}
 
@@ -663,10 +668,11 @@ export default function StudentBooking() {
                                <div className="text-sm font-black text-rose-petal">${studentCredits.toFixed(2)}</div>
                             </div>
 
+                            {/* 3. Primary Booking Button (Cash/PayPal) */}
                             <button 
                               onClick={handleBooking}
-                              disabled={booking || isExpired || loyaltyEligible}
-                              className={`w-full ${loyaltyEligible ? 'opacity-20 pointer-events-none' : 'btn-premium bg-rose-bloom'} text-white py-6 rounded-[2.5rem] shadow-xl shadow-rose-bloom/30 flex items-center justify-center gap-3 active:scale-95 transition-all disabled:opacity-30 disabled:cursor-not-allowed`}
+                              disabled={booking || isExpired}
+                              className="w-full btn-premium bg-rose-bloom text-white py-6 rounded-[2.5rem] shadow-xl shadow-rose-bloom/30 flex items-center justify-center gap-3 active:scale-95 transition-all disabled:opacity-20 disabled:pointer-events-none"
                             >
                               {booking ? (
                                 <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
