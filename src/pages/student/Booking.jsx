@@ -678,13 +678,15 @@ export default function StudentBooking() {
                               disabled={booking || isExpired || !loyaltyEligible}
                               className={`w-full py-6 rounded-[2.5rem] flex items-center justify-center gap-3 transition-all font-black uppercase tracking-widest text-xs mb-4 shadow-xl ${
                                 loyaltyEligible 
-                                ? 'bg-gradient-to-r from-amber-400 via-amber-200 to-amber-500 text-studio-dark shadow-amber-500/30 animate-bounce hover:opacity-90' 
-                                : 'bg-white/5 text-white/40 border border-white/10 opacity-60 cursor-not-allowed'
+                                ? 'bg-gradient-to-r from-amber-400 via-amber-200 to-amber-500 text-rose-bloom shadow-amber-500/30 animate-bounce hover:opacity-90' 
+                                : 'bg-white/5 text-amber-500/60 border border-amber-500/20 opacity-90 cursor-not-allowed'
                               } disabled:cursor-not-allowed`}
                             >
                               <div className="flex items-center justify-center gap-3 w-full">
-                                <Ticket className={`w-6 h-6 ${loyaltyEligible ? 'text-studio-dark' : 'text-white/20'}`} /> 
-                                <span>{loyaltyEligible ? 'Claim Free Loyalty Session!' : 'Loyalty Reward Locked'}</span>
+                                <Ticket className={`w-6 h-6 ${loyaltyEligible ? 'text-rose-bloom' : 'text-amber-500/40'}`} /> 
+                                <span className={loyaltyEligible ? 'text-rose-bloom' : 'text-amber-500/80'}>
+                                  {loyaltyEligible ? 'Claim Free Loyalty Session!' : 'Loyalty Reward Locked'}
+                                </span>
                               </div>
                             </button>
 
