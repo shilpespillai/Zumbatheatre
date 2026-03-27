@@ -21,8 +21,10 @@ const SEED_TEACHERS = [
 ];
 
 export default function StudentDashboard() {
-  const { profile, signOut, fetchProfile } = useAuth();
+  const { profile, signOut, fetchProfile, persistStageLocally, forceRefreshProfile } = useAuth();
   const [allSchedules, setAllSchedules] = useState([]);
+  const [rawFetchCount, setRawFetchCount] = useState(null);
+  const [lastFetchError, setLastFetchError] = useState(null);
   const [loading, setLoading] = useState(true);
   const [linkingCode, setLinkingCode] = useState('');
   const [linking, setLinking] = useState(false);
@@ -307,25 +309,29 @@ export default function StudentDashboard() {
   const fetchAllAvailableSchedules = useCallback(async (explicitTeacherId) => {
     const teacherId = explicitTeacherId || profile?.linked_teacher_id;
     if (!teacherId) { setAllSchedules([]); setLoading(false); return; }
+    console.log('[Dashboard] fetchAllAvailableSchedules for teacherId:', teacherId);
     setLoading(true);
+    setLastFetchError(null);
     try {
-      const { data, error } = await supabase
-        .from('schedules')
-        .select(`
-          *,
-          routines (
-            name,
-            duration_minutes
-          ),
-          profiles (
-            full_name
-          )
-        `)
-        .eq('teacher_id', teacherId)
-        .in('status', ['SCHEDULED', 'CANCELLED'])
-        .order('start_time', { ascending: true });
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Request timed out (10s)')), 10000)
+      );
       
-      if (error) throw error;
+      const fetchPromise = supabase
+        .from('schedules')
+        .select('*')
+        .eq('teacher_id', teacherId);
+      
+      const { data, error } = await Promise.race([fetchPromise, timeoutPromise]);
+      
+      console.log('[Dashboard] Fetch result:', { count: data?.length, error });
+      setRawFetchCount(data?.length || 0);
+      
+      if (error) {
+        console.error('[Dashboard] Fetch error details:', error);
+        setLastFetchError(error.message);
+        throw error;
+      }
       setAllSchedules(data || []);
     } catch (err) {
       console.error('[Dashboard] Fetch schedules error:', err);
@@ -539,9 +545,9 @@ export default function StudentDashboard() {
       ytdSpent: Math.round(ytdSpent), spendingTrend,
       loyaltyProgress: {
         current: loyaltyProgressCount,
-        total: loyaltySettings.required_sessions,
-        remaining: sessionsRemaining,
-        isUnlocked: loyaltyCount === loyaltySettings.required_sessions
+        total: required,
+        remaining: Math.max(0, required - loyaltyProgressCount),
+        isUnlocked: isEligible
       }
     });
   }, [timeRange, profile?.linked_teacher_id, teacherProfile?.loyalty_settings]);
@@ -627,8 +633,8 @@ export default function StudentDashboard() {
   }, [activeTab, profile?.id, profile?.linked_teacher_id, fetchMyBookings]);
 
   return (
-    <div className="min-h-screen bg-bloom-white text-studio-dark p-6 sm:p-10">
-      <div className="max-w-[1600px] mx-auto">
+    <div className="min-h-screen bg-bloom-white text-studio-dark selection:bg-rose-bloom/20 overflow-x-hidden">
+      <div className="max-w-[1600px] mx-auto p-6 sm:p-10 pt-16">
         <header className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-16 gap-8">
           <div>
             <h1 className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-studio-dark via-[#FFB38A] to-rose-bloom tracking-tight font-display italic">
@@ -637,35 +643,6 @@ export default function StudentDashboard() {
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-studio-dark/80 mt-1">Student Performance Center</p>
           </div>
           <div className="flex flex-wrap items-center gap-4">
-             {/* [PHASE 40] TECHNICAL DIAGNOSTICS OVERLAY */}
-      <div className="fixed bottom-4 right-4 z-[9999] p-4 bg-studio-dark/95 backdrop-blur-xl rounded-[2rem] border border-white/10 text-white font-mono text-[9px] shadow-2xl max-w-[280px] opacity-20 hover:opacity-100 transition-opacity pointer-events-auto">
-        <div className="flex items-center gap-2 mb-2 text-rose-bloom font-black border-b border-white/5 pb-2 uppercase tracking-widest">
-          <ShieldCheck className="w-3 h-3" /> System Diagnostics
-        </div>
-        <div className="space-y-1 overflow-hidden">
-          <div className="flex justify-between gap-4">
-            <span className="opacity-40">STUDENT_ID:</span>
-            <span className="truncate">{profile?.id?.slice(0, 8) || 'NONE'}...</span>
-          </div>
-          <div className="flex justify-between gap-4">
-            <span className="opacity-40">TEACHER_ID:</span>
-            <span className="truncate text-apricot">{profile?.linked_teacher_id?.slice(0, 8) || 'NULL'}...</span>
-          </div>
-          <div className="flex justify-between gap-4">
-            <span className="opacity-40">STAGE_CODE:</span>
-            <span className="font-bold text-rose-bloom">{profile?.stage_code || 'NONE'}</span>
-          </div>
-          <div className="flex justify-between gap-4">
-            <span className="opacity-40">DRAFT_MODE:</span>
-            <span>{profile?.is_draft ? 'YES' : 'NO'}</span>
-          </div>
-          <div className="flex justify-between gap-4">
-            <span className="opacity-40">ROUTINES:</span>
-            <span>{allSchedules.length}</span>
-          </div>
-        </div>
-      </div>
-
              {/* Stage Switcher Dropdown */}
              {visitedStages.length > 1 && (
                <div className="relative group">
