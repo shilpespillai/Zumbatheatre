@@ -498,7 +498,34 @@ export default function StudentBooking() {
                 <h3 className="text-xl font-black mb-8 relative z-10">Booking Summary</h3>
                 
                 <AnimatePresence mode="wait">
-                  {selectedSession ? (
+                  {loading && !selectedSession ? (
+                    <Motion.div 
+                      key="loading-stage"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="py-20 flex flex-col items-center justify-center relative"
+                    >
+                      <div className="relative w-24 h-24 mb-8">
+                        <Motion.div 
+                          animate={{ rotate: 360 }}
+                          transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+                          className="absolute inset-0 rounded-full border-t-2 border-b-2 border-rose-bloom/30"
+                        />
+                        <Motion.div 
+                          animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.6, 0.3] }}
+                          transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                          className="absolute inset-2 rounded-full bg-gradient-to-br from-rose-bloom/20 to-apricot/20 blur-xl"
+                        />
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <Landmark className="w-10 h-10 text-rose-bloom animate-pulse" />
+                        </div>
+                      </div>
+                      <p className="text-[10px] font-black uppercase tracking-[0.3em] text-rose-bloom animate-pulse">
+                        Synchronizing Stage...
+                      </p>
+                    </Motion.div>
+                  ) : selectedSession ? (
                     <Motion.div 
                       key="selected"
                       initial={{ opacity: 0, y: 10 }}
