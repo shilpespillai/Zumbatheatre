@@ -178,21 +178,29 @@ export default function StudentBooking() {
         const teacherLoyalty = teacher?.loyalty_settings || { required_sessions: 10, enabled: true };
         if (teacherLoyalty.enabled !== false) {
           const teacherBookings = (data || []).filter(b => {
-            const b_teacher_id = b.teacher_id || b.schedules?.teacher_id || b.schedules?.[0]?.teacher_id;
-            return b_teacher_id === teacherId && 
-            ['PAID', 'PENDING'].includes(b.payment_status) && 
-            b.payment_method !== 'LOYALTY_REWARD';
-          });
-          const required = teacherLoyalty.required_sessions || 10;
-          const paidCount = teacherBookings.length;
-          const rewardCount = (data || []).filter(b => {
-             const b_teacher_id = b.teacher_id || b.schedules?.teacher_id || b.schedules?.[0]?.teacher_id;
-             return b_teacher_id === teacherId && b.payment_method === 'LOYALTY_REWARD';
-          }).length;
-          
-          // Eligible if earned rewards > redeemed rewards
-          const eligibility = Math.floor(paidCount / required) > rewardCount;
-          setLoyaltyEligible(eligibility);
+          const b_tid = String(b.teacher_id || b.schedules?.teacher_id || b.schedules?.[0]?.teacher_id || '').toLowerCase();
+          const targetTid = String(teacherId).toLowerCase();
+          return b_tid === targetTid && 
+          ['PAID', 'PENDING'].includes(b.payment_status) && 
+          b.payment_method !== 'LOYALTY_REWARD';
+        });
+
+        const required = teacherLoyalty.required_sessions || 10;
+        const paidCount = teacherBookings.length;
+        
+        const redeemedRewardsBookings = (data || []).filter(b => {
+           const b_tid = String(b.teacher_id || b.schedules?.teacher_id || b.schedules?.[0]?.teacher_id || '').toLowerCase();
+           const targetTid = String(teacherId).toLowerCase();
+           return b_tid === targetTid && b.payment_method === 'LOYALTY_REWARD';
+        });
+        const rewardCount = redeemedRewardsBookings.length;
+        
+        // Final Eligibility Check
+        const earnedRewards = Math.floor(paidCount / required);
+        const eligibility = earnedRewards > rewardCount;
+        
+        console.log('[Booking] Loyalty Audit:', { paidCount, required, earnedRewards, rewardCount, eligibility });
+        setLoyaltyEligible(eligibility);
           
           // Cache this for the next visit
           localStorage.setItem(`cache_loyalty_eligible_${teacherId}`, JSON.stringify(eligibility));
@@ -670,12 +678,14 @@ export default function StudentBooking() {
                               disabled={booking || isExpired || !loyaltyEligible}
                               className={`w-full py-6 rounded-[2.5rem] flex items-center justify-center gap-3 transition-all font-black uppercase tracking-widest text-xs mb-4 shadow-xl ${
                                 loyaltyEligible 
-                                ? 'bg-gradient-to-r from-apricot to-rose-bloom text-white shadow-apricot/30 animate-bounce hover:opacity-90' 
+                                ? 'bg-gradient-to-r from-amber-400 via-amber-200 to-amber-500 text-studio-dark shadow-amber-500/30 animate-bounce hover:opacity-90' 
                                 : 'bg-white/5 text-white/40 border border-white/10 opacity-60 cursor-not-allowed'
                               } disabled:cursor-not-allowed`}
                             >
-                              <Ticket className={`w-6 h-6 ${loyaltyEligible ? 'text-white' : 'text-white/20'}`} /> 
-                              {loyaltyEligible ? 'Claim Free Loyalty Session!' : 'Loyalty Reward Locked'}
+                              <div className="flex items-center justify-center gap-3 w-full">
+                                <Ticket className={`w-6 h-6 ${loyaltyEligible ? 'text-studio-dark' : 'text-white/20'}`} /> 
+                                <span>{loyaltyEligible ? 'Claim Free Loyalty Session!' : 'Loyalty Reward Locked'}</span>
+                              </div>
                             </button>
 
                             {/* 2. Credits Option */}
