@@ -649,7 +649,7 @@ export default function StudentBooking() {
                            </div>
                         </div>
 
-                        {(selectedMethod === 'bank' || selectedMethod === 'manual') && teacher?.payment_settings?.config?.bank_instructions && (
+                        {selectedMethod === 'bank' && teacher?.payment_settings?.config?.bank_instructions && (
                           <div className="p-6 bg-rose-bloom/5 rounded-[2rem] border border-rose-bloom/20 mb-6 animate-in fade-in slide-in-from-top-2">
                             <div className="text-[10px] font-black text-rose-bloom uppercase tracking-[0.2em] mb-3 flex items-center gap-2">
                               <Landmark className="w-4 h-4" /> Transfer Instructions
