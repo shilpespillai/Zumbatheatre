@@ -9,7 +9,7 @@ import {
 import { 
   ChevronLeft, Calendar as CalendarIcon, Clock, MapPin, 
   Sparkles, ShieldCheck, Heart, Share2, Star,
-  CreditCard, ExternalLink, Banknote, Landmark, Ticket
+  CreditCard, ExternalLink, Banknote, Landmark, Ticket, CheckCircle2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion as Motion, AnimatePresence } from 'framer-motion';
@@ -18,7 +18,10 @@ import CalendarContainer from '../../components/CalendarContainer';
 export default function StudentBooking() {
   const { teacherId } = useParams();
   const navigate = useNavigate();
-  const { user, profile, fetchProfile } = useAuth();
+  const { 
+    user, profile, fetchProfile, 
+    persistStageLocally, forceRefreshProfile 
+  } = useAuth();
 
   const [teacher, setTeacher] = useState(null);
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -59,6 +62,10 @@ export default function StudentBooking() {
       return;
     }
     const teacherData = data;
+    setTeacher(data);
+    
+    // Update Cache
+    localStorage.setItem(`cache_teacher_profile_${teacherId}`, JSON.stringify(data));
 
     if (teacherData) {
       const settings = teacherData.payment_settings || {};
@@ -76,9 +83,26 @@ export default function StudentBooking() {
       
       // ONLY set default if not already selected to avoid resetting on re-fetches
       setSelectedMethod(current => current || settings.method || (available.length > 0 ? available[0] : null));
-      setTeacher(teacherData);
     }
   }, [teacherId]);
+
+  // [PERSISTENCE PHASE] Load cached data immediately on mount
+  useEffect(() => {
+    const cachedTeacher = localStorage.getItem(`cache_teacher_profile_${teacherId}`);
+    const cachedSchedules = localStorage.getItem(`cache_booking_schedules_${teacherId}`);
+    const cachedCredits = localStorage.getItem(`cache_credits_${profile?.linked_teacher_id}`);
+    const cachedLoyaltyEligible = localStorage.getItem(`cache_loyalty_eligible_${teacherId}`);
+
+    if (cachedTeacher) setTeacher(JSON.parse(cachedTeacher));
+    if (cachedSchedules) setSchedules(JSON.parse(cachedSchedules));
+    if (cachedCredits) setStudentCredits(JSON.parse(cachedCredits));
+    if (cachedLoyaltyEligible) setLoyaltyEligible(JSON.parse(cachedLoyaltyEligible));
+    
+    // If we have any cached data, stop the skeleton/empty state immediately
+    if (cachedTeacher || cachedSchedules) {
+      setLoading(false);
+    }
+  }, [teacherId, profile?.linked_teacher_id]);
 
   const fetchSchedules = useCallback(async () => {
     const firstDay = startOfMonth(currentMonth);
@@ -102,6 +126,7 @@ export default function StudentBooking() {
 
     const schedulesData = data || [];
     setSchedules(schedulesData);
+    localStorage.setItem(`cache_booking_schedules_${teacherId}`, JSON.stringify(schedulesData));
 
     if (sessionId) {
       const session = schedulesData.find(s => s.id === sessionId);
@@ -126,13 +151,15 @@ export default function StudentBooking() {
       
       if (!error && data) {
         setStudentCredits(parseFloat(data.balance));
+        localStorage.setItem(`cache_credits_${profile.linked_teacher_id}`, JSON.stringify(parseFloat(data.balance)));
       } else {
         setStudentCredits(0);
+        localStorage.setItem(`cache_credits_${profile.linked_teacher_id}`, JSON.stringify(0));
       }
     } catch (err) {
       console.error('[Booking] Fetch credits error:', err);
     }
-  }, [profile?.id, teacherId]);
+  }, [profile?.id, teacherId, profile?.linked_teacher_id]);
 
   const fetchAllStudentBookings = useCallback(async () => {
     if (!profile?.id) return;
@@ -166,6 +193,9 @@ export default function StudentBooking() {
           // Eligible if earned rewards > redeemed rewards
           const eligibility = Math.floor(paidCount / required) > rewardCount;
           setLoyaltyEligible(eligibility);
+          
+          // Cache this for the next visit
+          localStorage.setItem(`cache_loyalty_eligible_${teacherId}`, JSON.stringify(eligibility));
         }
       }
     } catch (err) {
@@ -213,14 +243,10 @@ export default function StudentBooking() {
         });
         
         if (!error) {
-          // Re-sync AuthContext so the Dashboard knows which stage we are now in
-          // Phase 32: Use forceRefreshProfile to bypass deduplication and get the absolute latest DB state
-          const { forceRefreshProfile, persistStageLocally } = useAuth();
+          // Phase 32: Force real sync
           await forceRefreshProfile();
           
           // [PHASE 34] Persistent Device Cache
-          // We don't have the full teacher object here easily so we pass the teacherId 
-          // persistStageLocally will handle the formatting
           persistStageLocally({ linked_teacher_id: teacherId });
         }
       }
@@ -645,10 +671,10 @@ export default function StudentBooking() {
                               className={`w-full py-6 rounded-[2.5rem] flex items-center justify-center gap-3 transition-all font-black uppercase tracking-widest text-xs mb-4 shadow-xl ${
                                 loyaltyEligible 
                                 ? 'bg-gradient-to-r from-apricot to-rose-bloom text-white shadow-apricot/30 animate-bounce hover:opacity-90' 
-                                : 'bg-studio-dark/5 text-studio-dark/40 border border-studio-dark/10 opacity-50 cursor-not-allowed'
+                                : 'bg-white/5 text-white/40 border border-white/10 opacity-60 cursor-not-allowed'
                               } disabled:cursor-not-allowed`}
                             >
-                              <Ticket className={`w-6 h-6 ${loyaltyEligible ? 'text-white' : 'text-studio-dark/20'}`} /> 
+                              <Ticket className={`w-6 h-6 ${loyaltyEligible ? 'text-white' : 'text-white/20'}`} /> 
                               {loyaltyEligible ? 'Claim Free Loyalty Session!' : 'Loyalty Reward Locked'}
                             </button>
 

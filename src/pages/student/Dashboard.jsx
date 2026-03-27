@@ -221,7 +221,6 @@ export default function StudentDashboard() {
           }
 
           localStorage.removeItem('pending_teacher_code');
-          const { forceRefreshProfile } = useAuth();
           await forceRefreshProfile(); // Phase 32: Force real sync
           
           // [PHASE 34] Persistent Device Cache
@@ -283,6 +282,24 @@ export default function StudentDashboard() {
     }
   };
 
+  // [PERSISTENCE PHASE] Load cached data immediately on mount
+  useEffect(() => {
+    const cachedSchedules = localStorage.getItem(`cache_schedules_${profile?.linked_teacher_id}`);
+    const cachedStats = localStorage.getItem(`cache_stats_${profile?.linked_teacher_id}`);
+    const cachedCredits = localStorage.getItem(`cache_credits_${profile?.linked_teacher_id}`);
+    const cachedTeacher = localStorage.getItem(`cache_teacher_${profile?.linked_teacher_id}`);
+
+    if (cachedSchedules) setAllSchedules(JSON.parse(cachedSchedules));
+    if (cachedStats) setStudentStats(JSON.parse(cachedStats));
+    if (cachedCredits) setStudentCredits(JSON.parse(cachedCredits));
+    if (cachedTeacher) setTeacherProfile(JSON.parse(cachedTeacher));
+    
+    // If we have cached data, we can set loading to false immediately to show "Instant" UI
+    if (cachedSchedules || cachedStats) {
+      setLoading(false);
+    }
+  }, [profile?.linked_teacher_id]);
+
   const fetchStudentCredits = useCallback(async () => {
     if (!profile?.id || !profile?.linked_teacher_id) return;
     try {
@@ -332,7 +349,11 @@ export default function StudentDashboard() {
         setLastFetchError(error.message);
         throw error;
       }
-      setAllSchedules(data || []);
+      const schedulesData = data || [];
+      setAllSchedules(schedulesData);
+      
+      // Update Cache
+      localStorage.setItem(`cache_schedules_${teacherId}`, JSON.stringify(schedulesData));
     } catch (err) {
       console.error('[Dashboard] Fetch schedules error:', err);
       // Silence the toast if it's just a cold-start/wake-up message to avoid scaring the user
@@ -396,7 +417,6 @@ export default function StudentDashboard() {
       
       // 2. Clear local storage and trigger re-fetch
       localStorage.removeItem('pending_teacher_code');
-      const { forceRefreshProfile } = useAuth();
       await forceRefreshProfile(); // Phase 32: Force real sync
       
       // 3. Persistent Device Cache (Instant Recall)
@@ -542,7 +562,7 @@ export default function StudentDashboard() {
     const isEligible = earnedRewards > rewardCount;
     const loyaltyProgressCount = isEligible ? required : (paidCount % required);
 
-    setStudentStats({
+    const stats = {
       totalSessions, routineVariety: routineVarietyWithPerformance, routineCategoryMix, attendanceTrend, energyBurn: Math.round(totalEnergyBurn),
       consistency: dayStats, totalSpent: Math.round(totalSpent), monthlySpent: Math.round(monthlySpent), quarterlySpent: Math.round(quarterlySpent),
       ytdSpent: Math.round(ytdSpent), spendingTrend,
@@ -552,7 +572,13 @@ export default function StudentDashboard() {
         remaining: Math.max(0, required - loyaltyProgressCount),
         isUnlocked: isEligible
       }
-    });
+    };
+    setStudentStats(stats);
+    
+    // Update Cache
+    if (profile?.linked_teacher_id) {
+      localStorage.setItem(`cache_stats_${profile.linked_teacher_id}`, JSON.stringify(stats));
+    }
   }, [timeRange, profile?.linked_teacher_id, teacherProfile?.loyalty_settings]);
 
   const handleJoinStage = async (e) => {
