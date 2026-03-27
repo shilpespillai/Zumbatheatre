@@ -703,18 +703,16 @@ export default function StudentBooking() {
                             <button 
                               onClick={() => handleBooking('loyalty')}
                               disabled={booking || isExpired || !loyaltyEligible}
-                              className={`w-full py-6 rounded-[2.5rem] flex items-center justify-center gap-3 transition-all font-black uppercase tracking-widest text-xs mb-4 shadow-xl ${
+                              className={`w-full py-8 rounded-[2.5rem] flex flex-col items-center justify-center gap-2 transition-all font-black uppercase tracking-widest text-xs mb-4 shadow-xl ${
                                 loyaltyEligible 
                                 ? 'bg-gradient-to-r from-amber-400 via-amber-200 to-amber-500 text-rose-bloom shadow-amber-500/30 animate-bounce hover:opacity-90' 
                                 : 'bg-white/5 text-amber-500/60 border border-amber-500/20 opacity-90 cursor-not-allowed'
                               } disabled:cursor-not-allowed`}
                             >
-                              <div className="flex items-center justify-center gap-3 w-full">
-                                <Ticket className={`w-6 h-6 ${loyaltyEligible ? 'text-rose-bloom' : 'text-amber-500/40'}`} /> 
-                                <span className={loyaltyEligible ? 'text-rose-bloom' : 'text-amber-500/80'}>
-                                  {loyaltyEligible ? 'Claim Free Loyalty Session!' : 'Loyalty Reward Locked'}
-                                </span>
-                              </div>
+                              <Ticket className={`w-8 h-8 mb-1 ${loyaltyEligible ? 'text-rose-bloom' : 'text-amber-500/40'}`} /> 
+                              <span className={`text-center max-w-[80%] leading-tight ${loyaltyEligible ? 'text-rose-bloom' : 'text-amber-500/80'}`}>
+                                {loyaltyEligible ? 'Claim Free Loyalty Session!' : 'Loyalty Reward Locked'}
+                              </span>
                             </button>
 
                             {/* 2. Credits Option */}
